@@ -1,0 +1,12 @@
+[package]
+name = "hades"
+version = "0.1.0"
+edition = "2024"
+
+
+
+[dependencies]
+anyhow = "1.0.100"
+phf = { version = "0.11.3", features = ["macros"] }
+indexmap = "2.11.4"
+ariadne = "0.4"

@@ -18,7 +18,7 @@ impl<'a> Analyzer<'a> {
 
         for stmt in ast {
             match stmt {
-                ast::Stmt::Let { name, value } => {
+                ast::Stmt::Let { name, value, .. } => {
                     self.check_let(stmt)?;
                 }
                 ast::Stmt::Return(value) => {
@@ -36,7 +36,7 @@ impl<'a> Analyzer<'a> {
     }
 
     pub fn check_let(&mut self, stmt: &ast::Stmt) -> Result<(), String> {
-        if let ast::Stmt::Let { name, value } = stmt {
+        if let ast::Stmt::Let { name, value, .. } = stmt {
             let typ = self.check_expr(value)?;
             self.idents.insert(name.clone(), typ)?;
 

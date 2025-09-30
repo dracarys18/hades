@@ -19,7 +19,7 @@ fn main() {
             let c = a - b + b - c;
             let x = "hello world";
             let float = 20.12313123;
-            let f = 20;
+            let f: int = 20;
             let p = Point { x: 10, y: 20, f: 3.14 };
             if x>=10 && x<10 || x==10 {
                 print(x);

@@ -265,11 +265,22 @@ impl Parser {
     fn parse_let_stmt(&mut self) -> ParseResult<Stmt> {
         self.expect(&Token::Let)?;
         let name = self.expect_identifier()?;
+
+        let var_type = if self.peek() == Some(&Token::Colon) {
+            Some(self.parse_optional_custom_type()?)
+        } else {
+            None
+        };
+
         self.expect(&Token::Assign)?;
         let value = self.parse_let_expr()?;
         self.expect(&Token::Semicolon)?;
 
-        Ok(Stmt::Let { name, value })
+        Ok(Stmt::Let {
+            name,
+            custom_type: var_type,
+            value,
+        })
     }
 
     fn parse_if_stmt(&mut self) -> ParseResult<Stmt> {
@@ -596,6 +607,13 @@ impl Parser {
             name: struct_name,
             fields,
         })
+    }
+
+    fn parse_optional_custom_type(&mut self) -> ParseResult<Types> {
+        self.expect(&Token::Colon)?;
+
+        let type_name = self.expect_identifier()?;
+        Ok(Types::from_str(&type_name))
     }
 
     fn parse_function_call(&mut self, func_name: Ident) -> ParseResult<Expr> {

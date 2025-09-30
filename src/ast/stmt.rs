@@ -10,6 +10,7 @@ use super::expr::Expr;
 pub enum Stmt {
     Let {
         name: Ident,
+        declared_type: Option<Types>,
         value: Expr,
     },
     Continue,

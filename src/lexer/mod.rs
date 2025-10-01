@@ -1,23 +1,25 @@
 mod error;
 
-use crate::tokens::{Assoc, Ident, OpInfo, Token};
+use crate::error::Span;
+use crate::tok;
+use crate::tokens::{Assoc, Ident, OpInfo, Token, TokenKind};
 pub use error::{LexError, LexResult};
 
 use phf::phf_map;
 
-static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
-    "let" => Token::Let,
-    "if" => Token::If,
-    "else" => Token::Else,
-    "while" => Token::While,
-    "for" => Token::For,
-    "fn" => Token::Fn,
-    "struct" => Token::Struct,
-    "return" => Token::Return,
-    "break" => Token::Break,
-    "continue" => Token::Continue,
-    "true" => Token::True,
-    "false" => Token::False,
+static KEYWORDS: phf::Map<&'static str, TokenKind> = phf_map! {
+    "let" => TokenKind::Let,
+    "if" => TokenKind::If,
+    "else" => TokenKind::Else,
+    "while" => TokenKind::While,
+    "for" => TokenKind::For,
+    "fn" => TokenKind::Fn,
+    "struct" => TokenKind::Struct,
+    "return" => TokenKind::Return,
+    "break" => TokenKind::Break,
+    "continue" => TokenKind::Continue,
+    "true" => TokenKind::True,
+    "false" => TokenKind::False,
 };
 
 pub struct Lexer<'a> {
@@ -25,8 +27,6 @@ pub struct Lexer<'a> {
     source_id: String,
     tokens: Vec<Token>,
     pos: usize,
-    line: usize,
-    column: usize,
 }
 
 impl<'a> Lexer<'a> {
@@ -36,8 +36,6 @@ impl<'a> Lexer<'a> {
             source_id,
             tokens: Vec::new(),
             pos: 0,
-            line: 1,
-            column: 1,
         }
     }
 
@@ -48,24 +46,13 @@ impl<'a> Lexer<'a> {
     fn next(&mut self) -> Option<char> {
         let c = self.peek();
         if let Some('\n') = c {
-            self.push_token(Token::Newline);
-            self.line += 1;
-            self.column = 1;
-        } else {
-            self.column += 1;
+            self.push_token(tok!(TokenKind::Newline, self.pos, self.pos + 1));
         }
         self.pos += 1;
         c
     }
 
     fn move_next(&mut self) {
-        let c = self.peek();
-        if let Some('\n') = c {
-            self.line += 1;
-            self.column = 1;
-        } else {
-            self.column += 1;
-        }
         self.pos += 1;
     }
 
@@ -90,25 +77,28 @@ impl<'a> Lexer<'a> {
     }
 
     fn parse_plus_equal(&mut self) {
+        let start_pos = self.pos;
+
         if self.peek() == Some('+') {
             self.next();
             if self.peek() == Some('=') {
                 self.next();
-                self.push_token(Token::PlusEqual);
+                self.push_token(tok!(TokenKind::PlusEqual, start_pos, self.pos));
             } else {
-                self.push_token(Token::Plus);
+                self.push_token(tok!(TokenKind::Plus, start_pos, self.pos));
             }
         }
     }
 
     fn parse_minus_equal(&mut self) {
+        let start_pos = self.pos;
         if self.peek() == Some('-') {
             self.next();
             if self.peek() == Some('=') {
                 self.next();
-                self.push_token(Token::MinusEqual);
+                self.push_token(tok!(TokenKind::MinusEqual, start_pos, self.pos));
             } else {
-                self.push_token(Token::Minus);
+                self.push_token(tok!(TokenKind::Minus, start_pos, self.pos));
             }
         }
     }
@@ -146,19 +136,25 @@ impl<'a> Lexer<'a> {
                 }
             }
 
-            self.push_token(Token::String(s));
+            self.push_token(tok!(TokenKind::String(s), start_pos, self.pos));
         }
         Ok(())
     }
 
     fn parse_keyword_or_identifier(&mut self) {
+        let start_pos = self.pos;
+
         if let Some(c) = self.peek() {
             if c.is_ascii_alphabetic() || c == '_' {
                 let ident = self.consume_while(|ch| ch.is_ascii_alphanumeric() || ch == '_');
                 if let Some(keyword_token) = KEYWORDS.get(ident.as_str()) {
-                    self.push_token(keyword_token.clone());
+                    self.push_token(tok!(keyword_token.clone(), start_pos, self.pos));
                 } else {
-                    self.push_token(Token::Ident(Ident::new(ident)));
+                    self.push_token(tok!(
+                        TokenKind::Ident(Ident::new(ident)),
+                        start_pos,
+                        self.pos
+                    ));
                 }
             }
         }
@@ -182,7 +178,7 @@ impl<'a> Lexer<'a> {
         if num_str.contains('.') {
             match num_str.parse::<f64>() {
                 Ok(num) => {
-                    self.push_token(Token::Float(num));
+                    self.push_token(tok!(TokenKind::Float(num), start_pos, self.pos));
                     Ok(())
                 }
                 Err(err) => Err(LexError::invalid_number(
@@ -195,7 +191,7 @@ impl<'a> Lexer<'a> {
         } else {
             match num_str.parse::<i64>() {
                 Ok(n) => {
-                    self.push_token(Token::Number(n));
+                    self.push_token(tok!(TokenKind::Number(n), start_pos, self.pos));
                     Ok(())
                 }
                 Err(err) => Err(LexError::invalid_number(
@@ -209,70 +205,72 @@ impl<'a> Lexer<'a> {
     }
 
     fn parse_operator(&mut self) {
+        let start_pos = self.pos;
         if let Some(c) = self.peek() {
             match c {
                 '+' => self.parse_plus_equal(),
                 '-' => self.parse_minus_equal(),
                 '*' => {
                     self.next();
-                    self.push_token(Token::Multiply);
+                    self.push_token(tok!(TokenKind::Multiply, start_pos, self.pos));
                 }
                 '/' => {
                     self.next();
-                    self.push_token(Token::Divide);
+                    self.push_token(tok!(TokenKind::Divide, start_pos, self.pos));
                 }
                 '=' => {
                     self.next();
                     if self.peek() == Some('=') {
                         self.next();
-                        self.push_token(Token::EqualEqual);
+
+                        self.push_token(tok!(TokenKind::EqualEqual, start_pos, self.pos));
                     } else {
-                        self.push_token(Token::Assign);
+                        self.push_token(tok!(TokenKind::Assign, start_pos, self.pos));
                     }
                 }
                 '!' => {
                     self.move_next();
                     if self.peek() == Some('=') {
                         self.next();
-                        self.push_token(Token::BangEqual);
+                        self.push_token(tok!(TokenKind::BangEqual, start_pos, self.pos));
                     } else {
-                        self.push_token(Token::Bang);
+                        self.push_token(tok!(TokenKind::Bang, start_pos, self.pos));
                     }
                 }
                 '|' => {
                     self.move_next();
                     if self.peek() == Some('|') {
                         self.next();
-                        self.push_token(Token::Or);
+                        self.push_token(tok!(TokenKind::Or, start_pos, self.pos));
                     } else {
-                        self.push_token(Token::BooleanOr);
+                        self.push_token(tok!(TokenKind::BooleanOr, start_pos, self.pos));
                     }
                 }
                 '&' => {
                     self.move_next();
                     if self.peek() == Some('&') {
                         self.next();
-                        self.push_token(Token::And);
+                        self.push_token(tok!(TokenKind::And, start_pos, self.pos));
                     } else {
-                        self.push_token(Token::BoleanAnd);
+                        self.push_token(tok!(TokenKind::BoleanAnd, start_pos, self.pos));
                     }
                 }
                 '>' => {
                     self.move_next();
                     if self.peek() == Some('=') {
                         self.next();
-                        self.push_token(Token::GreaterEqual);
+                        self.push_token(tok!(TokenKind::GreaterEqual, start_pos, self.pos));
                     } else {
-                        self.push_token(Token::Greater);
+                        self.push_token(tok!(TokenKind::Greater, start_pos, self.pos));
                     }
                 }
                 '<' => {
                     self.move_next();
                     if self.peek() == Some('=') {
                         self.next();
-                        self.push_token(Token::LessEqual);
+                        self.push_token(tok!(TokenKind::LessEqual, start_pos, self.pos));
                     } else {
-                        self.push_token(Token::Less);
+                        self.push_token(tok!(TokenKind::Less, start_pos, self.pos));
                     }
                 }
                 _ => {}
@@ -281,52 +279,53 @@ impl<'a> Lexer<'a> {
     }
 
     fn parse_punctuation(&mut self) {
+        let start_pos = self.pos;
         if let Some(c) = self.peek() {
             match c {
                 '(' => {
                     self.next();
-                    self.push_token(Token::LeftParen);
+                    self.push_token(tok!(TokenKind::LeftParen, start_pos, self.pos));
                 }
                 ')' => {
                     self.next();
-                    self.push_token(Token::RightParen);
+                    self.push_token(tok!(TokenKind::RightParen, start_pos, self.pos));
                 }
                 '{' => {
                     self.next();
-                    self.push_token(Token::LeftBrace);
+                    self.push_token(tok!(TokenKind::LeftBrace, start_pos, self.pos));
                 }
                 '}' => {
                     self.next();
-                    self.push_token(Token::RightBrace);
+                    self.push_token(tok!(TokenKind::RightBrace, start_pos, self.pos));
                 }
                 '[' => {
                     self.next();
-                    self.push_token(Token::LeftBracket);
+                    self.push_token(tok!(TokenKind::LeftBracket, start_pos, self.pos));
                 }
                 ']' => {
                     self.next();
-                    self.push_token(Token::RightBracket);
+                    self.push_token(tok!(TokenKind::RightBracket, start_pos, self.pos));
                 }
                 ',' => {
                     self.next();
-                    self.push_token(Token::Comma);
+                    self.push_token(tok!(TokenKind::Comma, start_pos, self.pos));
                 }
                 '.' => {
                     self.next();
                     if self.peek() == Some('.') {
                         self.next();
-                        self.push_token(Token::Range);
+                        self.push_token(tok!(TokenKind::Range, start_pos, self.pos));
                     } else {
-                        self.push_token(Token::Dot);
+                        self.push_token(tok!(TokenKind::Dot, start_pos, self.pos));
                     }
                 }
                 ';' => {
                     self.next();
-                    self.push_token(Token::Semicolon);
+                    self.push_token(tok!(TokenKind::Semicolon, start_pos, self.pos));
                 }
                 ':' => {
                     self.next();
-                    self.push_token(Token::Colon);
+                    self.push_token(tok!(TokenKind::Colon, start_pos, self.pos));
                 }
                 _ => {}
             }
@@ -385,28 +384,31 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn get_precedence(token: &Token) -> Option<OpInfo> {
-        match token {
-            Token::Multiply | Token::Divide => Some(OpInfo {
+        match token.kind() {
+            TokenKind::Multiply | TokenKind::Divide => Some(OpInfo {
                 prec: 5,
                 assoc: Assoc::Left,
             }),
-            Token::Plus | Token::Minus => Some(OpInfo {
+            TokenKind::Plus | TokenKind::Minus => Some(OpInfo {
                 prec: 4,
                 assoc: Assoc::Left,
             }),
-            Token::Greater | Token::Less | Token::GreaterEqual | Token::LessEqual => Some(OpInfo {
+            TokenKind::Greater
+            | TokenKind::Less
+            | TokenKind::GreaterEqual
+            | TokenKind::LessEqual => Some(OpInfo {
                 prec: 3,
                 assoc: Assoc::Left,
             }),
-            Token::EqualEqual | Token::BangEqual => Some(OpInfo {
+            TokenKind::EqualEqual | TokenKind::BangEqual => Some(OpInfo {
                 prec: 2,
                 assoc: Assoc::Left,
             }),
-            Token::And => Some(OpInfo {
+            TokenKind::And => Some(OpInfo {
                 prec: 1,
                 assoc: Assoc::Left,
             }),
-            Token::Or => Some(OpInfo {
+            TokenKind::Or => Some(OpInfo {
                 prec: 0,
                 assoc: Assoc::Left,
             }),

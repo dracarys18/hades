@@ -2,7 +2,8 @@ mod error;
 
 use crate::ast::{Expr, Program, Stmt, Types};
 use crate::parser::error::FinalParseResult;
-use crate::tokens::{Assoc, Ident, Op, Token};
+use crate::token_matches;
+use crate::tokens::{Assoc, Ident, Op, Token, TokenKind};
 use error::{ParseError, ParseResult};
 use indexmap::IndexMap;
 use std::ops::Range;
@@ -53,16 +54,21 @@ impl Parser {
     fn skip_to_recovery_point(&mut self) {
         while !self.is_eof() {
             match self.peek() {
-                Some(Token::Semicolon)
-                | Some(Token::RightBrace)
-                | Some(Token::Let)
-                | Some(Token::Fn)
-                | Some(Token::Struct)
-                | Some(Token::If)
-                | Some(Token::While)
-                | Some(Token::For)
-                | Some(Token::Return) => {
-                    if matches!(self.peek(), Some(Token::Semicolon)) {
+                Some(tok)
+                    if token_matches!(
+                        tok,
+                        TokenKind::Semicolon
+                            | TokenKind::RightBrace
+                            | TokenKind::Let
+                            | TokenKind::Fn
+                            | TokenKind::Struct
+                            | TokenKind::If
+                            | TokenKind::While
+                            | TokenKind::For
+                            | TokenKind::Return
+                    ) =>
+                {
+                    if token_matches!(tok, TokenKind::Semicolon) {
                         self.next();
                     }
                     break;
@@ -81,8 +87,8 @@ impl Parser {
     fn next(&mut self) -> Option<Token> {
         if let Some(tok) = self.tokens.get(self.pos).cloned() {
             self.advance_char_pos(&tok);
-            match tok {
-                Token::Newline | Token::Semicolon => {
+            match tok.kind() {
+                TokenKind::Newline | TokenKind::Semicolon => {
                     self.line += 1;
                     self.col = 1;
                 }
@@ -106,53 +112,53 @@ impl Parser {
     }
 
     fn estimate_token_length(&self, token: &Token) -> usize {
-        match token {
-            Token::LeftParen => 1,
-            Token::RightParen => 1,
-            Token::LeftBrace => 1,
-            Token::RightBrace => 1,
-            Token::LeftBracket => 1,
-            Token::RightBracket => 1,
-            Token::Comma => 1,
-            Token::Assign => 1,
-            Token::Dot => 1,
-            Token::Range => 2,
-            Token::Minus => 1,
-            Token::Plus => 1,
-            Token::Multiply => 1,
-            Token::Divide => 1,
-            Token::MinusEqual => 2,
-            Token::PlusEqual => 2,
-            Token::Colon => 1,
-            Token::Semicolon => 1,
-            Token::Bang => 1,
-            Token::BangEqual => 2,
-            Token::EqualEqual => 2,
-            Token::Greater => 1,
-            Token::GreaterEqual => 2,
-            Token::Less => 1,
-            Token::LessEqual => 2,
-            Token::Ident(s) => s.len(),
-            Token::String(s) => s.len() + 2, // +2 for quotes
-            Token::Number(n) => n.to_string().len(),
-            Token::Float(f) => f.to_string().len(),
-            Token::And => 3,
-            Token::BoleanAnd => 2,
-            Token::Struct => 6,
-            Token::Else => 4,
-            Token::False => 5,
-            Token::For => 3,
-            Token::If => 2,
-            Token::Return => 6,
-            Token::Break => 5,
-            Token::Continue => 8,
-            Token::Or => 2,
-            Token::BooleanOr => 2,
-            Token::True => 4,
-            Token::While => 5,
-            Token::Fn => 2,
-            Token::Let => 3,
-            _ => 1,
+        match token.kind() {
+            TokenKind::LeftParen => 1,
+            TokenKind::RightParen => 1,
+            TokenKind::LeftBrace => 1,
+            TokenKind::RightBrace => 1,
+            TokenKind::LeftBracket => 1,
+            TokenKind::RightBracket => 1,
+            TokenKind::Comma => 1,
+            TokenKind::Assign => 1,
+            TokenKind::Dot => 1,
+            TokenKind::Range => 2,
+            TokenKind::Minus => 1,
+            TokenKind::Plus => 1,
+            TokenKind::Multiply => 1,
+            TokenKind::Divide => 1,
+            TokenKind::MinusEqual => 2,
+            TokenKind::PlusEqual => 2,
+            TokenKind::Colon => 1,
+            TokenKind::Semicolon => 1,
+            TokenKind::Bang => 1,
+            TokenKind::BangEqual => 2,
+            TokenKind::EqualEqual => 2,
+            TokenKind::Greater => 1,
+            TokenKind::GreaterEqual => 2,
+            TokenKind::Less => 1,
+            TokenKind::LessEqual => 2,
+            TokenKind::Ident(ident) => ident.inner().len(),
+            TokenKind::String(s) => s.len() + 2, // +2 for quotes
+            TokenKind::Number(n) => n.to_string().len(),
+            TokenKind::Float(f) => f.to_string().len(),
+            TokenKind::And => 3,
+            TokenKind::BoleanAnd => 2,
+            TokenKind::Struct => 6,
+            TokenKind::Else => 4,
+            TokenKind::False => 5,
+            TokenKind::For => 3,
+            TokenKind::If => 2,
+            TokenKind::Return => 6,
+            TokenKind::Break => 5,
+            TokenKind::Continue => 8,
+            TokenKind::Or => 2,
+            TokenKind::BooleanOr => 2,
+            TokenKind::True => 4,
+            TokenKind::While => 5,
+            TokenKind::Fn => 2,
+            TokenKind::Let => 3,
+            TokenKind::Newline => 1,
         }
     }
 
@@ -160,17 +166,17 @@ impl Parser {
         self.char_pos += self.estimate_token_length(token);
     }
 
-    fn expect(&mut self, expected: &Token) -> ParseResult<()> {
+    fn expect(&mut self, expected: &TokenKind) -> ParseResult<()> {
         let start_pos = self.char_pos;
         let source_id = self.source_id.clone();
         let token = self.next();
         match token {
-            Some(ref t) if t == expected => Ok(()),
+            Some(ref t) if t.kind() == expected => Ok(()),
             other => {
                 let span = start_pos..self.char_pos;
                 Err(ParseError::unexpected_token(
                     other,
-                    &expected.to_string(),
+                    &format!("{:?}", expected),
                     span,
                     source_id,
                 ))
@@ -183,11 +189,22 @@ impl Parser {
         let source_id = self.source_id.clone();
         let token = self.next();
         let result = match token {
-            Some(Token::Ident(name)) => name,
-            other => {
+            Some(tok) => match tok.kind() {
+                TokenKind::Ident(name) => name.clone(),
+                _ => {
+                    let span = start_pos..self.char_pos;
+                    return Err(ParseError::unexpected_token(
+                        Some(tok),
+                        "identifier",
+                        span,
+                        source_id,
+                    ));
+                }
+            },
+            None => {
                 let span = start_pos..self.char_pos;
                 return Err(ParseError::unexpected_token(
-                    other,
+                    None,
                     "identifier",
                     span,
                     source_id,
@@ -202,11 +219,22 @@ impl Parser {
         let source_id = self.source_id.clone();
         let token = self.next();
         let result = match token {
-            Some(Token::Ident(name)) => Types::from_str(&name),
-            other => {
+            Some(tok) => match tok.kind() {
+                TokenKind::Ident(name) => Types::from_str(name),
+                _ => {
+                    let span = start_pos..self.char_pos;
+                    return Err(ParseError::unexpected_token(
+                        Some(tok),
+                        "type name",
+                        span,
+                        source_id,
+                    ));
+                }
+            },
+            None => {
                 let span = start_pos..self.char_pos;
                 return Err(ParseError::unexpected_token(
-                    other,
+                    None,
                     "type name",
                     span,
                     source_id,
@@ -216,8 +244,8 @@ impl Parser {
         Ok(result)
     }
 
-    fn consume_if(&mut self, token: &Token) -> bool {
-        if self.peek() == Some(token) {
+    fn consume_if(&mut self, expected: &TokenKind) -> bool {
+        if self.peek().map_or(false, |tok| tok.kind() == expected) {
             self.next();
             true
         } else {
@@ -227,20 +255,20 @@ impl Parser {
 
     fn parse_stmt(&mut self) -> ParseResult<Stmt> {
         match self.peek() {
-            Some(Token::Struct) => self.parse_struct_def(),
-            Some(Token::Fn) => self.parse_function_def(),
-            Some(Token::Let) => self.parse_let_stmt(),
-            Some(Token::If) => self.parse_if_stmt(),
-            Some(Token::While) => self.parse_while_stmt(),
-            Some(Token::For) => self.parse_for_stmt(),
-            Some(Token::Return) => self.parse_return_stmt(),
-            Some(Token::Continue) => self.parse_continue_stmt(),
+            Some(tok) if token_matches!(tok, TokenKind::Struct) => self.parse_struct_def(),
+            Some(tok) if token_matches!(tok, TokenKind::Fn) => self.parse_function_def(),
+            Some(tok) if token_matches!(tok, TokenKind::Let) => self.parse_let_stmt(),
+            Some(tok) if token_matches!(tok, TokenKind::If) => self.parse_if_stmt(),
+            Some(tok) if token_matches!(tok, TokenKind::While) => self.parse_while_stmt(),
+            Some(tok) if token_matches!(tok, TokenKind::For) => self.parse_for_stmt(),
+            Some(tok) if token_matches!(tok, TokenKind::Return) => self.parse_return_stmt(),
+            Some(tok) if token_matches!(tok, TokenKind::Continue) => self.parse_continue_stmt(),
             _ => self.parse_expr_stmt(),
         }
     }
 
     fn parse_struct_def(&mut self) -> ParseResult<Stmt> {
-        self.expect(&Token::Struct)?;
+        self.expect(&TokenKind::Struct)?;
         let name = self.expect_identifier()?;
         let fields = self.parse_field_list()?;
 
@@ -248,7 +276,7 @@ impl Parser {
     }
 
     fn parse_function_def(&mut self) -> ParseResult<Stmt> {
-        self.expect(&Token::Fn)?;
+        self.expect(&TokenKind::Fn)?;
         let name = self.expect_identifier()?;
         let params = self.parse_parameter_list()?;
         let return_type = self.parse_optional_return_type()?;
@@ -263,31 +291,34 @@ impl Parser {
     }
 
     fn parse_let_stmt(&mut self) -> ParseResult<Stmt> {
-        self.expect(&Token::Let)?;
+        self.expect(&TokenKind::Let)?;
         let name = self.expect_identifier()?;
 
-        let var_type = if self.peek() == Some(&Token::Colon) {
+        let var_type = if self
+            .peek()
+            .map_or(false, |tok| token_matches!(tok, TokenKind::Colon))
+        {
             Some(self.parse_optional_custom_type()?)
         } else {
             None
         };
 
-        self.expect(&Token::Assign)?;
+        self.expect(&TokenKind::Assign)?;
         let value = self.parse_let_expr()?;
-        self.expect(&Token::Semicolon)?;
+        self.expect(&TokenKind::Semicolon)?;
 
         Ok(Stmt::Let {
             name,
-            custom_type: var_type,
+            declared_type: var_type,
             value,
         })
     }
 
     fn parse_if_stmt(&mut self) -> ParseResult<Stmt> {
-        self.expect(&Token::If)?;
+        self.expect(&TokenKind::If)?;
         let cond = self.parse_if_expr()?;
         let then_branch = self.parse_stmt_or_block()?;
-        let else_branch = if self.consume_if(&Token::Else) {
+        let else_branch = if self.consume_if(&TokenKind::Else) {
             Some(self.parse_stmt_or_block()?)
         } else {
             None
@@ -301,7 +332,7 @@ impl Parser {
     }
 
     fn parse_while_stmt(&mut self) -> ParseResult<Stmt> {
-        self.expect(&Token::While)?;
+        self.expect(&TokenKind::While)?;
         let cond = self.parse_while_expr()?;
         let body = self.parse_stmt_or_block()?;
 
@@ -309,10 +340,10 @@ impl Parser {
     }
 
     fn parse_for_stmt(&mut self) -> ParseResult<Stmt> {
-        self.expect(&Token::For)?;
+        self.expect(&TokenKind::For)?;
         let init = Box::new(self.parse_stmt()?);
         let cond = self.parse_while_expr()?;
-        self.expect(&Token::Semicolon)?;
+        self.expect(&TokenKind::Semicolon)?;
         let update = self.parse_stmt_expr()?;
         let body = self.parse_stmt_or_block()?;
 
@@ -325,43 +356,52 @@ impl Parser {
     }
 
     fn parse_return_stmt(&mut self) -> ParseResult<Stmt> {
-        self.expect(&Token::Return)?;
-        let expr = if self.peek() != Some(&Token::Semicolon) {
+        self.expect(&TokenKind::Return)?;
+        let expr = if !self
+            .peek()
+            .map_or(false, |tok| token_matches!(tok, TokenKind::Semicolon))
+        {
             Some(self.parse_stmt_expr()?)
         } else {
             None
         };
-        self.expect(&Token::Semicolon)?;
+        self.expect(&TokenKind::Semicolon)?;
 
         Ok(Stmt::Return(expr))
     }
 
     fn parse_continue_stmt(&mut self) -> ParseResult<Stmt> {
-        self.expect(&Token::Continue)?;
-        self.expect(&Token::Semicolon)?;
+        self.expect(&TokenKind::Continue)?;
+        self.expect(&TokenKind::Semicolon)?;
         Ok(Stmt::Continue)
     }
 
     fn parse_expr_stmt(&mut self) -> ParseResult<Stmt> {
         let expr = self.parse_stmt_expr()?;
-        self.expect(&Token::Semicolon)?;
+        self.expect(&TokenKind::Semicolon)?;
         Ok(Stmt::Expr(expr))
     }
 
     fn parse_block(&mut self) -> ParseResult<Vec<Stmt>> {
-        self.expect(&Token::LeftBrace)?;
+        self.expect(&TokenKind::LeftBrace)?;
         let mut stmts = Vec::new();
 
-        while self.peek() != Some(&Token::RightBrace) {
+        while !self
+            .peek()
+            .map_or(false, |tok| token_matches!(tok, TokenKind::RightBrace))
+        {
             stmts.push(self.parse_stmt()?);
         }
 
-        self.expect(&Token::RightBrace)?;
+        self.expect(&TokenKind::RightBrace)?;
         Ok(stmts)
     }
 
     fn parse_stmt_or_block(&mut self) -> ParseResult<Vec<Stmt>> {
-        if self.peek() == Some(&Token::LeftBrace) {
+        if self
+            .peek()
+            .map_or(false, |tok| token_matches!(tok, TokenKind::LeftBrace))
+        {
             self.parse_block()
         } else {
             Ok(vec![self.parse_stmt()?])
@@ -369,41 +409,48 @@ impl Parser {
     }
 
     fn parse_parameter_list(&mut self) -> ParseResult<Vec<(Ident, Types)>> {
-        self.expect(&Token::LeftParen)?;
+        self.expect(&TokenKind::LeftParen)?;
         let params = self.parse_comma_separated(
             |parser| {
                 let name = parser.expect_identifier()?;
-                parser.expect(&Token::Colon)?;
+                parser.expect(&TokenKind::Colon)?;
                 let param_type = parser.expect_type()?;
                 Ok((name, param_type))
             },
-            &Token::RightParen,
+            &TokenKind::RightParen,
         )?;
-        self.expect(&Token::RightParen)?;
+        self.expect(&TokenKind::RightParen)?;
         Ok(params)
     }
 
     fn parse_field_list(&mut self) -> ParseResult<IndexMap<Ident, Types>> {
-        self.expect(&Token::LeftBrace)?;
+        self.expect(&TokenKind::LeftBrace)?;
         let mut fields = IndexMap::new();
 
-        while self.peek() != Some(&Token::RightBrace) {
+        while !self
+            .peek()
+            .map_or(false, |tok| token_matches!(tok, TokenKind::RightBrace))
+        {
             let field_name = self.expect_identifier()?;
-            self.expect(&Token::Colon)?;
+            self.expect(&TokenKind::Colon)?;
             let field_type = self.expect_type()?;
             fields.insert(field_name, field_type);
 
-            if !self.consume_if(&Token::Comma) && self.peek() != Some(&Token::RightBrace) {
+            if !self.consume_if(&TokenKind::Comma)
+                && !self
+                    .peek()
+                    .map_or(false, |tok| token_matches!(tok, TokenKind::RightBrace))
+            {
                 break;
             }
         }
 
-        self.expect(&Token::RightBrace)?;
+        self.expect(&TokenKind::RightBrace)?;
         Ok(fields)
     }
 
     fn parse_optional_return_type(&mut self) -> ParseResult<Types> {
-        if self.consume_if(&Token::Colon) {
+        if self.consume_if(&TokenKind::Colon) {
             self.expect_type()
         } else {
             Ok(Types::Void)
@@ -413,17 +460,17 @@ impl Parser {
     fn parse_comma_separated<T, F>(
         &mut self,
         mut parse_item: F,
-        terminator: &Token,
+        terminator: &TokenKind,
     ) -> ParseResult<Vec<T>>
     where
         F: FnMut(&mut Self) -> ParseResult<T>,
     {
         let mut items = Vec::new();
 
-        while self.peek() != Some(terminator) {
+        while !self.peek().map_or(false, |tok| tok.kind() == terminator) {
             items.push(parse_item(self)?);
 
-            if !self.consume_if(&Token::Comma) {
+            if !self.consume_if(&TokenKind::Comma) {
                 break;
             }
         }
@@ -489,7 +536,10 @@ impl Parser {
     }
 
     fn parse_unary_with_flags(&mut self, allow_struct_literals: bool) -> ParseResult<Expr> {
-        if matches!(self.peek(), Some(Token::Minus)) {
+        if self
+            .peek()
+            .map_or(false, |tok| token_matches!(tok, TokenKind::Minus))
+        {
             self.next();
             let expr = self.parse_unary_with_flags(allow_struct_literals)?;
             Ok(Expr::Unary {
@@ -507,31 +557,42 @@ impl Parser {
 
         let token = self.next();
         match token {
-            Some(Token::Number(n)) => Ok(Expr::Number(n)),
-            Some(Token::Float(f)) => Ok(Expr::Float(f)),
-            Some(Token::String(s)) => Ok(Expr::String(s)),
-            Some(Token::True) => Ok(Expr::Boolean(true)),
-            Some(Token::False) => Ok(Expr::Boolean(false)),
-            Some(Token::Ident(name)) => {
-                if allow_struct_literals {
-                    self.parse_postfix_expr_with_struct(name)
-                } else {
-                    self.parse_postfix_expr(name)
+            Some(tok) => match tok.kind() {
+                TokenKind::Number(n) => Ok(Expr::Number(*n)),
+                TokenKind::Float(f) => Ok(Expr::Float(*f)),
+                TokenKind::String(s) => Ok(Expr::String(s.clone())),
+                TokenKind::True => Ok(Expr::Boolean(true)),
+                TokenKind::False => Ok(Expr::Boolean(false)),
+                TokenKind::Ident(name) => {
+                    if allow_struct_literals {
+                        self.parse_postfix_expr_with_struct(name.clone())
+                    } else {
+                        self.parse_postfix_expr(name.clone())
+                    }
                 }
-            }
-            Some(Token::LeftParen) => {
-                let expr = if allow_struct_literals {
-                    self.parse_assignment()?
-                } else {
-                    self.parse_binary_with_flags(0, false)?
-                };
-                self.expect(&Token::RightParen)?;
-                Ok(expr)
-            }
-            other => {
+                TokenKind::LeftParen => {
+                    let expr = if allow_struct_literals {
+                        self.parse_assignment()?
+                    } else {
+                        self.parse_binary_with_flags(0, false)?
+                    };
+                    self.expect(&TokenKind::RightParen)?;
+                    Ok(expr)
+                }
+                _ => {
+                    let span = start_pos..self.char_pos;
+                    Err(ParseError::unexpected_token(
+                        Some(tok),
+                        "expression",
+                        span,
+                        source_id,
+                    ))
+                }
+            },
+            None => {
                 let span = start_pos..self.char_pos;
                 Err(ParseError::unexpected_token(
-                    other,
+                    None,
                     "expression",
                     span,
                     source_id,
@@ -564,7 +625,14 @@ impl Parser {
 
     fn peek_assignment_op(&self) -> Option<&Token> {
         match self.peek() {
-            Some(token @ (Token::Assign | Token::PlusEqual | Token::MinusEqual)) => Some(token),
+            Some(token)
+                if token_matches!(
+                    token,
+                    TokenKind::Assign | TokenKind::PlusEqual | TokenKind::MinusEqual
+                ) =>
+            {
+                Some(token)
+            }
             _ => None,
         }
     }
@@ -575,52 +643,63 @@ impl Parser {
 
     fn parse_postfix_expr(&mut self, name: Ident) -> ParseResult<Expr> {
         match self.peek() {
-            Some(Token::LeftParen) => self.parse_function_call(name),
+            Some(tok) if token_matches!(tok, TokenKind::LeftParen) => {
+                self.parse_function_call(name)
+            }
             _ => Ok(Expr::Ident(name)),
         }
     }
 
     fn parse_postfix_expr_with_struct(&mut self, name: Ident) -> ParseResult<Expr> {
         match self.peek() {
-            Some(Token::LeftParen) => self.parse_function_call(name),
-            Some(Token::LeftBrace) => self.parse_struct_literal(name),
+            Some(tok) if token_matches!(tok, TokenKind::LeftParen) => {
+                self.parse_function_call(name)
+            }
+            Some(tok) if token_matches!(tok, TokenKind::LeftBrace) => {
+                self.parse_struct_literal(name)
+            }
             _ => Ok(Expr::Ident(name)),
         }
     }
 
-    fn parse_struct_literal(&mut self, struct_name: Ident) -> ParseResult<Expr> {
-        self.expect(&Token::LeftBrace)?;
+    fn parse_struct_literal(&mut self, name: Ident) -> ParseResult<Expr> {
+        self.expect(&TokenKind::LeftBrace)?;
         let mut fields = IndexMap::new();
 
-        while self.peek() != Some(&Token::RightBrace) {
+        while !self
+            .peek()
+            .map_or(false, |tok| token_matches!(tok, TokenKind::RightBrace))
+        {
             let field_name = self.expect_identifier()?;
-            self.expect(&Token::Colon)?;
+            self.expect(&TokenKind::Colon)?;
             let field_value = self.parse_assignment()?;
             fields.insert(field_name, field_value);
-            if !self.consume_if(&Token::Comma) && self.peek() != Some(&Token::RightBrace) {
+
+            if !self.consume_if(&TokenKind::Comma)
+                && !self
+                    .peek()
+                    .map_or(false, |tok| token_matches!(tok, TokenKind::RightBrace))
+            {
                 break;
             }
         }
 
-        self.expect(&Token::RightBrace)?;
-        Ok(Expr::StructInit {
-            name: struct_name,
-            fields,
-        })
+        self.expect(&TokenKind::RightBrace)?;
+        Ok(Expr::StructInit { name, fields })
     }
 
     fn parse_optional_custom_type(&mut self) -> ParseResult<Types> {
-        self.expect(&Token::Colon)?;
+        self.expect(&TokenKind::Colon)?;
 
         let type_name = self.expect_identifier()?;
         Ok(Types::from_str(&type_name))
     }
 
     fn parse_function_call(&mut self, func_name: Ident) -> ParseResult<Expr> {
-        self.expect(&Token::LeftParen)?;
+        self.expect(&TokenKind::LeftParen)?;
         let args =
-            self.parse_comma_separated(|parser| parser.parse_assignment(), &Token::RightParen)?;
-        self.expect(&Token::RightParen)?;
+            self.parse_comma_separated(|parser| parser.parse_assignment(), &TokenKind::RightParen)?;
+        self.expect(&TokenKind::RightParen)?;
 
         Ok(Expr::Call {
             func: func_name,

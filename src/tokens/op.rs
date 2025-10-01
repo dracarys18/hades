@@ -1,4 +1,4 @@
-use super::Token;
+use super::{Token, TokenKind};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Assoc {
@@ -58,24 +58,24 @@ impl Op {
     }
 
     pub fn from_token(token: &Token) -> Option<Self> {
-        match token {
-            Token::Assign => Some(Op::Assign),
-            Token::Plus => Some(Op::Plus),
-            Token::Minus => Some(Op::Minus),
-            Token::Multiply => Some(Op::Multiply),
-            Token::Divide => Some(Op::Divide),
-            Token::PlusEqual => Some(Op::PlusEqual),
-            Token::MinusEqual => Some(Op::MinusEqual),
-            Token::EqualEqual => Some(Op::EqualEqual),
-            Token::BangEqual => Some(Op::BangEqual),
-            Token::Greater => Some(Op::Greater),
-            Token::GreaterEqual => Some(Op::GreaterEqual),
-            Token::Less => Some(Op::Less),
-            Token::LessEqual => Some(Op::LessEqual),
-            Token::And => Some(Op::And),
-            Token::Or => Some(Op::Or),
-            Token::BoleanAnd => Some(Op::BoleanAnd),
-            Token::BooleanOr => Some(Op::BooleanOr),
+        match token.kind() {
+            TokenKind::Assign => Some(Op::Assign),
+            TokenKind::Plus => Some(Op::Plus),
+            TokenKind::Minus => Some(Op::Minus),
+            TokenKind::Multiply => Some(Op::Multiply),
+            TokenKind::Divide => Some(Op::Divide),
+            TokenKind::PlusEqual => Some(Op::PlusEqual),
+            TokenKind::MinusEqual => Some(Op::MinusEqual),
+            TokenKind::EqualEqual => Some(Op::EqualEqual),
+            TokenKind::BangEqual => Some(Op::BangEqual),
+            TokenKind::Greater => Some(Op::Greater),
+            TokenKind::GreaterEqual => Some(Op::GreaterEqual),
+            TokenKind::Less => Some(Op::Less),
+            TokenKind::LessEqual => Some(Op::LessEqual),
+            TokenKind::And => Some(Op::And),
+            TokenKind::Or => Some(Op::Or),
+            TokenKind::BoleanAnd => Some(Op::BoleanAnd),
+            TokenKind::BooleanOr => Some(Op::BooleanOr),
             _ => None,
         }
     }

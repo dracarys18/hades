@@ -1,33 +1,15 @@
+mod span;
+
+pub use span::*;
+
 use ariadne::{Label, Report, ReportKind, Source};
 use std::ops::Range;
-
-#[derive(Debug, Clone)]
-pub struct Span {
-    line: usize,
-    column: usize,
-    source_id: String,
-    range: Range<usize>,
-}
-
-impl Span {
-    pub fn new(line: usize, column: usize, source_id: String, range: Range<usize>) -> Self {
-        Self {
-            line,
-            column,
-            source_id,
-            range,
-        }
-    }
-
-    pub fn range(&self) -> &Range<usize> {
-        &self.range
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct Error {
     pub message: String,
     pub span: Span,
+    pub context: String,
     pub severity: ErrorSeverity,
     pub help: Option<String>,
     pub note: Option<String>,
@@ -40,10 +22,11 @@ pub enum ErrorSeverity {
 }
 
 impl Error {
-    pub fn new_with_span(message: String, span: Range<usize>, source_id: String) -> Self {
+    pub fn new_with_span(message: String, span: Range<usize>, context: String) -> Self {
         Self {
             message,
-            span: Span::new(0, 0, source_id, span),
+            span: Span::new(span.start, span.end),
+            context,
             severity: ErrorSeverity::Error,
             help: None,
             note: None,
@@ -70,14 +53,14 @@ impl Error {
         self
     }
 
-    pub fn with_source_id(mut self, source_id: String) -> Self {
-        self.span.source_id = source_id;
+    pub fn with_context(mut self, context: String) -> Self {
+        self.context = context;
         self
     }
 
     pub fn eprint(&self, source: &str) {
         let report = self.to_report();
-        let cache = (self.span.source_id.as_str(), Source::from(source));
+        let cache = (self.context.as_str(), Source::from(source));
         report.eprint(cache).expect("Failed to print error report");
     }
 
@@ -88,10 +71,11 @@ impl Error {
         };
 
         let span = &self.span;
-        let mut report = Report::build(report_kind, span.source_id.as_str(), span.range.start)
+        let span_range = span.into_range();
+        let mut report = Report::build(report_kind, self.context.as_str(), span_range.start)
             .with_message(&self.message)
             .with_label(
-                Label::new((span.source_id.as_str(), span.range.clone()))
+                Label::new((self.context.as_str(), span_range.clone()))
                     .with_message(&self.message)
                     .with_color(match self.severity {
                         ErrorSeverity::Error => ariadne::Color::Red,
@@ -113,11 +97,7 @@ impl Error {
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "ParseError at {}:{}: {}",
-            self.span.line, self.span.column, self.message
-        )
+        write!(f, "ParseError at {:?}: {}", self.span, self.message)
     }
 }
 

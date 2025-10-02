@@ -1,5 +1,5 @@
 use super::stmt::Stmt;
-use crate::codegen::CodeGen;
+use crate::{codegen::CodeGen, consts::BUILD_PATH};
 use inkwell::context::Context;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -38,15 +38,23 @@ impl Program {
     pub fn compile_to_llvm(self, output_path: impl AsRef<std::path::Path>) {
         let context = Context::create();
         let mut codegen = CodeGen::new(&context, "main_module");
-        match codegen.compile(self) {
-            Ok(_) => {
-                println!("Code generation successful!");
-                match codegen.write_ir_to_file(output_path) {
-                    Ok(_) => println!("LLVM IR written to output.ll"),
-                    Err(e) => eprintln!("Failed to write LLVM IR to file: {e}"),
-                }
-            }
-            Err(e) => eprintln!("Code generation failed: {e}"),
-        }
+
+        let temp_llvm_path = format!("{BUILD_PATH}/temp.ll");
+
+        codegen
+            .compile(self)
+            .map_err(|err| {
+                eprintln!("Error during code generation: {err}");
+                err
+            })
+            .expect("Code generation failed");
+
+        codegen
+            .write_ir_to_file(temp_llvm_path)
+            .map_err(|err| {
+                eprintln!("Error writing LLVM IR to file: {err}");
+                err
+            })
+            .expect("Failed to write LLVM IR to file");
     }
 }

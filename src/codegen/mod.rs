@@ -3,6 +3,7 @@ use inkwell::context::Context;
 use inkwell::module::Module;
 use inkwell::types::{BasicMetadataTypeEnum, BasicTypeEnum};
 use inkwell::values::{BasicValueEnum, FunctionValue, PointerValue};
+use inkwell::{AddressSpace, execution_engine};
 use std::collections::HashMap;
 
 use crate::ast::{Expr, Program, Stmt, Types};
@@ -37,8 +38,8 @@ impl<'ctx> CodeGen<'ctx> {
     }
 
     fn declare_printf(&self) {
-        let i8_ptr_type = self.context.i8_type();
-        let printf_type = self.context.i32_type().fn_type(&[i8_ptr_type.into()], true);
+        let ptr_type = self.context.ptr_type(AddressSpace::default());
+        let printf_type = self.context.i32_type().fn_type(&[ptr_type.into()], true);
         self.module.add_function("printf", printf_type, None);
     }
 
@@ -203,7 +204,7 @@ impl<'ctx> CodeGen<'ctx> {
             Types::Int => self.context.i64_type().into(),
             Types::Float => self.context.f64_type().into(),
             Types::Bool => self.context.bool_type().into(),
-            Types::String => self.context.i8_type().into(),
+            Types::String => self.context.ptr_type(AddressSpace::default()).into(),
             _ => unreachable!("These are not implemented yet"),
         }
     }

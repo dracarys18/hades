@@ -8,12 +8,10 @@ mod parser;
 mod semantic;
 mod tokens;
 
-use parser::Parser;
-
 fn main() {
     let source = r#"
         fn main(): int {
-            print("What the hell");
+            print("Hello, world!");
             print(42);
             print(3.14);
             return 0;

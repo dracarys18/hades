@@ -24,7 +24,9 @@ impl<'a> Analyzer<'a> {
                 ast::Stmt::Return { expr: value, .. } => {
                     println!("Return statement: {:?}", value);
                 }
-                ast::Stmt::Expr { expr: expression, .. } => {
+                ast::Stmt::Expr {
+                    expr: expression, ..
+                } => {
                     println!("Expression statement: {:?}", expression);
                 }
                 _ => {

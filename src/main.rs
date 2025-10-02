@@ -1,13 +1,13 @@
 mod ast;
 mod codegen;
+mod compiler;
+mod consts;
 mod error;
 mod lexer;
 mod parser;
 mod semantic;
 mod tokens;
 
-use codegen::CodeGen;
-use inkwell::context::Context;
 use parser::Parser;
 
 fn main() {
@@ -37,51 +37,8 @@ fn main() {
 }
 
 fn parse_and_report(source: &str, filename: &str) {
-    let source_trimmed = source.trim();
+    let compiler = compiler::Compiler::new(source, filename);
+    compiler.prepare();
 
-    let mut lexer = lexer::Lexer::new(source_trimmed, filename.to_string());
-    match lexer.tokenize() {
-        Ok(_) => {
-            let mut parser = Parser::new(lexer.get_tokens().clone(), filename.to_string());
-
-            match parser.parse() {
-                Ok(program) => {
-                    println!("{program:#?}");
-
-                    // Generate LLVM IR
-                    let context = Context::create();
-                    let mut codegen = CodeGen::new(&context, "main_module");
-
-                    match codegen.compile(program) {
-                        Ok(_) => {
-                            println!("Code generation successful!");
-
-                            // Write IR to file
-                            match codegen.write_ir_to_file("output.ll") {
-                                Ok(_) => println!("LLVM IR written to: output.ll"),
-                                Err(e) => {
-                                    println!("Warning: Failed to write IR to file: {}", e)
-                                }
-                            }
-
-                            println!("\n=== LLVM IR Output ===");
-                            codegen.print_ir();
-                        }
-                        Err(e) => {
-                            println!("Code generation failed: {}", e);
-                        }
-                    }
-                }
-                Err(errors) => {
-                    println!("Parsing failed:");
-                    for e in errors.into_errors() {
-                        e.eprint(source_trimmed);
-                    }
-                }
-            }
-        }
-        Err(lex_error) => {
-            println!("Lexing failed: {lex_error}");
-        }
-    }
+    compiler.compile();
 }

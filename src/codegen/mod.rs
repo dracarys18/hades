@@ -208,11 +208,7 @@ impl<'ctx> CodeGen<'ctx> {
         }
     }
 
-    pub fn print_ir(&self) {
-        self.module.print_to_stderr();
-    }
-
-    pub fn write_ir_to_file(&self, path: &str) -> Result<(), String> {
+    pub fn write_ir_to_file(&self, path: impl AsRef<std::path::Path>) -> Result<(), String> {
         self.module
             .print_to_file(path)
             .map_err(|e| format!("Failed to write IR to file: {e}"))

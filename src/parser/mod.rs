@@ -46,7 +46,7 @@ impl Parser {
         }
 
         if errors.is_empty() {
-            Ok(stmts)
+            Ok(Program::new(stmts))
         } else {
             Err(error::FinalParseError::new(errors))
         }
@@ -298,7 +298,7 @@ impl Parser {
             name,
             params,
             return_type,
-            body,
+            body: Program::new(body),
             span: Span::new(start, end),
         })
     }
@@ -344,8 +344,8 @@ impl Parser {
 
         Ok(Stmt::If {
             cond,
-            then_branch,
-            else_branch,
+            then_branch: Program::new(then_branch),
+            else_branch: else_branch.map(Program::new),
             span: Span::new(start, end),
         })
     }
@@ -359,7 +359,7 @@ impl Parser {
 
         Ok(Stmt::While {
             cond,
-            body,
+            body: Program::new(body),
             span: Span::new(start, end),
         })
     }
@@ -378,7 +378,7 @@ impl Parser {
             init,
             cond,
             update,
-            body,
+            body: Program::new(body),
             span: Span::new(start, end),
         })
     }

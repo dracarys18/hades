@@ -1,6 +1,10 @@
 use super::stmt::Stmt;
 use crate::{codegen::CodeGen, consts::BUILD_PATH};
+use inkwell::OptimizationLevel;
 use inkwell::context::Context;
+use inkwell::targets::{
+    CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program(Vec<Stmt>);
@@ -35,7 +39,7 @@ impl IntoIterator for Program {
 }
 
 impl Program {
-    pub fn compile_to_llvm(self, output_path: impl AsRef<std::path::Path>) {
+    pub fn compile_program(self, output_path: impl AsRef<std::path::Path>) {
         let context = Context::create();
         let mut codegen = CodeGen::new(&context, "main_module");
 
@@ -56,5 +60,15 @@ impl Program {
                 err
             })
             .expect("Failed to write LLVM IR to file");
+
+        codegen
+            .write_exec(output_path)
+            .map_err(|err| {
+                eprintln!("Error writing executable: {err}");
+                err
+            })
+            .expect("Failed to write executable");
+
+        codegen.cleanup();
     }
 }

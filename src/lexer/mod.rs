@@ -2,7 +2,7 @@ mod error;
 
 use crate::error::Span;
 use crate::tok;
-use crate::tokens::{Assoc, Ident, OpInfo, Token, TokenKind};
+use crate::tokens::{Ident, Token, TokenKind};
 pub use error::{LexError, LexResult};
 
 use phf::phf_map;
@@ -370,53 +370,11 @@ impl<'a> Lexer<'a> {
         Ok(())
     }
 
-    fn make_snippet(&self, line: usize, column: usize) -> String {
-        let lines: Vec<&str> = self.input.lines().collect();
-        if let Some(src_line) = lines.get(line - 1) {
-            let mut s = src_line.to_string();
-            s.push('\n');
-            s.push_str(&" ".repeat(column.saturating_sub(1)));
-            s.push('^');
-            s
-        } else {
-            "".to_string()
-        }
-    }
-
-    pub fn get_precedence(token: &Token) -> Option<OpInfo> {
-        match token.kind() {
-            TokenKind::Multiply | TokenKind::Divide => Some(OpInfo {
-                prec: 5,
-                assoc: Assoc::Left,
-            }),
-            TokenKind::Plus | TokenKind::Minus => Some(OpInfo {
-                prec: 4,
-                assoc: Assoc::Left,
-            }),
-            TokenKind::Greater
-            | TokenKind::Less
-            | TokenKind::GreaterEqual
-            | TokenKind::LessEqual => Some(OpInfo {
-                prec: 3,
-                assoc: Assoc::Left,
-            }),
-            TokenKind::EqualEqual | TokenKind::BangEqual => Some(OpInfo {
-                prec: 2,
-                assoc: Assoc::Left,
-            }),
-            TokenKind::And => Some(OpInfo {
-                prec: 1,
-                assoc: Assoc::Left,
-            }),
-            TokenKind::Or => Some(OpInfo {
-                prec: 0,
-                assoc: Assoc::Left,
-            }),
-            _ => None,
-        }
-    }
-
     pub fn get_tokens(&self) -> &Vec<Token> {
         &self.tokens
+    }
+
+    pub fn into_tokens(self) -> Vec<Token> {
+        self.tokens
     }
 }

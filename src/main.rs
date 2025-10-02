@@ -38,5 +38,6 @@ fn parse_and_report(source: &str, filename: &str) {
     let compiler = compiler::Compiler::new(source, filename);
     compiler.prepare();
 
-    compiler.compile();
+    let path = format!("{}/output", consts::BUILD_PATH);
+    compiler.compile(path);
 }

@@ -14,31 +14,29 @@ impl<'a> Compiler<'a> {
         std::fs::create_dir_all(consts::BUILD_PATH).expect("Failed to create build directory");
     }
 
-    pub fn compile(&self) {
+    pub fn compile(&self, path: impl AsRef<std::path::Path>) {
         let source_trimmed = self.source.trim();
-        let mut lexer = lexer::Lexer::new(source_trimmed, self.filename.to_string());
-        match lexer.tokenize() {
-            Ok(_) => {
-                let mut parser =
-                    parser::Parser::new(lexer.get_tokens().clone(), self.filename.to_string());
 
-                match parser.parse() {
-                    Ok(program) => {
-                        println!("{program:#?}");
-                        let output_path = format!("{}/output.ll", consts::BUILD_PATH);
-                        program.compile_to_llvm(output_path);
-                    }
-                    Err(errors) => {
-                        println!("Parsing failed:");
-                        for e in errors.into_errors() {
-                            e.eprint(source_trimmed);
-                        }
-                    }
+        // Lex the chars into tokens
+        let mut lexer = lexer::Lexer::new(source_trimmed, self.filename.to_string());
+        lexer
+            .tokenize()
+            .map_err(|err| eprintln!("{err}"))
+            .expect("Tokenizing failed");
+
+        // Parse the tokens into an AST
+        let mut parser = parser::Parser::new(lexer.into_tokens(), self.filename.to_string());
+        let program = match parser.parse() {
+            Ok(prog) => prog,
+            Err(err) => {
+                let err = err.into_errors();
+                for e in err {
+                    e.eprint(source_trimmed);
                 }
+                return;
             }
-            Err(lex_error) => {
-                println!("Lexing failed: {lex_error}");
-            }
-        }
+        };
+
+        program.compile_program(path);
     }
 }

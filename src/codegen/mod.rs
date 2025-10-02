@@ -1,10 +1,17 @@
+use inkwell::AddressSpace;
+use inkwell::OptimizationLevel;
 use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::module::Module;
+use inkwell::targets::{
+    CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine,
+};
 use inkwell::types::{BasicMetadataTypeEnum, BasicTypeEnum};
 use inkwell::values::{BasicValueEnum, FunctionValue, PointerValue};
-use inkwell::{AddressSpace, execution_engine};
 use std::collections::HashMap;
+use std::process::Command;
+
+use crate::consts::BUILD_PATH;
 
 use crate::ast::{Expr, Program, Stmt, Types};
 use crate::tokens::Ident;
@@ -213,5 +220,45 @@ impl<'ctx> CodeGen<'ctx> {
         self.module
             .print_to_file(path)
             .map_err(|e| format!("Failed to write IR to file: {e}"))
+    }
+
+    pub fn write_exec(&self, path: impl AsRef<std::path::Path>) -> Result<(), String> {
+        Target::initialize_all(&InitializationConfig::default());
+
+        let target_triple = TargetMachine::get_default_triple();
+        let target = Target::from_triple(&target_triple)
+            .map_err(|e| format!("Failed to get target from triple: {e}"))?;
+        let obj_path = format!("{BUILD_PATH}/temp.o");
+        let object_path = std::path::Path::new(obj_path.as_str());
+
+        let target_machine_options = inkwell::targets::TargetMachineOptions::default()
+            .set_level(OptimizationLevel::Aggressive)
+            .set_code_model(CodeModel::Default)
+            .set_reloc_mode(RelocMode::Default);
+
+        let tm = target
+            .create_target_machine_from_options(&target_triple, target_machine_options)
+            .ok_or("Failed to create TargetMachine")?;
+
+        tm.write_to_file(&self.module, FileType::Object, object_path)
+            .expect("Failed to write object file");
+
+        let status = Command::new("clang")
+            .arg(obj_path)
+            .arg("-o")
+            .arg(path.as_ref())
+            .status()
+            .map_err(|e| format!("Failed to invoke clang: {e}"))?;
+
+        if !status.success() {
+            return Err(format!("Clang failed with exit code: {status:?}"));
+        }
+
+        Ok(())
+    }
+
+    pub fn cleanup(&self) {
+        let _ = std::fs::remove_file(format!("{BUILD_PATH}/temp.ll"));
+        let _ = std::fs::remove_file(format!("{BUILD_PATH}/temp.o"));
     }
 }

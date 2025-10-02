@@ -43,8 +43,6 @@ impl Program {
         let context = Context::create();
         let mut codegen = CodeGen::new(&context, "main_module");
 
-        let temp_llvm_path = format!("{BUILD_PATH}/temp.ll");
-
         codegen
             .compile(self)
             .map_err(|err| {
@@ -52,14 +50,6 @@ impl Program {
                 err
             })
             .expect("Code generation failed");
-
-        codegen
-            .write_ir_to_file(temp_llvm_path)
-            .map_err(|err| {
-                eprintln!("Error writing LLVM IR to file: {err}");
-                err
-            })
-            .expect("Failed to write LLVM IR to file");
 
         codegen
             .write_exec(output_path)

@@ -1,5 +1,5 @@
 use crate::codegen::CodeGen;
-use crate::{consts, lexer, parser};
+use crate::{consts, lexer, parser, semantic};
 use inkwell::context::Context;
 
 pub struct Compiler<'a> {
@@ -41,6 +41,13 @@ impl<'a> Compiler<'a> {
                 return;
             }
         };
+        
+        // Perform semantic analysis (type checking)
+        let mut analyzer = semantic::Analyzer::new(&program);
+        if let Err(err) = analyzer.analyze() {
+            eprintln!("Type checking error: {}", err);
+            return;
+        }
 
         codegen
             .compile(program)

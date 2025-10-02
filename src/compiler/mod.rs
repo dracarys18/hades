@@ -1,4 +1,6 @@
+use crate::codegen::CodeGen;
 use crate::{consts, lexer, parser};
+use inkwell::context::Context;
 
 pub struct Compiler<'a> {
     source: &'a str,
@@ -15,6 +17,9 @@ impl<'a> Compiler<'a> {
     }
 
     pub fn compile(&self, path: impl AsRef<std::path::Path>) {
+        let context = Context::create();
+        let mut codegen = CodeGen::new(&context, "main_module");
+
         let source_trimmed = self.source.trim();
 
         // Lex the chars into tokens
@@ -37,6 +42,22 @@ impl<'a> Compiler<'a> {
             }
         };
 
-        program.compile_program(path);
+        codegen
+            .compile(program)
+            .map_err(|err| {
+                eprintln!("Error during code generation: {err}");
+                err
+            })
+            .expect("Code generation failed");
+
+        codegen
+            .write_exec(path)
+            .map_err(|err| {
+                eprintln!("Error writing executable: {err}");
+                err
+            })
+            .expect("Failed to write executable");
+
+        codegen.cleanup();
     }
 }

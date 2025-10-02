@@ -37,28 +37,3 @@ impl IntoIterator for Program {
         self.0.into_iter()
     }
 }
-
-impl Program {
-    pub fn compile_program(self, output_path: impl AsRef<std::path::Path>) {
-        let context = Context::create();
-        let mut codegen = CodeGen::new(&context, "main_module");
-
-        codegen
-            .compile(self)
-            .map_err(|err| {
-                eprintln!("Error during code generation: {err}");
-                err
-            })
-            .expect("Code generation failed");
-
-        codegen
-            .write_exec(output_path)
-            .map_err(|err| {
-                eprintln!("Error writing executable: {err}");
-                err
-            })
-            .expect("Failed to write executable");
-
-        codegen.cleanup();
-    }
-}

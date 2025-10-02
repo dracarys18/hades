@@ -1,42 +1,22 @@
 mod ast;
+mod codegen;
 mod error;
 mod lexer;
 mod parser;
 mod semantic;
 mod tokens;
 
+use codegen::CodeGen;
+use inkwell::context::Context;
 use parser::Parser;
 
 fn main() {
     let source = r#"
-        struct Point {
-            x: int,
-            y: int,
-            f: float,
-        }
-
-        fn add(a: int, b: int): int {
-            let c = a - b + b - c;
-            let x = "hello world";
-            let float = 20.12313123;
-            let f: int = 20;
-            let p = Point { x: 10, y: 20, f: 3.14 };
-            if x>=10 && x<10 || x==10 {
-                print(x);
-            } else {
-                print("x is less than 10");
-            }
-            b = foo(a, b);
-            b = 1;
-            while b {
-                f-=1;
-                f+=2;
-            }
-
-            for i = 0; i < 10; i = i + 1 {
-                print("Hello world", i);
-            }
-            return c;
+        fn main(): int {
+            print("What the hell");
+            print(42);
+            print(3.14);
+            return 0;
         }
     "#;
 
@@ -67,6 +47,30 @@ fn parse_and_report(source: &str, filename: &str) {
             match parser.parse() {
                 Ok(program) => {
                     println!("{program:#?}");
+
+                    // Generate LLVM IR
+                    let context = Context::create();
+                    let mut codegen = CodeGen::new(&context, "main_module");
+
+                    match codegen.compile(program) {
+                        Ok(_) => {
+                            println!("Code generation successful!");
+
+                            // Write IR to file
+                            match codegen.write_ir_to_file("output.ll") {
+                                Ok(_) => println!("LLVM IR written to: output.ll"),
+                                Err(e) => {
+                                    println!("Warning: Failed to write IR to file: {}", e)
+                                }
+                            }
+
+                            println!("\n=== LLVM IR Output ===");
+                            codegen.print_ir();
+                        }
+                        Err(e) => {
+                            println!("Code generation failed: {}", e);
+                        }
+                    }
                 }
                 Err(errors) => {
                     println!("Parsing failed:");

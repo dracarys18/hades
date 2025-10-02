@@ -21,10 +21,10 @@ impl<'a> Analyzer<'a> {
                 ast::Stmt::Let { name, value, .. } => {
                     self.check_let(stmt)?;
                 }
-                ast::Stmt::Return(value) => {
+                ast::Stmt::Return { expr: value, .. } => {
                     println!("Return statement: {:?}", value);
                 }
-                ast::Stmt::Expr(expression) => {
+                ast::Stmt::Expr { expr: expression, .. } => {
                     println!("Expression statement: {:?}", expression);
                 }
                 _ => {

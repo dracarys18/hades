@@ -1,4 +1,6 @@
-#[derive(PartialEq, Clone, Debug, Eq, Hash)]
+use std::fmt::Debug;
+
+#[derive(PartialEq, Clone, Hash, Eq)]
 pub struct Ident(pub String);
 
 impl Ident {
@@ -18,5 +20,11 @@ impl Ident {
 impl std::fmt::Display for Ident {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl Debug for Ident {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Ident({})", self.0)
     }
 }

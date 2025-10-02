@@ -1,12 +1,15 @@
 mod ident;
 mod op;
+mod macros;
+
+use std::fmt::Debug;
 
 pub use ident::*;
 pub use op::*;
 
 use crate::error::Span;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Token {
     kind: TokenKind,
     span: Span,
@@ -31,26 +34,6 @@ impl Token {
     pub fn matches(&self, kinds: &[TokenKind]) -> bool {
         kinds.contains(&self.kind)
     }
-}
-
-#[macro_export]
-macro_rules! tok {
-    // Case 1: Just a TokenKind, with start..end
-    ($kind:expr, $start:expr, $end:expr) => {
-        Token::new($kind, Span::new($start, $end))
-    };
-
-    // Case 2: TokenKind constructor with arguments, like Ident("foo")
-    ($kind:path, $arg:expr, $start:expr, $end:expr) => {
-        Token::new($kind($arg), Span::new($start, $end))
-    };
-}
-
-#[macro_export]
-macro_rules! token_matches {
-    ($token:expr, $($pattern:pat_param)|+) => {
-        matches!($token.kind(), $($pattern)|+)
-    };
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -107,9 +90,9 @@ pub enum TokenKind {
     Let,
 }
 
-impl std::fmt::Display for Token {
+impl std::fmt::Display for TokenKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self.kind {
+        match &self {
             TokenKind::LeftParen => write!(f, "("),
             TokenKind::RightParen => write!(f, ")"),
             TokenKind::LeftBrace => write!(f, "{{"),
@@ -157,5 +140,11 @@ impl std::fmt::Display for Token {
             TokenKind::Fn => write!(f, "fn"),
             TokenKind::Let => write!(f, "let"),
         }
+    }
+}
+
+impl Debug for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "\"{}\"", self.kind)
     }
 }

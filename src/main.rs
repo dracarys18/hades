@@ -3,6 +3,7 @@ mod codegen;
 mod compiler;
 mod consts;
 mod error;
+mod evaluator;
 mod lexer;
 mod parser;
 mod semantic;

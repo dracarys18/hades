@@ -1,10 +1,4 @@
 use super::stmt::Stmt;
-use crate::{codegen::CodeGen, consts::BUILD_PATH};
-use inkwell::OptimizationLevel;
-use inkwell::context::Context;
-use inkwell::targets::{
-    CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine,
-};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program(Vec<Stmt>);

@@ -1,13 +1,13 @@
 use rayon::prelude::*;
 
-use crate::ast::Program;
+use crate::typed_ast::TypedProgram;
 use std::sync::Arc;
 
 pub type EvaluatorFn<T> = dyn for<'a> Fn(&'a T) -> Result<(), String> + Send + Sync;
 
 #[derive(Clone)]
 pub struct GraphNode {
-    evaluators: Vec<Arc<EvaluatorFn<Program>>>,
+    evaluators: Vec<Arc<EvaluatorFn<TypedProgram>>>,
 }
 
 impl GraphNode {
@@ -19,13 +19,13 @@ impl GraphNode {
 
     pub fn eval<F>(mut self, evaluator: F) -> Self
     where
-        F: for<'a> Fn(&'a Program) -> Result<(), String> + Send + Sync + 'static,
+        F: for<'a> Fn(&'a TypedProgram) -> Result<(), String> + Send + Sync + 'static,
     {
         self.evaluators.push(Arc::new(evaluator));
         self
     }
 
-    pub fn execute(&self, program: &Program) -> Result<(), String> {
+    pub fn execute(&self, program: &TypedProgram) -> Result<(), String> {
         for evaluator in &self.evaluators {
             evaluator(program)?;
         }
@@ -61,7 +61,7 @@ impl EvaluationGraph {
         self
     }
 
-    pub fn execute(&mut self, program: &Program) -> Result<(), String> {
+    pub fn execute(&mut self, program: &TypedProgram) -> Result<(), String> {
         self.nodes
             .par_iter()
             .map(|node| node.execute(program))
@@ -73,7 +73,7 @@ impl EvaluationGraph {
 
 pub enum EvaluationStep {
     Node(GraphNode),
-    Function(Arc<EvaluatorFn<Program>>),
+    Function(Arc<EvaluatorFn<TypedProgram>>),
 }
 
 impl From<GraphNode> for EvaluationStep {
@@ -84,7 +84,7 @@ impl From<GraphNode> for EvaluationStep {
 
 impl<F> From<F> for EvaluationStep
 where
-    F: for<'a> Fn(&'a Program) -> Result<(), String> + Send + Sync + 'static,
+    F: for<'a> Fn(&'a TypedProgram) -> Result<(), String> + Send + Sync + 'static,
 {
     fn from(f: F) -> Self {
         EvaluationStep::Function(Arc::new(f))

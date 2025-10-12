@@ -19,6 +19,7 @@ pub enum Op {
     Minus,
     Multiply,
     Divide,
+    Mod,
     PlusEqual,
     MinusEqual,
     EqualEqual,
@@ -31,6 +32,23 @@ pub enum Op {
     Or,
     BoleanAnd,
     BooleanOr,
+    Not,
+    BitAnd,
+    BitOr,
+    BitXor,
+    BitNot,
+    Shl,
+    Shr,
+    Eq,
+    Ne,
+    Lt,
+    Le,
+    Gt,
+    Ge,
+    Add,
+    Sub,
+    Mul,
+    Div,
 }
 
 impl Op {
@@ -41,6 +59,7 @@ impl Op {
             "-" => Some(Op::Minus),
             "*" => Some(Op::Multiply),
             "/" => Some(Op::Divide),
+            "%" => Some(Op::Mod),
             "+=" => Some(Op::PlusEqual),
             "-=" => Some(Op::MinusEqual),
             "==" => Some(Op::EqualEqual),
@@ -53,6 +72,13 @@ impl Op {
             "or" => Some(Op::Or),
             "&&" => Some(Op::BoleanAnd),
             "||" => Some(Op::BooleanOr),
+            "!" => Some(Op::Not),
+            "&" => Some(Op::BitAnd),
+            "|" => Some(Op::BitOr),
+            "^" => Some(Op::BitXor),
+            "~" => Some(Op::BitNot),
+            "<<" => Some(Op::Shl),
+            ">>" => Some(Op::Shr),
             _ => None,
         }
     }
@@ -76,33 +102,41 @@ impl Op {
             TokenKind::Or => Some(Op::Or),
             TokenKind::BoleanAnd => Some(Op::BoleanAnd),
             TokenKind::BooleanOr => Some(Op::BooleanOr),
+            TokenKind::Bang => Some(Op::Not),
             _ => None,
         }
     }
 
     pub fn get_precedence(&self) -> Option<OpInfo> {
         match self {
-            Op::Multiply | Op::Divide => Some(OpInfo {
+            Op::Multiply | Op::Divide | Op::Mod | Op::Mul | Op::Div => Some(OpInfo {
                 prec: 5,
                 assoc: Assoc::Left,
             }),
-            Op::Plus | Op::Minus => Some(OpInfo {
+            Op::Plus | Op::Minus | Op::Add | Op::Sub => Some(OpInfo {
                 prec: 4,
                 assoc: Assoc::Left,
             }),
-            Op::Greater | Op::Less | Op::GreaterEqual | Op::LessEqual => Some(OpInfo {
+            Op::Greater
+            | Op::Less
+            | Op::GreaterEqual
+            | Op::LessEqual
+            | Op::Gt
+            | Op::Lt
+            | Op::Ge
+            | Op::Le => Some(OpInfo {
                 prec: 3,
                 assoc: Assoc::Left,
             }),
-            Op::EqualEqual | Op::BangEqual => Some(OpInfo {
+            Op::EqualEqual | Op::BangEqual | Op::Eq | Op::Ne => Some(OpInfo {
                 prec: 2,
                 assoc: Assoc::Left,
             }),
-            Op::And => Some(OpInfo {
+            Op::And | Op::BoleanAnd | Op::BitAnd => Some(OpInfo {
                 prec: 1,
                 assoc: Assoc::Left,
             }),
-            Op::Or => Some(OpInfo {
+            Op::Or | Op::BooleanOr | Op::BitOr | Op::BitXor => Some(OpInfo {
                 prec: 0,
                 assoc: Assoc::Left,
             }),

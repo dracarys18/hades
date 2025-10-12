@@ -2,12 +2,6 @@ use indexmap::IndexMap;
 
 use crate::tokens::Ident;
 
-pub struct TypeId(pub u64);
-
-pub struct TypeTable {
-    inner: IndexMap<TypeId, Types>,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Types {
     Int,
@@ -20,6 +14,20 @@ pub enum Types {
         name: Ident,
         fields: IndexMap<Ident, Types>,
     },
+}
+
+impl std::fmt::Display for Types {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Types::Int => write!(f, "int"),
+            Types::Float => write!(f, "float"),
+            Types::Bool => write!(f, "bool"),
+            Types::String => write!(f, "string"),
+            Types::Void => write!(f, "void"),
+            Types::Custom(name) => write!(f, "{}", name),
+            Types::Struct { name, .. } => write!(f, "struct {}", name),
+        }
+    }
 }
 
 impl Types {

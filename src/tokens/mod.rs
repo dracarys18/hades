@@ -1,6 +1,5 @@
 mod ident;
 mod op;
-mod macros;
 
 use std::fmt::Debug;
 

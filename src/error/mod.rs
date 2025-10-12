@@ -1,5 +1,6 @@
 mod span;
 
+pub use crate::semantic::error::SemanticError;
 pub use span::*;
 
 use ariadne::{Label, Report, ReportKind, Source};

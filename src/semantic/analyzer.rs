@@ -1,71 +1,52 @@
-use crate::ast::{self, Types};
+use std::marker::PhantomData;
 
-pub struct Analyzer<'a> {
-    idents: ast::IdentMap,
-    ast: &'a ast::Program,
+use crate::{
+    ast::Program,
+    error::SemanticError,
+    evaluator::graph::EvaluationGraph,
+    typed_ast::{TypedAstMeta, TypedProgram},
+};
+
+pub struct Unprepared;
+pub struct Prepared;
+
+pub struct Analyzer<T> {
+    data: TypedAstMeta,
+    _m: PhantomData<T>,
 }
 
-impl<'a> Analyzer<'a> {
-    pub fn new(ast: &'a ast::Program) -> Self {
-        Self {
-            ast,
-            idents: ast::IdentMap::empty(),
+impl<T> Analyzer<T> {
+    pub fn new() -> Analyzer<Unprepared> {
+        Analyzer {
+            data: TypedAstMeta::new(),
+            _m: PhantomData,
         }
     }
 
-    pub fn analyze(&mut self) -> Result<(), String> {
-        let ast = self.ast;
-
-        for stmt in ast {
-            match stmt {
-                ast::Stmt::Let { name, value, .. } => {
-                    self.check_let(stmt)?;
-                }
-                ast::Stmt::Return { expr: value, .. } => {
-                    println!("Return statement: {:?}", value);
-                }
-                ast::Stmt::Expr {
-                    expr: expression, ..
-                } => {
-                    println!("Expression statement: {:?}", expression);
-                }
-                _ => {
-                    return Err(format!("Unknown statement: {:?}", stmt));
-                }
-            }
-        }
-        Ok(())
+    pub fn ast(&self) -> &TypedProgram {
+        self.data.ast()
     }
+}
 
-    pub fn check_let(&mut self, stmt: &ast::Stmt) -> Result<(), String> {
-        if let ast::Stmt::Let { name, value, .. } = stmt {
-            let typ = self.check_expr(value)?;
-            self.idents.insert(name.clone(), typ)?;
-
-            Ok(())
-        } else {
-            panic!("Not a let statement")
-        }
+impl Analyzer<Unprepared> {
+    pub fn prepare(self, program: &Program) -> Result<Analyzer<Prepared>, SemanticError> {
+        self.data.prepare(program).map(|data| Analyzer {
+            data,
+            _m: PhantomData,
+        })
     }
+}
 
-    pub fn check_expr(&mut self, expr: &ast::Expr) -> Result<Types, String> {
-        match expr {
-            ast::Expr::String(_) => Ok(Types::String),
-            ast::Expr::Number(_) => Ok(Types::Int),
-            ast::Expr::Boolean(_) => Ok(Types::Bool),
-            ast::Expr::Float(_) => Ok(Types::Float),
-            ast::Expr::StructInit { name, fields } => {
-                let mut field_types = indexmap::IndexMap::new();
-                for (field_name, field_expr) in fields {
-                    let field_type = self.check_expr(field_expr)?;
-                    field_types.insert(field_name.clone(), field_type);
-                }
-                Ok(Types::Struct {
-                    name: name.clone(),
-                    fields: field_types,
-                })
-            }
-            _ => Ok(Types::Void),
-        }
+impl Analyzer<Prepared> {
+    pub fn analyze(&self) -> Result<(), String> {
+        let mut evaluator = EvaluationGraph::new();
+
+        //TODO: Add more analysis steps here
+        evaluator
+            .eval(|program: &TypedProgram| {
+                println!("Analyzing program with {} statements", program.len());
+                Ok(())
+            })
+            .execute(self.data.ast())
     }
 }

@@ -1,4 +1,5 @@
 use crate::codegen::CodeGen;
+use crate::semantic::analyzer::{Analyzer, Unprepared};
 use crate::{consts, lexer, parser};
 use inkwell::context::Context;
 
@@ -16,20 +17,57 @@ impl<'a> Compiler<'a> {
         std::fs::create_dir_all(consts::BUILD_PATH).expect("Failed to create build directory");
     }
 
-    pub fn compile(&self, path: impl AsRef<std::path::Path>) {
-        let context = Context::create();
-        let mut codegen = CodeGen::new(&context, "main_module");
-
+    pub fn check(&self, path: impl AsRef<std::path::Path>) {
         let source_trimmed = self.source.trim();
 
-        // Lex the chars into tokens
         let mut lexer = lexer::Lexer::new(source_trimmed, self.filename.to_string());
         lexer
             .tokenize()
             .map_err(|err| eprintln!("{err}"))
             .expect("Tokenizing failed");
 
-        // Parse the tokens into an AST
+        let mut parser = parser::Parser::new(lexer.into_tokens(), self.filename.to_string());
+        let program = match parser.parse() {
+            Ok(prog) => prog,
+            Err(err) => {
+                let err = err.into_errors();
+                for e in err {
+                    e.eprint(source_trimmed);
+                }
+                return;
+            }
+        };
+
+        let analyzer = Analyzer::<Unprepared>::new();
+        let analyzer = analyzer
+            .prepare(&program)
+            .map_err(|err| {
+                eprintln!("Error during semantic analysis: {err}");
+                err
+            })
+            .expect("Semantic analysis preparation failed");
+
+        analyzer
+            .analyze()
+            .map_err(|err| {
+                eprintln!("Error during semantic analysis: {err}");
+                err
+            })
+            .expect("Semantic analysis failed");
+    }
+
+    pub fn compile(&self, path: impl AsRef<std::path::Path>) {
+        let context = Context::create();
+        let mut codegen = CodeGen::new(&context, "main_module");
+
+        let source_trimmed = self.source.trim();
+
+        let mut lexer = lexer::Lexer::new(source_trimmed, self.filename.to_string());
+        lexer
+            .tokenize()
+            .map_err(|err| eprintln!("{err}"))
+            .expect("Tokenizing failed");
+
         let mut parser = parser::Parser::new(lexer.into_tokens(), self.filename.to_string());
         let program = match parser.parse() {
             Ok(prog) => prog,

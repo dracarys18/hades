@@ -1,0 +1,245 @@
+use super::SemanticError;
+use crate::typed_ast::{
+    function::{FunctionSignature, Functions},
+    ident::IdentMap,
+};
+
+use crate::ast::Types;
+use crate::error::Span;
+use crate::tokens::{Ident, Op};
+use indexmap::IndexMap;
+use std::collections::HashMap;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeContext {
+    idents: IdentMap,
+    functions: Functions,
+    structs: HashMap<String, IndexMap<Ident, Types>>,
+    current_function: Option<(Ident, Types)>,
+}
+
+impl TypeContext {
+    pub fn new() -> Self {
+        Self {
+            idents: IdentMap::empty(),
+            functions: Functions::new(),
+            structs: HashMap::new(),
+            current_function: None,
+        }
+    }
+
+    pub fn enter_function(
+        &mut self,
+        name: Ident,
+        params: Vec<(Ident, Types)>,
+        return_type: Types,
+    ) -> Result<(), SemanticError> {
+        self.enter_scope();
+        self.current_function = Some((name.clone(), return_type.clone()));
+
+        let param_types = params.iter().map(|(_, t)| t.clone()).collect();
+        self.functions.insert(
+            name,
+            FunctionSignature {
+                params: param_types,
+                return_type,
+            },
+        )
+    }
+
+    pub fn enter_scope(&mut self) {
+        self.idents.enter_scope();
+    }
+
+    pub fn exit_scope(&mut self) {
+        self.idents.exit_scope();
+    }
+
+    pub fn exit_function(&mut self) {
+        self.current_function = None;
+    }
+
+    pub fn insert_variable(&mut self, name: Ident, typ: Types) {
+        if let Some(scope) = self.idents.current_scope_mut() {
+            scope.insert(name, typ);
+        }
+    }
+
+    pub fn get_variable_type(&self, name: &Ident) -> Result<Types, SemanticError> {
+        for scope in self.idents.into_iter().rev() {
+            println!("Checking scope: {:?}", name);
+            println!("Found variable with name {:?}", scope.get(name));
+            if let Some(typ) = scope.get(name) {
+                return Ok(typ.clone());
+            }
+        }
+
+        Err(SemanticError::UndefinedVariable {
+            name: name.clone(),
+            span: Span::default(),
+        })
+    }
+
+    pub fn insert_struct(&mut self, name: Ident, fields: IndexMap<Ident, Types>) {
+        self.structs.insert(name.inner().to_string(), fields);
+    }
+
+    pub fn get_struct_type(&self, name: &Ident) -> Result<Types, SemanticError> {
+        let name_str = name.inner();
+
+        if let Some(fields) = self.structs.get(name_str) {
+            Ok(Types::Struct {
+                name: name.clone(),
+                fields: fields.clone(),
+            })
+        } else {
+            Err(SemanticError::UndefinedStruct {
+                name: name.clone(),
+                span: Span::default(),
+            })
+        }
+    }
+
+    pub fn get_function_signature(
+        &self,
+        name: &Ident,
+    ) -> Result<&FunctionSignature, SemanticError> {
+        self.functions.get(name)
+    }
+
+    pub fn check_return_type(&self, return_type: Types, span: Span) -> Result<(), SemanticError> {
+        if let Some((_, expected_return_type)) = &self.current_function {
+            if *expected_return_type != return_type {
+                return Err(SemanticError::ReturnTypeMismatch {
+                    expected: expected_return_type.clone().to_string(),
+                    found: return_type.to_string(),
+                    span,
+                });
+            }
+        }
+        Ok(())
+    }
+
+    pub fn infer_binary_type(
+        &self,
+        left: &Types,
+        op: &Op,
+        right: &Types,
+    ) -> Result<Types, SemanticError> {
+        match op {
+            Op::Add
+            | Op::Sub
+            | Op::Mul
+            | Op::Div
+            | Op::Mod
+            | Op::Plus
+            | Op::PlusEqual
+            | Op::MinusEqual
+            | Op::Minus
+            | Op::Multiply
+            | Op::Divide => match (left, right) {
+                (Types::Int, Types::Int) => Ok(Types::Int),
+                (Types::Float, Types::Float) => Ok(Types::Float),
+                (Types::Int, Types::Float) | (Types::Float, Types::Int) => Ok(Types::Float),
+                (Types::String, Types::String) if matches!(op, Op::Add | Op::Plus) => {
+                    Ok(Types::String)
+                }
+                _ => Err(SemanticError::InvalidBinaryOperation {
+                    left: left.to_string().to_string(),
+                    op: format!("{op:?}"),
+                    right: right.to_string().to_string(),
+                    span: Span::default(),
+                }),
+            },
+            Op::Eq
+            | Op::Ne
+            | Op::Lt
+            | Op::Le
+            | Op::Gt
+            | Op::Ge
+            | Op::EqualEqual
+            | Op::BangEqual
+            | Op::Less
+            | Op::LessEqual
+            | Op::Greater
+            | Op::GreaterEqual => match (left, right) {
+                (Types::Int, Types::Int)
+                | (Types::Float, Types::Float)
+                | (Types::String, Types::String)
+                | (Types::Bool, Types::Bool) => Ok(Types::Bool),
+                (Types::Int, Types::Float) | (Types::Float, Types::Int) => Ok(Types::Bool),
+                _ => Err(SemanticError::InvalidBinaryOperation {
+                    left: left.to_string().to_string(),
+                    op: format!("{op:?}"),
+                    right: right.to_string().to_string(),
+                    span: Span::default(),
+                }),
+            },
+            Op::And | Op::Or | Op::BoleanAnd | Op::BooleanOr => match (left, right) {
+                (Types::Bool, Types::Bool) => Ok(Types::Bool),
+                _ => Err(SemanticError::InvalidBinaryOperation {
+                    left: left.to_string(),
+                    op: format!("{op:?}"),
+                    right: right.to_string(),
+                    span: Span::default(),
+                }),
+            },
+            Op::BitAnd | Op::BitOr | Op::BitXor | Op::Shl | Op::Shr => match (left, right) {
+                (Types::Int, Types::Int) => Ok(Types::Int),
+                _ => Err(SemanticError::InvalidBinaryOperation {
+                    left: left.to_string(),
+                    op: format!("{op:?}"),
+                    right: right.to_string(),
+                    span: Span::default(),
+                }),
+            },
+            _ => Err(SemanticError::InvalidBinaryOperation {
+                left: left.to_string(),
+                op: format!("{op:?}"),
+                right: right.to_string(),
+                span: Span::default(),
+            }),
+        }
+    }
+
+    pub fn infer_unary_type(&self, op: &Op, operand: &Types) -> Result<Types, SemanticError> {
+        match op {
+            Op::Sub | Op::Minus => match operand {
+                Types::Int => Ok(Types::Int),
+                Types::Float => Ok(Types::Float),
+                _ => Err(SemanticError::InvalidUnaryOperation {
+                    op: format!("{op:?}"),
+                    operand: operand.to_string(),
+                    span: Span::default(),
+                }),
+            },
+            Op::Not => match operand {
+                Types::Bool => Ok(Types::Bool),
+                _ => Err(SemanticError::InvalidUnaryOperation {
+                    op: format!("{op:?}"),
+                    operand: operand.to_string(),
+                    span: Span::default(),
+                }),
+            },
+            Op::BitNot => match operand {
+                Types::Int => Ok(Types::Int),
+                _ => Err(SemanticError::InvalidUnaryOperation {
+                    op: format!("{op:?}"),
+                    operand: operand.to_string(),
+                    span: Span::default(),
+                }),
+            },
+            _ => Err(SemanticError::InvalidUnaryOperation {
+                op: format!("{op:?}"),
+                operand: operand.to_string(),
+                span: Span::default(),
+            }),
+        }
+    }
+}
+
+impl Default for TypeContext {
+    fn default() -> Self {
+        Self::new()
+    }
+}

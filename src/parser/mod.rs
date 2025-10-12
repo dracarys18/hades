@@ -367,7 +367,7 @@ impl Parser {
     fn parse_for_stmt(&mut self) -> ParseResult<Stmt> {
         let start = self.char_pos;
         self.expect(&TokenKind::For)?;
-        let init = Box::new(self.parse_stmt()?);
+        let init = self.parse_stmt_expr()?;
         let cond = self.parse_while_expr()?;
         self.expect(&TokenKind::Semicolon)?;
         let update = self.parse_stmt_expr()?;

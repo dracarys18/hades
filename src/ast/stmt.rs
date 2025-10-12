@@ -36,10 +36,10 @@ pub enum Stmt {
         span: Span,
     },
     For {
-        init: Box<Stmt>, // initializer
-        cond: Expr,      // condition
-        update: Expr,    // update expression
-        body: Program,   // body statements
+        init: Expr,
+        cond: Expr,    // condition
+        update: Expr,  // update expression
+        body: Program, // body statements
         span: Span,
     },
     StructDef {

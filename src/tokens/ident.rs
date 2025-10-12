@@ -1,30 +1,53 @@
+use crate::error::Span;
 use std::fmt::Debug;
+use std::hash::Hash;
 
-#[derive(PartialEq, Clone, Hash, Eq)]
-pub struct Ident(pub String);
+#[derive(Clone)]
+pub struct Ident {
+    name: String,
+    span: Span,
+}
 
 impl Ident {
-    pub fn new(name: String) -> Self {
-        Self(name)
+    pub fn new(name: String, span: Span) -> Self {
+        Self { name, span }
     }
 
     pub fn len(&self) -> usize {
-        self.0.len()
+        self.name.len()
     }
 
     pub fn inner(&self) -> &str {
-        &self.0
+        &self.name
+    }
+
+    pub fn span(&self) -> &Span {
+        &self.span
     }
 }
 
+impl Hash for Ident {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+    }
+}
+
+impl PartialEq for Ident {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+    }
+}
+
+impl Eq for Ident {}
+
 impl std::fmt::Display for Ident {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+        write!(f, "{}", self.name)
     }
 }
 
 impl Debug for Ident {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Ident({})", self.0)
+        write!(f, "Ident({})", self.name)
     }
 }

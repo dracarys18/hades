@@ -150,8 +150,10 @@ impl<'a> Lexer<'a> {
                 if let Some(keyword_token) = KEYWORDS.get(ident.as_str()) {
                     self.push_token(tok!(keyword_token.clone(), start_pos, self.pos));
                 } else {
+                    let span = Span::new(start_pos, self.pos);
+                    // Handle span better
                     self.push_token(tok!(
-                        TokenKind::Ident(Ident::new(ident)),
+                        TokenKind::Ident(Ident::new(ident, span)),
                         start_pos,
                         self.pos
                     ));

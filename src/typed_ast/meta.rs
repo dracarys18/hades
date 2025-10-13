@@ -34,7 +34,6 @@ impl TypeContext {
         params: Vec<(Ident, Types)>,
         return_type: Types,
     ) -> Result<(), SemanticError> {
-        self.enter_scope();
         self.current_function = Some((name.clone(), return_type.clone()));
 
         let param_types = params.iter().map(|(_, t)| t.clone()).collect();
@@ -56,7 +55,6 @@ impl TypeContext {
     }
 
     pub fn exit_function(&mut self) {
-        self.exit_scope();
         self.current_function = None;
     }
 

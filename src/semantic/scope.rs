@@ -1,5 +1,4 @@
 use crate::ast::Types;
-use crate::error::SemanticError;
 use crate::tokens::Ident;
 use indexmap::IndexMap;
 use std::rc::Rc;
@@ -32,15 +31,8 @@ impl SymbolNode {
         }
     }
 
-    pub fn insert(&mut self, name: Ident, typ: Types) -> Result<(), SemanticError> {
-        if self.symbols.contains_key(&name) {
-            return Err(SemanticError::RedefinedVariable {
-                name: name.clone(),
-                span: name.span().clone(),
-            });
-        }
+    pub fn insert(&mut self, name: Ident, typ: Types) {
         self.symbols.insert(name, typ);
-        Ok(())
     }
 }
 

@@ -1,6 +1,6 @@
 mod error;
 
-use crate::ast::{Expr, Program, Stmt, Types};
+use crate::ast::{Block, Expr, Program, Stmt, Types};
 use crate::error::Span;
 use crate::parser::error::FinalParseResult;
 use crate::token_matches;
@@ -298,7 +298,7 @@ impl Parser {
             name,
             params,
             return_type,
-            body: Program::new(body),
+            body: Block::new(body.into(), Span::new(start, end)),
             span: Span::new(start, end),
         })
     }

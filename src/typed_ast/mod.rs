@@ -4,7 +4,7 @@ mod function;
 mod ident;
 mod meta;
 
-pub use ast::TypedStmt;
+pub use ast::{TypedBlock, TypedStmt};
 pub use expr::TypedExpr;
 pub use meta::TypeContext;
 

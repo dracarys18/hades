@@ -15,6 +15,13 @@ impl std::ops::Deref for Program {
         &self.0
     }
 }
+
+impl From<Vec<Stmt>> for Program {
+    fn from(stmts: Vec<Stmt>) -> Self {
+        Self(stmts)
+    }
+}
+
 impl<'a> IntoIterator for &'a Program {
     type Item = &'a Stmt;
     type IntoIter = std::slice::Iter<'a, Stmt>;

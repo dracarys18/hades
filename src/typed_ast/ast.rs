@@ -2,6 +2,13 @@ use crate::{ast::Types, error::Span, tokens::Ident};
 use indexmap::IndexMap;
 
 use super::{TypedProgram, expr::TypedExpr};
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedBlock {
+    pub stmts: TypedProgram,
+    pub span: Span,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypedStmt {
     Let {
@@ -44,7 +51,7 @@ pub enum TypedStmt {
         name: Ident,
         params: Vec<(Ident, Types)>,
         return_type: Types,
-        body: TypedProgram,
+        body: TypedBlock,
         span: Span,
     },
     Block {

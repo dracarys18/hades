@@ -1,6 +1,6 @@
-use crate::ast::{Expr, Program, Stmt, Types};
+use crate::ast::{Block, Expr, Program, Stmt, Types};
 use crate::error::SemanticError;
-use crate::typed_ast::{TypeContext, TypedExpr, TypedProgram, TypedStmt};
+use crate::typed_ast::{TypeContext, TypedBlock, TypedExpr, TypedProgram, TypedStmt};
 
 pub trait ToTyped {
     type Output;
@@ -158,14 +158,14 @@ impl ToTyped for Stmt {
                     span: span.clone(),
                 })
             }
-            Stmt::Block { stmts, span } => {
+            Stmt::Block(block) => {
                 ctx.enter_scope();
-                let typed_stmts = stmts.to_typed(ctx)?;
+                let typed_stmts = block.stmts().to_typed(ctx)?;
                 ctx.exit_scope();
 
                 Ok(TypedStmt::Block {
                     stmts: typed_stmts,
-                    span: span.clone(),
+                    span: block.span().clone(),
                 })
             }
             Stmt::Return { expr, span } => {
@@ -187,6 +187,19 @@ impl ToTyped for Stmt {
                 })
             }
         }
+    }
+}
+
+impl ToTyped for Block {
+    type Output = TypedBlock;
+    fn to_typed(&self, ctx: &mut TypeContext) -> Result<Self::Output, SemanticError> {
+        ctx.enter_scope();
+        let typed_stmts = self.stmts().to_typed(ctx)?;
+        ctx.exit_scope();
+        Ok(TypedBlock {
+            stmts: typed_stmts,
+            span: self.span().clone(),
+        })
     }
 }
 

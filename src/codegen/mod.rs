@@ -13,7 +13,7 @@ use std::process::Command;
 
 use crate::consts::BUILD_PATH;
 
-use crate::ast::{Expr, Program, Stmt, Types};
+use crate::ast::{Block, Expr, Program, Stmt, Types};
 use crate::tokens::Ident;
 
 pub struct CodeGen<'ctx> {
@@ -53,13 +53,13 @@ impl<'ctx> CodeGen<'ctx> {
     pub fn compile(&mut self, program: Program) -> Result<(), String> {
         // Second pass: compile all statements
         for stmt in program {
-            self.compile_stmt(stmt)?;
+            self.compile_stmt(&stmt)?;
         }
 
         Ok(())
     }
 
-    fn compile_stmt(&mut self, stmt: Stmt) -> Result<(), String> {
+    fn compile_stmt(&mut self, stmt: &Stmt) -> Result<(), String> {
         match stmt {
             Stmt::FuncDef {
                 name,
@@ -79,10 +79,10 @@ impl<'ctx> CodeGen<'ctx> {
 
     fn compile_function(
         &mut self,
-        name: Ident,
-        params: Vec<(Ident, Types)>,
-        return_type: Types,
-        body: Program,
+        name: &Ident,
+        params: &[(Ident, Types)],
+        return_type: &Types,
+        body: &Block,
     ) -> Result<(), String> {
         let param_types: Vec<BasicMetadataTypeEnum> = params
             .iter()
@@ -117,11 +117,11 @@ impl<'ctx> CodeGen<'ctx> {
                 .insert(param_name.inner().to_string(), alloca);
         }
 
-        for stmt in body {
+        for stmt in body.stmts() {
             self.compile_stmt(stmt)?;
         }
 
-        if return_type == Types::Void {
+        if return_type.eq(&Types::Void) {
             self.builder
                 .build_return(None)
                 .map_err(|e| format!("Failed to build return: {e}"))?;
@@ -130,10 +130,10 @@ impl<'ctx> CodeGen<'ctx> {
         Ok(())
     }
 
-    fn compile_expr(&mut self, expr: Expr) -> Result<BasicValueEnum<'ctx>, String> {
+    fn compile_expr(&mut self, expr: &Expr) -> Result<BasicValueEnum<'ctx>, String> {
         match expr {
-            Expr::Number(n) => Ok(self.context.i64_type().const_int(n as u64, true).into()),
-            Expr::Float(f) => Ok(self.context.f64_type().const_float(f).into()),
+            Expr::Number(n) => Ok(self.context.i64_type().const_int(*n as u64, true).into()),
+            Expr::Float(f) => Ok(self.context.f64_type().const_float(*f).into()),
             Expr::String(s) => {
                 let global_string = self
                     .builder
@@ -148,8 +148,8 @@ impl<'ctx> CodeGen<'ctx> {
 
     fn compile_call(
         &mut self,
-        func: Ident,
-        args: Vec<Expr>,
+        func: &Ident,
+        args: &[Expr],
     ) -> Result<BasicValueEnum<'ctx>, String> {
         if func.inner() == "print" {
             return self.compile_print_call(args);
@@ -158,7 +158,7 @@ impl<'ctx> CodeGen<'ctx> {
         Err(format!("Function call not yet implemented: {func:?}"))
     }
 
-    fn compile_print_call(&mut self, args: Vec<Expr>) -> Result<BasicValueEnum<'ctx>, String> {
+    fn compile_print_call(&mut self, args: &[Expr]) -> Result<BasicValueEnum<'ctx>, String> {
         let printf = self
             .module
             .get_function("printf")
@@ -192,7 +192,7 @@ impl<'ctx> CodeGen<'ctx> {
         Ok(self.context.i32_type().const_zero().into())
     }
 
-    fn compile_return(&mut self, expr: Option<Expr>) -> Result<(), String> {
+    fn compile_return(&mut self, expr: &Option<Expr>) -> Result<(), String> {
         if let Some(expr) = expr {
             let val = self.compile_expr(expr)?;
             self.builder

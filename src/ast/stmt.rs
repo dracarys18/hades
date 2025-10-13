@@ -9,6 +9,25 @@ use indexmap::IndexMap;
 
 use super::expr::Expr;
 
+#[derive(Clone, PartialEq, Debug)]
+pub struct Block {
+    pub stmts: Program,
+    pub span: Span,
+}
+
+impl Block {
+    pub fn new(stmts: Program, span: Span) -> Self {
+        Self { stmts, span }
+    }
+    pub fn span(&self) -> &Span {
+        &self.span
+    }
+
+    pub fn stmts(&self) -> &Program {
+        &self.stmts
+    }
+}
+
 #[derive(Clone, PartialEq)]
 pub enum Stmt {
     Let {
@@ -37,9 +56,9 @@ pub enum Stmt {
     },
     For {
         init: Expr,
-        cond: Expr,    // condition
-        update: Expr,  // update expression
-        body: Program, // body statements
+        cond: Expr,
+        update: Expr,
+        body: Program,
         span: Span,
     },
     StructDef {
@@ -51,13 +70,10 @@ pub enum Stmt {
         name: Ident,
         params: Vec<(Ident, Types)>,
         return_type: Types,
-        body: Program,
+        body: Block,
         span: Span,
     },
-    Block {
-        stmts: Program,
-        span: Span,
-    },
+    Block(Block),
     Return {
         expr: Option<Expr>,
         span: Span,
@@ -75,7 +91,7 @@ impl Stmt {
             Stmt::For { span, .. } => span,
             Stmt::StructDef { span, .. } => span,
             Stmt::FuncDef { span, .. } => span,
-            Stmt::Block { span, .. } => span,
+            Stmt::Block(block) => block.span(),
             Stmt::Return { span, .. } => span,
         }
     }
@@ -144,7 +160,10 @@ impl Debug for Stmt {
                 .field("return_type", return_type)
                 .field("body", body)
                 .finish(),
-            Stmt::Block { stmts, .. } => f.debug_struct("Block").field("stmts", stmts).finish(),
+            Stmt::Block(block) => f
+                .debug_struct("Block")
+                .field("stmts", block.stmts())
+                .finish(),
             Stmt::Return { expr, .. } => f.debug_struct("Return").field("expr", expr).finish(),
         }
     }

@@ -56,6 +56,7 @@ impl TypeContext {
     }
 
     pub fn exit_function(&mut self) {
+        self.exit_scope();
         self.current_function = None;
     }
 
@@ -66,18 +67,13 @@ impl TypeContext {
     }
 
     pub fn get_variable_type(&self, name: &Ident) -> Result<Types, SemanticError> {
-        for scope in self.idents.into_iter().rev() {
-            println!("Checking scope: {:?}", name);
-            println!("Found variable with name {:?}", scope.get(name));
-            if let Some(typ) = scope.get(name) {
-                return Ok(typ.clone());
-            }
-        }
-
-        Err(SemanticError::UndefinedVariable {
-            name: name.clone(),
-            span: Span::default(),
-        })
+        self.idents
+            .lookup(name)
+            .ok_or(SemanticError::UndefinedVariable {
+                name: name.clone(),
+                span: Span::default(),
+            })
+            .cloned()
     }
 
     pub fn insert_struct(&mut self, name: Ident, fields: IndexMap<Ident, Types>) {

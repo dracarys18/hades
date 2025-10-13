@@ -359,7 +359,7 @@ impl Parser {
 
         Ok(Stmt::While {
             cond,
-            body: Program::new(body),
+            body: Block::new(body.into(), Span::new(start, end)),
             span: Span::new(start, end),
         })
     }
@@ -378,7 +378,7 @@ impl Parser {
             init,
             cond,
             update,
-            body: Program::new(body),
+            body: Block::new(body.into(), Span::new(start, end)),
             span: Span::new(start, end),
         })
     }

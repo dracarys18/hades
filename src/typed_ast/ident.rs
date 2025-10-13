@@ -30,18 +30,6 @@ impl IdentMap {
         self.inner.current_scope_mut()
     }
 
-    pub fn insert(&mut self, name: Ident, typ: Types) -> Result<(), String> {
-        if let Some(current_scope) = self.inner.current_scope_mut() {
-            if current_scope.contains(&name) {
-                return Err(format!("Variable '{name}' already declared in this scope",));
-            }
-            current_scope.insert(name, typ);
-            Ok(())
-        } else {
-            Err("No scope available".to_string())
-        }
-    }
-
     pub fn lookup<'a>(&'a self, name: &'a Ident) -> Option<&'a Types> {
         self.inner.lookup_scope(name)
     }

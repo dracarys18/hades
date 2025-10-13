@@ -32,14 +32,14 @@ pub enum TypedStmt {
     },
     While {
         cond: TypedExpr,
-        body: TypedProgram,
+        body: TypedBlock,
         span: Span,
     },
     For {
         init: Box<TypedExpr>,
         cond: Box<TypedExpr>,
         update: Box<TypedExpr>,
-        body: TypedProgram,
+        body: TypedBlock,
         span: Span,
     },
     StructDef {

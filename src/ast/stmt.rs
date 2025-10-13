@@ -51,14 +51,14 @@ pub enum Stmt {
     },
     While {
         cond: Expr,
-        body: Program,
+        body: Block,
         span: Span,
     },
     For {
         init: Expr,
         cond: Expr,
         update: Expr,
-        body: Program,
+        body: Block,
         span: Span,
     },
     StructDef {

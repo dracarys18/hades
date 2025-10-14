@@ -10,6 +10,7 @@ pub enum Types {
     String,
     Void,
     Custom(String),
+    Any,
     Struct {
         name: Ident,
         fields: IndexMap<Ident, Types>,
@@ -25,6 +26,7 @@ impl std::fmt::Display for Types {
             Types::String => write!(f, "string"),
             Types::Void => write!(f, "void"),
             Types::Custom(name) => write!(f, "{}", name),
+            Types::Any => write!(f, "any"),
             Types::Struct { name, .. } => write!(f, "struct {}", name),
         }
     }

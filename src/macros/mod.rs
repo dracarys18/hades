@@ -10,6 +10,17 @@ macro_rules! tok {
 }
 
 #[macro_export]
+macro_rules! impl_span {
+    ($t:ty) => {
+        impl $t {
+            pub fn span(&self) -> &Span {
+                &self.span
+            }
+        }
+    };
+}
+
+#[macro_export]
 macro_rules! token_matches {
     ($token:expr, $($pattern:pat_param)|+) => {
         matches!($token.kind(), $($pattern)|+)

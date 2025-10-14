@@ -1,6 +1,6 @@
 mod error;
 
-use crate::ast::{Block, Expr, Program, Stmt, Types};
+use crate::ast::*;
 use crate::error::Span;
 use crate::parser::error::FinalParseResult;
 use crate::token_matches;
@@ -278,11 +278,11 @@ impl Parser {
         let fields = self.parse_field_list()?;
         let end = self.char_pos;
 
-        Ok(Stmt::StructDef {
+        Ok(Stmt::StructDef(StructDef {
             name,
             fields,
             span: Span::new(start, end),
-        })
+        }))
     }
 
     fn parse_function_def(&mut self) -> ParseResult<Stmt> {
@@ -294,13 +294,13 @@ impl Parser {
         let body = self.parse_block()?;
         let end = self.char_pos;
 
-        Ok(Stmt::FuncDef {
+        Ok(Stmt::FuncDef(FuncDef {
             name,
             params,
             return_type,
             body: Block::new(body.into(), Span::new(start, end)),
             span: Span::new(start, end),
-        })
+        }))
     }
 
     fn parse_let_stmt(&mut self) -> ParseResult<Stmt> {
@@ -322,12 +322,15 @@ impl Parser {
         self.expect(&TokenKind::Semicolon)?;
         let end = self.char_pos;
 
-        Ok(Stmt::Let {
+        Ok(Stmt::Let(Let {
             name,
             declared_type: var_type,
-            value,
+            value: ExprAst {
+                expr: value,
+                span: Span::new(start, end),
+            },
             span: Span::new(start, end),
-        })
+        }))
     }
 
     fn parse_if_stmt(&mut self) -> ParseResult<Stmt> {
@@ -341,13 +344,14 @@ impl Parser {
             None
         };
         let end = self.char_pos;
+        let span = Span::new(start, end);
 
-        Ok(Stmt::If {
-            cond,
-            then_branch: Program::new(then_branch),
-            else_branch: else_branch.map(Program::new),
+        Ok(Stmt::If(If {
+            cond: ExprAst { expr: cond, span },
+            then_branch: Block::new(then_branch.into(), span),
+            else_branch: else_branch.map(|p| Block::new(p.into(), span)),
             span: Span::new(start, end),
-        })
+        }))
     }
 
     fn parse_while_stmt(&mut self) -> ParseResult<Stmt> {
@@ -357,11 +361,11 @@ impl Parser {
         let body = self.parse_stmt_or_block()?;
         let end = self.char_pos;
 
-        Ok(Stmt::While {
+        Ok(Stmt::While(While {
             cond,
             body: Block::new(body.into(), Span::new(start, end)),
             span: Span::new(start, end),
-        })
+        }))
     }
 
     fn parse_for_stmt(&mut self) -> ParseResult<Stmt> {
@@ -373,14 +377,15 @@ impl Parser {
         let update = self.parse_stmt_expr()?;
         let body = self.parse_stmt_or_block()?;
         let end = self.char_pos;
+        let span = Span::new(start, end);
 
-        Ok(Stmt::For {
-            init,
-            cond,
-            update,
+        Ok(Stmt::For(For {
+            init: ExprAst { expr: init, span },
+            cond: ExprAst { expr: cond, span },
+            update: ExprAst { expr: update, span },
             body: Block::new(body.into(), Span::new(start, end)),
             span: Span::new(start, end),
-        })
+        }))
     }
 
     fn parse_return_stmt(&mut self) -> ParseResult<Stmt> {
@@ -396,11 +401,10 @@ impl Parser {
         };
         self.expect(&TokenKind::Semicolon)?;
         let end = self.char_pos;
+        let span = Span::new(start, end);
+        let expr = expr.map(|e| ExprAst { expr: e, span });
 
-        Ok(Stmt::Return {
-            expr,
-            span: Span::new(start, end),
-        })
+        Ok(Stmt::Return(Return { expr, span }))
     }
 
     fn parse_continue_stmt(&mut self) -> ParseResult<Stmt> {
@@ -408,9 +412,9 @@ impl Parser {
         self.expect(&TokenKind::Continue)?;
         self.expect(&TokenKind::Semicolon)?;
         let end = self.char_pos;
-        Ok(Stmt::Continue {
+        Ok(Stmt::Continue(Continue {
             span: Span::new(start, end),
-        })
+        }))
     }
 
     fn parse_expr_stmt(&mut self) -> ParseResult<Stmt> {
@@ -418,10 +422,10 @@ impl Parser {
         let expr = self.parse_stmt_expr()?;
         self.expect(&TokenKind::Semicolon)?;
         let end = self.char_pos;
-        Ok(Stmt::Expr {
+        Ok(Stmt::Expr(ExprAst {
             expr,
             span: Span::new(start, end),
-        })
+        }))
     }
 
     fn parse_block(&mut self) -> ParseResult<Vec<Stmt>> {

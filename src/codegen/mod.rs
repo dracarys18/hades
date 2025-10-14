@@ -13,8 +13,12 @@ use std::process::Command;
 
 use crate::consts::BUILD_PATH;
 
-use crate::ast::{Block, Expr, Program, Stmt, Types};
+use crate::ast::Types;
 use crate::tokens::Ident;
+use crate::typed_ast::TypedExpr;
+use crate::typed_ast::TypedFuncDef;
+use crate::typed_ast::TypedProgram;
+use crate::typed_ast::TypedStmt;
 
 pub struct CodeGen<'ctx> {
     context: &'ctx Context,
@@ -50,51 +54,44 @@ impl<'ctx> CodeGen<'ctx> {
         self.module.add_function("printf", printf_type, None);
     }
 
-    pub fn compile(&mut self, program: Program) -> Result<(), String> {
+    pub fn compile(&mut self, program: &TypedProgram) -> Result<(), String> {
         // Second pass: compile all statements
         for stmt in program {
-            self.compile_stmt(&stmt)?;
+            self.compile_stmt(stmt)?;
         }
 
         Ok(())
     }
 
-    fn compile_stmt(&mut self, stmt: &Stmt) -> Result<(), String> {
+    fn compile_stmt(&mut self, stmt: &TypedStmt) -> Result<(), String> {
         match stmt {
-            Stmt::FuncDef {
-                name,
-                params,
-                return_type,
-                body,
-                ..
-            } => self.compile_function(name, params, return_type, body),
-            Stmt::Expr { expr, .. } => {
+            TypedStmt::FuncDef(func) => self.compile_function(func),
+            TypedStmt::TypedExpr(expr) => {
+                let expr = &expr.expr;
                 self.compile_expr(expr)?;
                 Ok(())
             }
-            Stmt::Return { expr, .. } => self.compile_return(expr),
+            TypedStmt::Return(expr) => {
+                let expr = expr.expr.clone().map(|i| i.expr);
+                self.compile_return(&expr)
+            }
             _ => Err(format!("Statement not yet implemented: {stmt:?}")),
         }
     }
 
-    fn compile_function(
-        &mut self,
-        name: &Ident,
-        params: &[(Ident, Types)],
-        return_type: &Types,
-        body: &Block,
-    ) -> Result<(), String> {
-        let param_types: Vec<BasicMetadataTypeEnum> = params
+    fn compile_function(&mut self, func: &TypedFuncDef) -> Result<(), String> {
+        let param_types: Vec<BasicMetadataTypeEnum> = func
+            .params
             .iter()
             .map(|(_, ty)| self.type_to_llvm(ty).into())
             .collect();
 
-        let fn_type = match self.type_to_llvm(&return_type) {
+        let fn_type = match self.type_to_llvm(&func.return_type) {
             BasicTypeEnum::IntType(int_type) => int_type.fn_type(&param_types, false),
             _ => self.context.void_type().fn_type(&param_types, false),
         };
 
-        let function = self.module.add_function(name.inner(), fn_type, None);
+        let function = self.module.add_function(func.name.inner(), fn_type, None);
         self.current_function = Some(function);
 
         let entry_block = self.context.append_basic_block(function, "entry");
@@ -102,7 +99,7 @@ impl<'ctx> CodeGen<'ctx> {
 
         self.variables.clear();
 
-        for (i, (param_name, param_type)) in params.iter().enumerate() {
+        for (i, (param_name, param_type)) in func.params.iter().enumerate() {
             let param_value = function.get_nth_param(i as u32).unwrap();
             let alloca = self
                 .builder
@@ -117,11 +114,11 @@ impl<'ctx> CodeGen<'ctx> {
                 .insert(param_name.inner().to_string(), alloca);
         }
 
-        for stmt in body.stmts() {
+        for stmt in &func.body.stmts {
             self.compile_stmt(stmt)?;
         }
 
-        if return_type.eq(&Types::Void) {
+        if func.return_type.eq(&Types::Void) {
             self.builder
                 .build_return(None)
                 .map_err(|e| format!("Failed to build return: {e}"))?;
@@ -130,18 +127,18 @@ impl<'ctx> CodeGen<'ctx> {
         Ok(())
     }
 
-    fn compile_expr(&mut self, expr: &Expr) -> Result<BasicValueEnum<'ctx>, String> {
+    fn compile_expr(&mut self, expr: &TypedExpr) -> Result<BasicValueEnum<'ctx>, String> {
         match expr {
-            Expr::Number(n) => Ok(self.context.i64_type().const_int(*n as u64, true).into()),
-            Expr::Float(f) => Ok(self.context.f64_type().const_float(*f).into()),
-            Expr::String(s) => {
+            TypedExpr::Number(n) => Ok(self.context.i64_type().const_int(*n as u64, true).into()),
+            TypedExpr::Float(f) => Ok(self.context.f64_type().const_float(*f).into()),
+            TypedExpr::String(s) => {
                 let global_string = self
                     .builder
                     .build_global_string_ptr(&s, "str")
                     .map_err(|e| format!("Failed to create string: {e}"))?;
                 Ok(global_string.as_pointer_value().into())
             }
-            Expr::Call { func, args } => self.compile_call(func, args),
+            TypedExpr::Call { func, args, .. } => self.compile_call(func, args),
             _ => Err(format!("Expression not yet implemented: {expr:?}")),
         }
     }
@@ -149,7 +146,7 @@ impl<'ctx> CodeGen<'ctx> {
     fn compile_call(
         &mut self,
         func: &Ident,
-        args: &[Expr],
+        args: &[TypedExpr],
     ) -> Result<BasicValueEnum<'ctx>, String> {
         if func.inner() == "print" {
             return self.compile_print_call(args);
@@ -158,7 +155,7 @@ impl<'ctx> CodeGen<'ctx> {
         Err(format!("Function call not yet implemented: {func:?}"))
     }
 
-    fn compile_print_call(&mut self, args: &[Expr]) -> Result<BasicValueEnum<'ctx>, String> {
+    fn compile_print_call(&mut self, args: &[TypedExpr]) -> Result<BasicValueEnum<'ctx>, String> {
         let printf = self
             .module
             .get_function("printf")
@@ -166,10 +163,10 @@ impl<'ctx> CodeGen<'ctx> {
 
         for arg in args {
             let format_string = match &arg {
-                Expr::String(_) => "%s\n\0",
-                Expr::Number(_) => "%lld\n\0",
-                Expr::Float(_) => "%f\n\0",
-                Expr::Boolean(_) => "%d\n\0",
+                TypedExpr::String(_) => "%s\n\0",
+                TypedExpr::Number(_) => "%lld\n\0",
+                TypedExpr::Float(_) => "%f\n\0",
+                TypedExpr::Boolean(_) => "%d\n\0",
                 _ => unreachable!("Unsupported type for print"),
             };
 
@@ -192,7 +189,7 @@ impl<'ctx> CodeGen<'ctx> {
         Ok(self.context.i32_type().const_zero().into())
     }
 
-    fn compile_return(&mut self, expr: &Option<Expr>) -> Result<(), String> {
+    fn compile_return(&mut self, expr: &Option<TypedExpr>) -> Result<(), String> {
         if let Some(expr) = expr {
             let val = self.compile_expr(expr)?;
             self.builder

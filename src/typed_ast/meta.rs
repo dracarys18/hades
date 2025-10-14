@@ -11,14 +11,14 @@ use indexmap::IndexMap;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct TypeContext {
+pub struct CompilerContext {
     idents: IdentMap,
     functions: Functions,
     structs: HashMap<String, IndexMap<Ident, Types>>,
     current_function: Option<(Ident, Types)>,
 }
 
-impl TypeContext {
+impl CompilerContext {
     pub fn new() -> Self {
         Self {
             idents: IdentMap::empty(),
@@ -37,13 +37,8 @@ impl TypeContext {
         self.current_function = Some((name.clone(), return_type.clone()));
 
         let param_types = params.iter().map(|(_, t)| t.clone()).collect();
-        self.functions.insert(
-            name,
-            FunctionSignature {
-                params: param_types,
-                return_type,
-            },
-        )
+        self.functions
+            .insert(name, FunctionSignature::new(param_types, return_type))
     }
 
     pub fn enter_scope(&mut self) {
@@ -232,7 +227,7 @@ impl TypeContext {
     }
 }
 
-impl Default for TypeContext {
+impl Default for CompilerContext {
     fn default() -> Self {
         Self::new()
     }

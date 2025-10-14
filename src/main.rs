@@ -18,6 +18,7 @@ fn main() {
             let a = 1;
             a+=3;
             b+=3;
+            print("Hello, World!");
             return 0;
         }
     "#;

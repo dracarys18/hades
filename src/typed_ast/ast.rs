@@ -1,4 +1,5 @@
 use crate::{ast::Types, error::Span, tokens::Ident};
+use derive_more::Debug;
 use indexmap::IndexMap;
 
 use super::{TypedProgram, expr::TypedExpr};
@@ -6,60 +7,93 @@ use super::{TypedProgram, expr::TypedExpr};
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypedBlock {
     pub stmts: TypedProgram,
+    #[debug(skip)]
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedLet {
+    pub name: Ident,
+    pub typ: Types,
+    pub value: TypedExprAst,
+    #[debug(skip)]
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedContinue {
+    #[debug(skip)]
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedExprAst {
+    pub expr: TypedExpr,
+    pub span: Span,
+}
+
+impl TypedExprAst {
+    pub fn get_type(&self) -> Types {
+        self.expr.get_type()
+    }
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedIf {
+    pub cond: TypedExprAst,
+    pub then_branch: TypedBlock,
+    pub else_branch: Option<TypedBlock>,
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedWhile {
+    pub cond: TypedExpr,
+    pub body: TypedBlock,
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedFor {
+    pub init: TypedExprAst,
+    pub cond: TypedExprAst,
+    pub update: TypedExprAst,
+    pub body: TypedBlock,
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedStructDef {
+    pub name: Ident,
+    pub fields: IndexMap<Ident, Types>,
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedFuncDef {
+    pub name: Ident,
+    pub params: Vec<(Ident, Types)>,
+    pub return_type: Types,
+    pub body: TypedBlock,
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedReturn {
+    pub expr: Option<TypedExprAst>,
     pub span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypedStmt {
-    Let {
-        name: Ident,
-        typ: Types,
-        value: TypedExpr,
-        span: Span,
-    },
-    Continue {
-        span: Span,
-    },
-    TypedExpr {
-        expr: TypedExpr,
-        span: Span,
-    },
-    If {
-        cond: TypedExpr,
-        then_branch: TypedProgram,
-        else_branch: Option<TypedProgram>,
-        span: Span,
-    },
-    While {
-        cond: TypedExpr,
-        body: TypedBlock,
-        span: Span,
-    },
-    For {
-        init: Box<TypedExpr>,
-        cond: Box<TypedExpr>,
-        update: Box<TypedExpr>,
-        body: TypedBlock,
-        span: Span,
-    },
-    StructDef {
-        name: Ident,
-        fields: IndexMap<Ident, Types>,
-        span: Span,
-    },
-    FuncDef {
-        name: Ident,
-        params: Vec<(Ident, Types)>,
-        return_type: Types,
-        body: TypedBlock,
-        span: Span,
-    },
-    Block {
-        stmts: TypedProgram,
-        span: Span,
-    },
-    Return {
-        expr: Option<TypedExpr>,
-        span: Span,
-    },
+    Let(TypedLet),
+    Continue(TypedContinue),
+    TypedExpr(TypedExprAst),
+    If(TypedIf),
+    While(TypedWhile),
+    For(TypedFor),
+    StructDef(TypedStructDef),
+    FuncDef(TypedFuncDef),
+    Block(TypedBlock),
+    Return(TypedReturn),
 }

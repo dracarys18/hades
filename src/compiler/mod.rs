@@ -80,8 +80,25 @@ impl<'a> Compiler<'a> {
             }
         };
 
+        let analyzer = Analyzer::<Unprepared>::new();
+        let analyzer = analyzer
+            .prepare(&program)
+            .map_err(|err| {
+                eprintln!("Error during semantic analysis: {err}");
+                err
+            })
+            .expect("Semantic analysis preparation failed");
+
+        analyzer
+            .analyze()
+            .map_err(|err| {
+                eprintln!("Error during semantic analysis: {err}");
+                err
+            })
+            .expect("Semantic analysis failed");
+
         codegen
-            .compile(program)
+            .compile(analyzer.ast())
             .map_err(|err| {
                 eprintln!("Error during code generation: {err}");
                 err

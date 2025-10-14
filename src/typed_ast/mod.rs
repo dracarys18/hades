@@ -4,12 +4,12 @@ mod function;
 mod ident;
 mod meta;
 
-pub use ast::{TypedBlock, TypedStmt};
+pub use ast::*;
 pub use expr::TypedExpr;
-pub use meta::TypeContext;
+pub use meta::CompilerContext;
 
 use crate::{
-    ast::{Program, ToTyped},
+    ast::{Program, WalkAst},
     error::SemanticError,
 };
 
@@ -48,20 +48,20 @@ impl IntoIterator for TypedProgram {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypedAstMeta {
     ast: TypedProgram,
-    ctx: TypeContext,
+    ctx: CompilerContext,
 }
 
 impl TypedAstMeta {
     pub fn new() -> Self {
         let ast = TypedProgram::new(vec![]);
-        let ctx = TypeContext::new();
+        let ctx = CompilerContext::new();
 
         Self { ast, ctx }
     }
 
     pub fn prepare(self, program: &Program) -> Result<Self, SemanticError> {
-        let mut ctx = TypeContext::new();
-        let ast = program.to_typed(&mut ctx);
+        let mut ctx = CompilerContext::new();
+        let ast = program.walk(&mut ctx);
         match ast {
             Err(e) => {
                 print!("{ctx:?}");
@@ -74,7 +74,7 @@ impl TypedAstMeta {
     pub fn ast(&self) -> &TypedProgram {
         &self.ast
     }
-    pub fn ctx(&self) -> &TypeContext {
+    pub fn ctx(&self) -> &CompilerContext {
         &self.ctx
     }
 }

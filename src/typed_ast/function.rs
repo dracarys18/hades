@@ -1,5 +1,5 @@
+use super::builtins::BUILTIN_FUNCTIONS;
 use crate::ast::Types;
-use crate::error::Span;
 use crate::tokens::Ident;
 use crate::typed_ast::SemanticError;
 
@@ -39,13 +39,8 @@ pub struct Functions {
 
 impl Functions {
     pub fn new() -> Self {
-        let print_func = FunctionSignature::new(vec![Types::String], Types::Void);
-        let mut map = IndexMap::new();
-        map.insert(
-            Ident::new(String::from("print"), Span::default()),
-            print_func,
-        );
-        Self { inner: map }
+        let built_ins = BUILTIN_FUNCTIONS.clone();
+        Self { inner: built_ins }
     }
 
     pub fn insert(&mut self, name: Ident, sig: FunctionSignature) -> Result<(), SemanticError> {

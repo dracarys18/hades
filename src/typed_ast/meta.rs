@@ -2,19 +2,19 @@ use super::SemanticError;
 use crate::typed_ast::{
     function::{FunctionSignature, Functions},
     ident::IdentMap,
+    struc::{Field, Structs},
 };
 
 use crate::ast::Types;
 use crate::error::Span;
 use crate::tokens::{Ident, Op};
 use indexmap::IndexMap;
-use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CompilerContext {
     idents: IdentMap,
     functions: Functions,
-    structs: HashMap<String, IndexMap<Ident, Types>>,
+    structs: Structs,
     current_function: Option<(Ident, Types)>,
 }
 
@@ -23,7 +23,7 @@ impl CompilerContext {
         Self {
             idents: IdentMap::empty(),
             functions: Functions::new(),
-            structs: HashMap::new(),
+            structs: Structs::new(),
             current_function: None,
         }
     }
@@ -70,17 +70,12 @@ impl CompilerContext {
     }
 
     pub fn insert_struct(&mut self, name: Ident, fields: IndexMap<Ident, Types>) {
-        self.structs.insert(name.inner().to_string(), fields);
+        self.structs.insert(name.clone(), fields);
     }
 
-    pub fn get_struct_type(&self, name: &Ident) -> Result<Types, SemanticError> {
-        let name_str = name.inner();
-
-        if let Some(fields) = self.structs.get(name_str) {
-            Ok(Types::Struct {
-                name: name.clone(),
-                fields: fields.clone(),
-            })
+    pub fn get_struct_type(&self, name: &Ident) -> Result<Field, SemanticError> {
+        if let Some(fields) = self.structs.fields(name) {
+            Ok(fields.clone())
         } else {
             Err(SemanticError::UndefinedStruct {
                 name: name.clone(),

@@ -24,38 +24,31 @@ impl WalkAst for Expr {
                 let struct_type = ctx.get_struct_type(name)?;
                 let mut typed_fields = indexmap::IndexMap::new();
 
-                match &struct_type {
-                    Types::Struct {
-                        fields: struct_fields,
-                        ..
-                    } => {
-                        for (field_name, field_expr) in fields {
-                            let expected_type = struct_fields.get(field_name).ok_or_else(|| {
-                                SemanticError::UnknownField {
-                                    struct_name: name.clone(),
-                                    field_name: field_name.clone(),
-                                }
+                for (field_name, field_expr) in fields {
+                    let expected_type =
+                        struct_type
+                            .get(field_name)
+                            .ok_or_else(|| SemanticError::UnknownField {
+                                struct_name: name.clone(),
+                                field_name: field_name.clone(),
                             })?;
 
-                            let typed_expr = field_expr.walk(ctx)?;
-                            if typed_expr.get_type() != *expected_type {
-                                return Err(SemanticError::TypeMismatch {
-                                    expected: expected_type.clone().to_string(),
-                                    found: typed_expr.get_type().to_string(),
-                                    span: crate::error::Span::default(),
-                                });
-                            }
-                            typed_fields.insert(field_name.clone(), typed_expr);
-                        }
-
-                        Ok(TypedExpr::StructInit {
-                            name: name.clone(),
-                            fields: typed_fields,
-                            types: struct_type,
-                        })
+                    let typed_expr = field_expr.walk(ctx)?;
+                    if typed_expr.get_type() != *expected_type {
+                        return Err(SemanticError::TypeMismatch {
+                            expected: expected_type.clone().to_string(),
+                            found: typed_expr.get_type().to_string(),
+                            span: crate::error::Span::default(),
+                        });
                     }
-                    _ => Err(SemanticError::NotAStruct { name: name.clone() }),
+                    typed_fields.insert(field_name.clone(), typed_expr);
                 }
+
+                Ok(TypedExpr::StructInit {
+                    name: name.clone(),
+                    fields: typed_fields,
+                    types: Types::Struct(name.clone()),
+                })
             }
             Expr::Binary { left, op, right } => {
                 let typed_left = left.walk(ctx)?;
@@ -126,13 +119,21 @@ impl WalkAst for Expr {
                 let mut typed_args = Vec::new();
                 for (arg, expected_type) in args.iter().zip(params.iter()) {
                     let typed_arg = arg.walk(ctx)?;
-                    if typed_arg.get_type() != *expected_type {
+                    let typ = typed_arg.get_type();
+
+                    let cond = match expected_type {
+                        Types::Generic(typs) => typs.contains(&typ),
+                        _ => &typ == expected_type,
+                    };
+
+                    if !cond {
                         return Err(SemanticError::TypeMismatch {
                             expected: expected_type.clone().to_string(),
                             found: typed_arg.get_type().to_string(),
                             span: crate::error::Span::default(),
                         });
                     }
+
                     typed_args.push(typed_arg);
                 }
 

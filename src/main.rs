@@ -13,13 +13,16 @@ mod typed_ast;
 
 fn main() {
     let source = r#"
-        let b = 3;
-        fn main(): int {
+        struct Point {
+            x: int,
+            y: int,
+        }
+        fn main(): Point {
             let a = 1;
             a+=3;
-            b+=3;
-            print("Hello, World!");
-            return 0;
+            let s = Point { x: a, y: 2 };
+            print(1.0);
+            return s;
         }
     "#;
 

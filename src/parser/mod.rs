@@ -604,11 +604,11 @@ impl Parser {
         let token = self.next();
         match token {
             Some(tok) => match tok.kind() {
-                TokenKind::Number(n) => Ok(Expr::Number(*n)),
-                TokenKind::Float(f) => Ok(Expr::Float(*f)),
-                TokenKind::String(s) => Ok(Expr::String(s.clone())),
-                TokenKind::True => Ok(Expr::Boolean(true)),
-                TokenKind::False => Ok(Expr::Boolean(false)),
+                TokenKind::Number(n) => Ok(Expr::Value(Value::Number(*n))),
+                TokenKind::Float(f) => Ok(Expr::Value(Value::Float(*f))),
+                TokenKind::String(s) => Ok(Expr::Value(Value::String(s.clone()))),
+                TokenKind::True => Ok(Expr::Value(Value::Boolean(true))),
+                TokenKind::False => Ok(Expr::Value(Value::Boolean(false))),
                 TokenKind::Ident(name) => {
                     if allow_struct_literals {
                         self.parse_postfix_expr_with_struct(name.clone())

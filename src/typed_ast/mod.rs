@@ -5,10 +5,12 @@ mod function;
 mod ident;
 mod meta;
 mod struc;
+mod value;
 
 pub use ast::*;
 pub use expr::TypedExpr;
 pub use meta::CompilerContext;
+pub use value::TypedValue;
 
 use crate::{
     ast::{Program, WalkAst},
@@ -65,10 +67,7 @@ impl TypedAstMeta {
         let mut ctx = CompilerContext::new();
         let ast = program.walk(&mut ctx);
         match ast {
-            Err(e) => {
-                print!("{ctx:?}");
-                Err(e)
-            }
+            Err(e) => Err(e),
             Ok(ast) => Ok(Self { ast, ctx }),
         }
     }

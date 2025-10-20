@@ -59,6 +59,10 @@ pub enum SemanticError {
         name: Ident,
         span: Span,
     },
+    InvalidType {
+        name: Ident,
+        span: Span,
+    },
 }
 
 impl std::fmt::Display for SemanticError {
@@ -130,6 +134,9 @@ impl std::fmt::Display for SemanticError {
             }
             SemanticError::RedefinedStruct { name, .. } => {
                 write!(f, "Struct {} is already defined", name.inner())
+            }
+            SemanticError::InvalidType { name, .. } => {
+                write!(f, "Invalid type: {}", name.inner())
             }
         }
     }

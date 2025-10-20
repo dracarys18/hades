@@ -36,6 +36,10 @@ impl TypedExprAst {
     pub fn get_type(&self) -> Types {
         self.expr.get_type()
     }
+
+    pub fn expr(&self) -> &TypedExpr {
+        &self.expr
+    }
 }
 
 #[derive(Clone, PartialEq, Debug)]

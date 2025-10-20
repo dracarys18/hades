@@ -9,6 +9,7 @@ mod walk_program;
 mod walk_return;
 mod walk_stmt;
 mod walk_structdef;
+mod walk_value;
 mod walk_while;
 
 use crate::ast::Stmt;

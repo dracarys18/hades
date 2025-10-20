@@ -9,10 +9,7 @@ impl WalkAst for Expr {
 
     fn walk(&self, ctx: &mut CompilerContext) -> Result<Self::Output, SemanticError> {
         match self {
-            Expr::Number(n) => Ok(TypedExpr::Number(*n)),
-            Expr::Float(f) => Ok(TypedExpr::Float(*f)),
-            Expr::String(s) => Ok(TypedExpr::String(s.clone())),
-            Expr::Boolean(b) => Ok(TypedExpr::Boolean(*b)),
+            Expr::Value(value) => Ok(TypedExpr::Value(value.walk(ctx)?)),
             Expr::Ident(ident) => {
                 let typ = ctx.get_variable_type(ident)?;
                 Ok(TypedExpr::Ident {

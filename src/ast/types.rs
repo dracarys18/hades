@@ -1,5 +1,3 @@
-use indexmap::IndexMap;
-
 use crate::tokens::Ident;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

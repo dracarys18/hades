@@ -17,17 +17,21 @@ fn main() {
             x: int,
             y: int,
         }
-        fn main(): Point {
+
+        fn struct_init(): Point {
             let a = 1;
-            a+=3;
             let s = Point { x: a, y: 2 };
-            print(1.0);
             return s;
+        }
+
+        fn main(): int {
+            let p = struct_init();
+            return 0;
         }
     "#;
 
     println!("=== Parsing valid code ===");
-    parse_and_check(source, "main.hd");
+    parse_and_report(source, "main.hd");
 }
 
 fn parse_and_report(source: &str, filename: &str) {

@@ -1,14 +1,12 @@
 use indexmap::IndexMap;
 
+use super::value::Value;
 use crate::tokens::{Ident, Op};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
-    Number(i64),
-    Float(f64),
-    String(String),
+    Value(Value),
     Ident(Ident),
-    Boolean(bool),
     StructInit {
         name: Ident,
         fields: IndexMap<Ident, Expr>,

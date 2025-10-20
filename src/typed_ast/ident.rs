@@ -1,11 +1,11 @@
 use crate::ast::Types;
-use crate::semantic::scope::{Scope, SymbolNode};
+use crate::semantic::scope::Scope;
 
 use crate::tokens::Ident;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct IdentMap {
-    inner: Scope,
+    inner: Scope<Types>,
 }
 
 impl IdentMap {
@@ -22,12 +22,10 @@ impl IdentMap {
         self.inner.exit_scope();
     }
 
-    pub fn current_scope(&self) -> &SymbolNode {
-        self.inner.current_scope()
-    }
-
-    pub fn current_scope_mut(&mut self) -> Option<&mut SymbolNode> {
-        self.inner.current_scope_mut()
+    pub fn insert(&mut self, name: Ident, typ: Types) {
+        self.inner.on_scope_mut(|node| {
+            node.insert(name, typ);
+        });
     }
 
     pub fn lookup<'a>(&'a self, name: &'a Ident) -> Option<&'a Types> {

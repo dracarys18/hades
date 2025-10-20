@@ -1,4 +1,4 @@
-use crate::ast::{Let, WalkAst};
+use crate::ast::{Let, Types, WalkAst};
 use crate::error::SemanticError;
 use crate::typed_ast::{CompilerContext, TypedLet};
 
@@ -26,6 +26,13 @@ impl WalkAst for Let {
             }
             None => inferred_type,
         };
+
+        if final_type.eq(&Types::Void) {
+            return Err(SemanticError::InvalidType {
+                name: name.clone(),
+                span: span.clone(),
+            });
+        }
 
         ctx.insert_variable(name.clone(), final_type.clone());
         Ok(TypedLet {

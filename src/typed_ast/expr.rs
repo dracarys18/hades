@@ -1,18 +1,16 @@
 use crate::ast::Types;
 use indexmap::IndexMap;
 
+use super::value::TypedValue;
 use crate::tokens::{Ident, Op};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypedExpr {
-    Number(i64),
-    Float(f64),
-    String(String),
+    Value(TypedValue),
     Ident {
         ident: Ident,
         typ: Types,
     },
-    Boolean(bool),
     StructInit {
         name: Ident,
         fields: IndexMap<Ident, TypedExpr>,
@@ -45,10 +43,7 @@ pub enum TypedExpr {
 impl TypedExpr {
     pub fn get_type(&self) -> Types {
         match self {
-            TypedExpr::Number(_) => Types::Int,
-            TypedExpr::Float(_) => Types::Float,
-            TypedExpr::String(_) => Types::String,
-            TypedExpr::Boolean(_) => Types::Bool,
+            TypedExpr::Value(val) => val.get_type(),
             TypedExpr::Ident { typ, .. } => typ.clone(),
             TypedExpr::StructInit { types, .. } => types.clone(),
             TypedExpr::Binary { typ, .. } => typ.clone(),

@@ -4,7 +4,7 @@ use crate::{
     ast::Program,
     error::SemanticError,
     evaluator::graph::EvaluationGraph,
-    typed_ast::{TypedAstMeta, TypedProgram},
+    typed_ast::{CompilerContext, TypedAstMeta, TypedProgram},
 };
 
 pub struct Unprepared;
@@ -25,6 +25,10 @@ impl<T> Analyzer<T> {
 
     pub fn ast(&self) -> &TypedProgram {
         self.data.ast()
+    }
+
+    pub fn ctx(&self) -> &CompilerContext {
+        self.data.ctx()
     }
 }
 

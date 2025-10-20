@@ -54,9 +54,7 @@ impl CompilerContext {
     }
 
     pub fn insert_variable(&mut self, name: Ident, typ: Types) {
-        if let Some(scope) = self.idents.current_scope_mut() {
-            scope.insert(name, typ);
-        }
+        self.idents.insert(name, typ);
     }
 
     pub fn get_variable_type(&self, name: &Ident) -> Result<Types, SemanticError> {

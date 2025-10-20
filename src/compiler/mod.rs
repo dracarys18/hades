@@ -1,4 +1,3 @@
-use crate::codegen::CodeGen;
 use crate::semantic::analyzer::{Analyzer, Unprepared};
 use crate::{consts, lexer, parser};
 use inkwell::context::Context;
@@ -17,7 +16,7 @@ impl<'a> Compiler<'a> {
         std::fs::create_dir_all(consts::BUILD_PATH).expect("Failed to create build directory");
     }
 
-    pub fn check(&self, path: impl AsRef<std::path::Path>) {
+    pub fn check(&self, _: impl AsRef<std::path::Path>) {
         let source_trimmed = self.source.trim();
 
         let mut lexer = lexer::Lexer::new(source_trimmed, self.filename.to_string());
@@ -58,7 +57,6 @@ impl<'a> Compiler<'a> {
 
     pub fn compile(&self, path: impl AsRef<std::path::Path>) {
         let context = Context::create();
-        let mut codegen = CodeGen::new(&context, "main_module");
 
         let source_trimmed = self.source.trim();
 
@@ -81,7 +79,7 @@ impl<'a> Compiler<'a> {
         };
 
         let analyzer = Analyzer::<Unprepared>::new();
-        let analyzer = analyzer
+        let prepared = analyzer
             .prepare(&program)
             .map_err(|err| {
                 eprintln!("Error during semantic analysis: {err}");
@@ -89,7 +87,7 @@ impl<'a> Compiler<'a> {
             })
             .expect("Semantic analysis preparation failed");
 
-        analyzer
+        prepared
             .analyze()
             .map_err(|err| {
                 eprintln!("Error during semantic analysis: {err}");
@@ -97,22 +95,12 @@ impl<'a> Compiler<'a> {
             })
             .expect("Semantic analysis failed");
 
-        codegen
-            .compile(analyzer.ast())
+        prepared
+            .compile_to_object(&context, "main_module", path.as_ref())
             .map_err(|err| {
                 eprintln!("Error during code generation: {err}");
                 err
             })
             .expect("Code generation failed");
-
-        codegen
-            .write_exec(path)
-            .map_err(|err| {
-                eprintln!("Error writing executable: {err}");
-                err
-            })
-            .expect("Failed to write executable");
-
-        codegen.cleanup();
     }
 }

@@ -15,17 +15,18 @@ fn main() {
     let source = r#"
         struct Point {
             x: int,
-            y: int,
+            y: string,
         }
 
         fn struct_init(): Point {
-            let a = 1;
-            let s = Point { x: a, y: 2 };
+            let a = 32;
+            let s = Point { x: a, y: "Hello world" };
             return s;
         }
 
         fn main(): int {
             let p = struct_init();
+            printf(2);
             return 0;
         }
     "#;

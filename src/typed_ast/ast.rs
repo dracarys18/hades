@@ -1,4 +1,4 @@
-use crate::{ast::Types, error::Span, tokens::Ident};
+use crate::{ast::Types, error::Span, tokens::Ident, typed_ast::function::FunctionSignature};
 use derive_more::Debug;
 use indexmap::IndexMap;
 
@@ -76,8 +76,7 @@ pub struct TypedStructDef {
 #[derive(Clone, PartialEq, Debug)]
 pub struct TypedFuncDef {
     pub name: Ident,
-    pub params: Vec<(Ident, Types)>,
-    pub return_type: Types,
+    pub signature: FunctionSignature,
     pub body: TypedBlock,
     pub span: Span,
 }

@@ -7,12 +7,12 @@ use indexmap::IndexMap;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionSignature {
-    pub params: Vec<Types>,
+    pub params: IndexMap<Ident, Types>,
     pub return_type: Types,
 }
 
 impl FunctionSignature {
-    pub fn new(params: Vec<Types>, return_type: Types) -> Self {
+    pub fn new(params: IndexMap<Ident, Types>, return_type: Types) -> Self {
         Self {
             params,
             return_type,
@@ -23,8 +23,8 @@ impl FunctionSignature {
         self.params.len()
     }
 
-    pub fn params(&self) -> &Vec<Types> {
-        &self.params
+    pub fn params(&self) -> Vec<Types> {
+        self.params.iter().map(|(_, v)| v.clone()).collect()
     }
 
     pub fn return_type(&self) -> &Types {

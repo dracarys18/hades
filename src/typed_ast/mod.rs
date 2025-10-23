@@ -8,7 +8,9 @@ mod struc;
 mod value;
 
 pub use ast::*;
+pub use builtins::BUILTIN_FUNCTIONS;
 pub use expr::TypedExpr;
+pub use function::FunctionSignature;
 pub use meta::CompilerContext;
 pub use value::TypedValue;
 

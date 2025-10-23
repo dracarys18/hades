@@ -31,14 +31,10 @@ impl CompilerContext {
     pub fn enter_function(
         &mut self,
         name: Ident,
-        params: Vec<(Ident, Types)>,
-        return_type: Types,
+        signature: FunctionSignature,
     ) -> Result<(), SemanticError> {
-        self.current_function = Some((name.clone(), return_type.clone()));
-
-        let param_types = params.iter().map(|(_, t)| t.clone()).collect();
-        self.functions
-            .insert(name, FunctionSignature::new(param_types, return_type))
+        self.current_function = Some((name.clone(), signature.return_type.clone()));
+        self.functions.insert(name, signature)
     }
 
     pub fn enter_scope(&mut self) {

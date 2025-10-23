@@ -2,24 +2,26 @@ use inkwell::types::{AnyType, AnyTypeEnum, FunctionType};
 
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult};
-use crate::codegen::traits::{BlockCodegen, ExprCodegen, FunctionCodegen, StmtCodegen};
+use crate::codegen::traits::Visit;
 use crate::typed_ast::{
     TypedBlock, TypedContinue, TypedFor, TypedFuncDef, TypedIf, TypedReturn, TypedStmt, TypedWhile,
 };
 
-impl StmtCodegen for TypedStmt {
-    fn generate_stmt<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<()> {
+impl Visit for TypedStmt {
+    type Output<'ctx> = ();
+
+    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
         match self {
-            Self::Let(let_stmt) => let_stmt.generate_stmt(context),
-            Self::TypedExpr(expr) => expr.generate_stmt(context),
-            Self::If(if_stmt) => if_stmt.generate_stmt(context),
-            Self::While(while_stmt) => while_stmt.generate_stmt(context),
-            Self::For(for_stmt) => for_stmt.generate_stmt(context),
-            Self::Block(block) => block.generate_block(context),
-            Self::Return(return_stmt) => return_stmt.generate_stmt(context),
-            Self::Continue(continue_stmt) => continue_stmt.generate_stmt(context),
+            Self::Let(let_stmt) => let_stmt.visit(context),
+            Self::TypedExpr(expr) => expr.visit(context),
+            Self::If(if_stmt) => if_stmt.visit(context),
+            Self::While(while_stmt) => while_stmt.visit(context),
+            Self::For(for_stmt) => for_stmt.visit(context),
+            Self::Block(block) => block.visit(context),
+            Self::Return(return_stmt) => return_stmt.visit(context),
+            Self::Continue(continue_stmt) => continue_stmt.visit(context),
             Self::FuncDef(func_def) => {
-                func_def.generate_function(context)?;
+                func_def.visit(context)?;
                 Ok(())
             }
             Self::StructDef(_) => Ok(()),
@@ -27,10 +29,12 @@ impl StmtCodegen for TypedStmt {
     }
 }
 
-impl BlockCodegen for TypedBlock {
-    fn generate_block<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<()> {
+impl Visit for TypedBlock {
+    type Output<'ctx> = ();
+
+    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
         for stmt in &self.stmts.0 {
-            stmt.generate_stmt(context)?;
+            stmt.visit(context)?;
             if context.is_block_terminated() {
                 break;
             }
@@ -39,9 +43,11 @@ impl BlockCodegen for TypedBlock {
     }
 }
 
-impl StmtCodegen for TypedIf {
-    fn generate_stmt<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<()> {
-        let cond_val = self.cond.expr().generate_expr(context)?;
+impl Visit for TypedIf {
+    type Output<'ctx> = ();
+
+    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
+        let cond_val = self.cond.expr().visit(context)?;
         let cond_int = cond_val.value.into_int_value();
 
         let then_block = context.create_basic_block("if.then");
@@ -57,14 +63,14 @@ impl StmtCodegen for TypedIf {
         context.build_conditional_branch(cond_int.into(), then_block, final_else_block)?;
 
         context.position_at_end(then_block);
-        self.then_branch.generate_block(context)?;
+        self.then_branch.visit(context)?;
         if !context.is_block_terminated() {
             context.build_unconditional_branch(merge_block)?;
         }
 
         if let Some(else_branch) = &self.else_branch {
             context.position_at_end(else_block);
-            else_branch.generate_block(context)?;
+            else_branch.visit(context)?;
             if !context.is_block_terminated() {
                 context.build_unconditional_branch(merge_block)?;
             }
@@ -75,8 +81,10 @@ impl StmtCodegen for TypedIf {
     }
 }
 
-impl StmtCodegen for TypedWhile {
-    fn generate_stmt<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<()> {
+impl Visit for TypedWhile {
+    type Output<'ctx> = ();
+
+    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
         let loop_header = context.create_basic_block("while.header");
         let loop_body = context.create_basic_block("while.body");
         let loop_exit = context.create_basic_block("while.exit");
@@ -84,14 +92,14 @@ impl StmtCodegen for TypedWhile {
         context.build_unconditional_branch(loop_header)?;
         context.position_at_end(loop_header);
 
-        let cond_val = self.cond.generate_expr(context)?;
+        let cond_val = self.cond.visit(context)?;
         let cond_int = cond_val.value.into_int_value();
 
         context.build_conditional_branch(cond_int.into(), loop_body, loop_exit)?;
 
         context.position_at_end(loop_body);
         context.push_loop(loop_header, loop_exit);
-        self.body.generate_block(context)?;
+        self.body.visit(context)?;
         context.pop_loop();
 
         if !context.is_block_terminated() {
@@ -103,9 +111,11 @@ impl StmtCodegen for TypedWhile {
     }
 }
 
-impl StmtCodegen for TypedFor {
-    fn generate_stmt<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<()> {
-        self.init.expr().generate_expr(context)?;
+impl Visit for TypedFor {
+    type Output<'ctx> = ();
+
+    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
+        self.init.expr().visit(context)?;
 
         let loop_header = context.create_basic_block("for.header");
         let loop_body = context.create_basic_block("for.body");
@@ -115,14 +125,14 @@ impl StmtCodegen for TypedFor {
         context.build_unconditional_branch(loop_header)?;
         context.position_at_end(loop_header);
 
-        let cond_val = self.cond.expr().generate_expr(context)?;
+        let cond_val = self.cond.expr().visit(context)?;
         let cond_int = cond_val.value.into_int_value();
 
         context.build_conditional_branch(cond_int.into(), loop_body, loop_exit)?;
 
         context.position_at_end(loop_body);
         context.push_loop(loop_update, loop_exit);
-        self.body.generate_block(context)?;
+        self.body.visit(context)?;
         context.pop_loop();
 
         if !context.is_block_terminated() {
@@ -130,7 +140,7 @@ impl StmtCodegen for TypedFor {
         }
 
         context.position_at_end(loop_update);
-        self.update.expr().generate_expr(context)?;
+        self.update.expr().visit(context)?;
         context.build_unconditional_branch(loop_header)?;
 
         context.position_at_end(loop_exit);
@@ -138,11 +148,13 @@ impl StmtCodegen for TypedFor {
     }
 }
 
-impl StmtCodegen for TypedReturn {
-    fn generate_stmt<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<()> {
+impl Visit for TypedReturn {
+    type Output<'ctx> = ();
+
+    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
         match &self.expr {
             Some(expr) => {
-                let return_val = expr.expr().generate_expr(context)?;
+                let return_val = expr.expr().visit(context)?;
                 context.build_return(Some(return_val.value))?;
             }
             None => {
@@ -153,8 +165,10 @@ impl StmtCodegen for TypedReturn {
     }
 }
 
-impl StmtCodegen for TypedContinue {
-    fn generate_stmt<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<()> {
+impl Visit for TypedContinue {
+    type Output<'ctx> = ();
+
+    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
         let loop_ctx = context
             .current_loop()
             .ok_or_else(|| CodegenError::LLVMBuild {
@@ -167,28 +181,28 @@ impl StmtCodegen for TypedContinue {
     }
 }
 
-impl FunctionCodegen for TypedFuncDef {
-    fn generate_function<'ctx>(
-        &self,
-        context: &mut LLVMContext<'ctx>,
-    ) -> CodegenResult<inkwell::values::FunctionValue<'ctx>> {
+impl Visit for TypedFuncDef {
+    type Output<'ctx> = inkwell::values::FunctionValue<'ctx>;
+
+    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
         let mut param_types = Vec::new();
         let symbols = context.symbols();
-        for (_, param_type) in &self.params {
+        let sigature = self.signature.clone();
+        for (_, param_type) in &sigature.params {
             let llvm_type = context.type_converter().to_llvm_type(param_type, symbols)?;
             param_types.push(llvm_type.into());
         }
 
-        let return_type: AnyTypeEnum = if self.return_type == crate::ast::Types::Void {
+        let return_type: AnyTypeEnum = if sigature.return_type == crate::ast::Types::Void {
             context.type_converter().void_type().into()
         } else {
             context
                 .type_converter()
-                .to_llvm_type(&self.return_type, symbols)?
+                .to_llvm_type(&sigature.return_type, symbols)?
                 .as_any_type_enum()
         };
 
-        let fn_type: FunctionType = if self.return_type == crate::ast::Types::Void {
+        let fn_type: FunctionType = if sigature.return_type == crate::ast::Types::Void {
             context
                 .type_converter()
                 .void_type()
@@ -201,13 +215,12 @@ impl FunctionCodegen for TypedFuncDef {
             .module()
             .add_function(self.name.inner(), fn_type, None);
 
-        context.declare_function(self.name.inner().to_string(), function);
         context.set_current_function(function);
 
         let entry_block = context.create_basic_block("entry");
         context.position_at_end(entry_block);
 
-        for (i, (param_name, param_type)) in self.params.iter().enumerate() {
+        for (i, (param_name, param_type)) in sigature.params.iter().enumerate() {
             let param_val = function.get_nth_param(i as u32).unwrap();
             param_val.set_name(param_name.inner());
 
@@ -218,13 +231,13 @@ impl FunctionCodegen for TypedFuncDef {
             context.declare_variable(param_name.clone(), param_alloca, param_type.clone())?;
         }
 
-        self.body.generate_block(context)?;
+        self.body.visit(context)?;
 
         if !context.is_block_terminated() {
-            if self.return_type == crate::ast::Types::Void {
+            if self.signature.return_type == crate::ast::Types::Void {
                 context.build_return(None)?;
             } else {
-                let default_val = match self.return_type {
+                let default_val = match self.signature.return_type {
                     crate::ast::Types::Int => context.context().i32_type().const_zero().into(),
                     crate::ast::Types::Float => context.context().f64_type().const_zero().into(),
                     crate::ast::Types::Bool => context.context().bool_type().const_zero().into(),
@@ -232,7 +245,7 @@ impl FunctionCodegen for TypedFuncDef {
                         return Err(CodegenError::LLVMBuild {
                             message: format!(
                                 "Cannot generate default return value for type {:?}",
-                                self.return_type
+                                self.signature.return_type
                             ),
                         });
                     }

@@ -1,6 +1,6 @@
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult};
-use crate::codegen::traits::{CodegenVisitor, StmtCodegen};
+use crate::codegen::traits::{CodegenVisitor, Visit};
 use crate::semantic::analyzer::{Analyzer, Prepared};
 use crate::typed_ast::TypedProgram;
 use inkwell::{
@@ -8,8 +8,10 @@ use inkwell::{
     targets::{CodeModel, FileType, RelocMode, Target, TargetMachine},
 };
 
-impl StmtCodegen for TypedProgram {
-    fn generate_stmt<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<()> {
+impl Visit for TypedProgram {
+    type Output<'ctx> = ();
+
+    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
         let visitor = CodegenVisitor::new();
         visitor.visit_program(self, context)
     }
@@ -17,7 +19,7 @@ impl StmtCodegen for TypedProgram {
 
 impl Analyzer<Prepared> {
     pub fn generate_code<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<()> {
-        self.ast().generate_stmt(context)
+        self.ast().visit(context)
     }
 
     pub fn compile_to_llvm<'ctx>(
@@ -93,6 +95,8 @@ impl Analyzer<Prepared> {
                 message: "Failed to create target machine".to_string(),
             })?;
 
+        let ir = self.generate_ir(llvm_context, module_name)?;
+        println!("Generated IR:\n{}", ir);
         target_machine
             .write_to_file(context.module(), FileType::Object, output_path)
             .map_err(|e| CodegenError::LLVMBuild {

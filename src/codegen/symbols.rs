@@ -24,14 +24,12 @@ impl<'ctx> LLVMVariable<'ctx> {
 #[derive(Debug)]
 pub struct CodegenSymbols<'ctx> {
     variables: Scope<LLVMVariable<'ctx>>,
-    functions: HashMap<String, FunctionValue<'ctx>>,
 }
 
 impl<'ctx> CodegenSymbols<'ctx> {
     pub fn new() -> Self {
         Self {
             variables: Scope::global(),
-            functions: HashMap::new(),
         }
     }
 
@@ -56,28 +54,13 @@ impl<'ctx> CodegenSymbols<'ctx> {
         Ok(())
     }
 
-    pub fn declare_function(&mut self, name: String, func: FunctionValue<'ctx>) {
-        self.functions.insert(name, func);
-    }
-
     pub fn lookup_variable(&self, name: &Ident) -> Option<LLVMVariable<'ctx>> {
         self.variables.lookup_scope(name).cloned()
-    }
-
-    pub fn lookup_function(&self, name: &str) -> Option<FunctionValue<'ctx>> {
-        self.functions.get(name).copied()
     }
 
     pub fn get_variable(&self, name: &Ident) -> CodegenResult<LLVMVariable<'ctx>> {
         self.lookup_variable(name)
             .ok_or_else(|| CodegenError::UndefinedVariable {
-                name: name.to_string(),
-            })
-    }
-
-    pub fn get_function(&self, name: &str) -> CodegenResult<FunctionValue<'ctx>> {
-        self.lookup_function(name)
-            .ok_or_else(|| CodegenError::FunctionNotFound {
                 name: name.to_string(),
             })
     }

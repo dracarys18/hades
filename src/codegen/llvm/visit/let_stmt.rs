@@ -1,13 +1,14 @@
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::CodegenResult;
-use crate::codegen::traits::{ExprCodegen, StmtCodegen};
-use crate::typed_ast::TypedLet;
+use crate::codegen::traits::Visit;
 
-impl StmtCodegen for TypedLet {
-    fn generate_stmt<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<()> {
+impl Visit for crate::typed_ast::TypedLet {
+    type Output<'ctx> = ();
+
+    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
         let var_name = self.name.clone();
 
-        let init_value = self.value.expr().generate_expr(context)?;
+        let init_value = self.value.expr().visit(context)?;
 
         let symbols = context.symbols();
         let var_type = context.type_converter().to_llvm_type(&self.typ, symbols)?;
@@ -22,9 +23,11 @@ impl StmtCodegen for TypedLet {
     }
 }
 
-impl StmtCodegen for crate::typed_ast::TypedExprAst {
-    fn generate_stmt<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<()> {
-        self.expr().generate_expr(context)?;
+impl Visit for crate::typed_ast::TypedExprAst {
+    type Output<'ctx> = ();
+
+    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
+        self.expr().visit(context)?;
         Ok(())
     }
 }

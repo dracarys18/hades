@@ -79,24 +79,20 @@ impl<'ctx> LLVMContext<'ctx> {
         self.codegen_symbols.declare_variable(name, ptr, typ)
     }
 
-    pub fn declare_function(&mut self, name: String, func: FunctionValue<'ctx>) {
-        self.codegen_symbols.declare_function(name, func)
-    }
-
     pub fn get_variable(&self, name: &Ident) -> CodegenResult<LLVMVariable<'ctx>> {
         self.codegen_symbols.get_variable(name)
     }
 
     pub fn get_function(&self, name: &str) -> CodegenResult<FunctionValue<'ctx>> {
-        self.codegen_symbols.get_function(name)
+        self.module()
+            .get_function(name)
+            .ok_or(CodegenError::FunctionNotFound {
+                name: name.to_string(),
+            })
     }
 
     pub fn lookup_variable(&self, name: &Ident) -> Option<LLVMVariable<'ctx>> {
         self.codegen_symbols.lookup_variable(name)
-    }
-
-    pub fn lookup_function(&self, name: &str) -> Option<FunctionValue<'ctx>> {
-        self.codegen_symbols.lookup_function(name)
     }
 
     pub fn set_current_function(&mut self, func: FunctionValue<'ctx>) {

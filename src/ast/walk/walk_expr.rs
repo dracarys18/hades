@@ -1,7 +1,7 @@
 use crate::error::SemanticError;
 use crate::{
     ast::{Expr, Types, WalkAst},
-    typed_ast::{CompilerContext, TypedExpr, TypedExprAst},
+    typed_ast::{CompilerContext, Params, TypedExpr, TypedExprAst},
 };
 
 impl WalkAst for Expr {
@@ -102,27 +102,37 @@ impl WalkAst for Expr {
                 let sig = ctx.get_function_signature(func)?;
 
                 let return_type = sig.return_type().clone();
-                let params = sig.params().to_vec();
+                let params = sig.params();
                 let param_count = sig.param_count();
 
-                if args.len() != param_count {
-                    return Err(SemanticError::ArgumentCountMismatch {
-                        expected: param_count,
-                        found: args.len(),
-                        function: func.clone(),
-                    });
+                match &params {
+                    Params::Variadic => {
+                        if args.len() > param_count {
+                            return Err(SemanticError::ArgumentCountMismatch {
+                                expected: param_count,
+                                found: args.len(),
+                                function: func.clone(),
+                            });
+                        }
+                    }
+                    Params::Fixed(_) => {
+                        if args.len() != param_count {
+                            return Err(SemanticError::ArgumentCountMismatch {
+                                expected: param_count,
+                                found: args.len(),
+                                function: func.clone(),
+                            });
+                        }
+                    }
                 }
 
                 let mut typed_args = Vec::new();
-                for (arg, expected_type) in args.iter().zip(params.iter()) {
+
+                for (i, arg) in args.iter().enumerate() {
                     let typed_arg = arg.walk(ctx)?;
-                    let typ = typed_arg.get_type();
+                    let expected_type = typed_arg.get_type();
 
-                    let cond = match expected_type {
-                        Types::Generic(typs) => typs.contains(&typ),
-                        _ => &typ == expected_type,
-                    };
-
+                    let cond = params.type_match(i, &expected_type);
                     if !cond {
                         return Err(SemanticError::TypeMismatch {
                             expected: expected_type.clone().to_string(),

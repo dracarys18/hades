@@ -13,20 +13,8 @@ mod typed_ast;
 
 fn main() {
     let source = r#"
-        struct Point {
-            x: int,
-            y: string,
-        }
-
-        fn struct_init(): Point {
-            let a = 32;
-            let s = Point { x: a, y: "Hello world" };
-            return s;
-        }
-
         fn main(): int {
-            let p = struct_init();
-            printf(2);
+            printf("End of test\n");
             return 0;
         }
     "#;

@@ -96,7 +96,11 @@ impl<'a> Compiler<'a> {
             .expect("Semantic analysis failed");
 
         prepared
-            .compile_to_object(&context, "main_module", path.as_ref())
+            .verify_module(&context, "main_module")
+            .expect("Module verification failed");
+
+        prepared
+            .compile(&context, "main_module", path.as_ref())
             .map_err(|err| {
                 eprintln!("Error during code generation: {err}");
                 err

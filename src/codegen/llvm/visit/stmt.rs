@@ -188,7 +188,8 @@ impl Visit for TypedFuncDef {
         let mut param_types = Vec::new();
         let symbols = context.symbols();
         let sigature = self.signature.clone();
-        for (_, param_type) in &sigature.params {
+        let params = sigature.to_fixed_params();
+        for (_, param_type) in &params {
             let llvm_type = context.type_converter().to_llvm_type(param_type, symbols)?;
             param_types.push(llvm_type.into());
         }
@@ -220,7 +221,7 @@ impl Visit for TypedFuncDef {
         let entry_block = context.create_basic_block("entry");
         context.position_at_end(entry_block);
 
-        for (i, (param_name, param_type)) in sigature.params.iter().enumerate() {
+        for (i, (param_name, param_type)) in params.iter().enumerate() {
             let param_val = function.get_nth_param(i as u32).unwrap();
             param_val.set_name(param_name.inner());
 

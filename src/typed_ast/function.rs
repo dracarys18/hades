@@ -1,30 +1,71 @@
 use super::builtins::BUILTIN_FUNCTIONS;
 use crate::ast::Types;
+use crate::consts::MAX_FUNCTION_PARAMS;
 use crate::tokens::Ident;
 use crate::typed_ast::SemanticError;
 
 use indexmap::IndexMap;
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum Params {
+    Variadic,
+    Fixed(IndexMap<Ident, Types>),
+}
+
+impl Params {
+    pub fn type_match(&self, num: usize, other_type: &Types) -> bool {
+        match self {
+            Params::Variadic => true,
+            Params::Fixed(map) => {
+                let expected_type = map.values().nth(num).expect("Parameter not found");
+
+                let cond = match expected_type {
+                    Types::Generic(typs) => typs.contains(&other_type),
+                    _ => other_type == expected_type,
+                };
+                cond
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct FunctionSignature {
-    pub params: IndexMap<Ident, Types>,
+    pub params: Params,
     pub return_type: Types,
 }
 
 impl FunctionSignature {
     pub fn new(params: IndexMap<Ident, Types>, return_type: Types) -> Self {
         Self {
-            params,
+            params: Params::Fixed(params),
+            return_type,
+        }
+    }
+
+    pub fn new_variadic(return_type: Types) -> Self {
+        Self {
+            params: Params::Variadic,
             return_type,
         }
     }
 
     pub fn param_count(&self) -> usize {
-        self.params.len()
+        match &self.params {
+            Params::Variadic => MAX_FUNCTION_PARAMS,
+            Params::Fixed(map) => map.len(),
+        }
     }
 
-    pub fn params(&self) -> Vec<Types> {
-        self.params.iter().map(|(_, v)| v.clone()).collect()
+    pub fn params(&self) -> Params {
+        self.params.clone()
+    }
+
+    pub fn to_fixed_params(&self) -> IndexMap<Ident, Types> {
+        match &self.params {
+            Params::Variadic => panic!("Variadic functions are not supported yet"),
+            Params::Fixed(map) => map.clone(),
+        }
     }
 
     pub fn return_type(&self) -> &Types {

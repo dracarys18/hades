@@ -41,33 +41,33 @@ impl Analyzer<Prepared> {
         Ok(context.module().print_to_string().to_string())
     }
 
-    pub fn verify_module<'ctx>(
+    pub fn verify_module(
         &self,
-        llvm_context: &'ctx inkwell::context::Context,
+        llvm_context: &inkwell::context::Context,
         module_name: &str,
     ) -> CodegenResult<bool> {
         let context = self.compile_to_llvm(llvm_context, module_name)?;
         Ok(context.module().verify().is_ok())
     }
 
-    pub fn write_to_file<'ctx>(
+    pub fn write_to_file(
         &self,
-        llvm_context: &'ctx inkwell::context::Context,
+        llvm_context: &inkwell::context::Context,
         module_name: &str,
         file_path: &std::path::Path,
     ) -> CodegenResult<()> {
         let ir = self.generate_ir(llvm_context, module_name)?;
         std::fs::write(file_path, ir).map_err(|e| {
             crate::codegen::error::CodegenError::LLVMBuild {
-                message: format!("Failed to write IR to file: {}", e),
+                message: format!("Failed to write IR to file: {e}"),
             }
         })?;
         Ok(())
     }
 
-    pub fn compile_to_object<'ctx>(
+    pub fn compile_to_object(
         &self,
-        llvm_context: &'ctx inkwell::context::Context,
+        llvm_context: &inkwell::context::Context,
         module_name: &str,
         output_path: &std::path::Path,
     ) -> CodegenResult<()> {
@@ -78,7 +78,7 @@ impl Analyzer<Prepared> {
         let triple = TargetMachine::get_default_triple();
         let target = Target::from_triple(&triple).map_err(|e| {
             crate::codegen::error::CodegenError::LLVMBuild {
-                message: format!("Failed to get target from triple: {}", e),
+                message: format!("Failed to get target from triple: {e}"),
             }
         })?;
 
@@ -95,56 +95,49 @@ impl Analyzer<Prepared> {
                 message: "Failed to create target machine".to_string(),
             })?;
 
-        let ir = self.generate_ir(llvm_context, module_name)?;
-        println!("Generated IR:\n{}", ir);
         target_machine
             .write_to_file(context.module(), FileType::Object, output_path)
             .map_err(|e| CodegenError::LLVMBuild {
-                message: format!("Failed to write object file: {}", e),
+                message: format!("Failed to write object file: {e}"),
             })?;
 
         Ok(())
     }
-}
 
-pub struct ProgramGenerator<'ctx> {
-    context: LLVMContext<'ctx>,
-    visitor: CodegenVisitor,
-}
+    pub fn compile(
+        &self,
+        llvm_context: &inkwell::context::Context,
+        module_name: &str,
+        output_path: &std::path::Path,
+    ) -> CodegenResult<()> {
+        let object_path = output_path.with_extension("o");
+        self.compile_to_object(llvm_context, module_name, &object_path)?;
 
-impl<'ctx> ProgramGenerator<'ctx> {
-    pub fn new(context: LLVMContext<'ctx>) -> Self {
-        Self {
-            context,
-            visitor: CodegenVisitor::new(),
+        let status = std::process::Command::new("clang")
+            .arg(object_path.to_str().unwrap())
+            .arg("-o")
+            .arg(output_path.to_str().unwrap())
+            .arg("-lc")
+            .status()
+            .map_err(|e| CodegenError::LLVMBuild {
+                message: format!("Failed to invoke gcc: {e}"),
+            })?;
+
+        if !status.success() {
+            return Err(CodegenError::LLVMBuild {
+                message: "Clang failed to create executable".to_string(),
+            });
         }
+        Ok(())
     }
 
-    pub fn generate(&mut self, program: &TypedProgram) -> CodegenResult<()> {
-        self.visitor.visit_program(program, &mut self.context)
-    }
-
-    pub fn into_context(self) -> LLVMContext<'ctx> {
-        self.context
-    }
-
-    pub fn context(&self) -> &LLVMContext<'ctx> {
-        &self.context
-    }
-
-    pub fn context_mut(&mut self) -> &mut LLVMContext<'ctx> {
-        &mut self.context
-    }
-
-    pub fn get_ir(&self) -> String {
-        self.context.module().print_to_string().to_string()
-    }
-
-    pub fn verify(&self) -> bool {
-        self.context.module().verify().is_ok()
-    }
-
-    pub fn dump_ir(&self) {
-        self.context.module().print_to_stderr();
+    pub fn cleanup(&self, output_path: &std::path::Path) -> CodegenResult<()> {
+        let object_path = output_path.with_extension("o");
+        if object_path.exists() {
+            std::fs::remove_file(&object_path).map_err(|e| CodegenError::LLVMBuild {
+                message: format!("Failed to remove object file: {e}"),
+            })?;
+        }
+        Ok(())
     }
 }

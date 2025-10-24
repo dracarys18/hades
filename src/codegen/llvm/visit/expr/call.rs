@@ -38,7 +38,6 @@ impl<'a> Visit for FunctionCall<'a> {
             .clone();
 
         if BuiltinRegistar::is_builtin_function(self.name) {
-            print!("Calling builtin function: {}\n", self.name);
             let call_result =
                 BuiltinRegistar::handle(self.name, context, &arg_values).map_err(|_| {
                     CodegenError::LLVMBuild {

@@ -16,7 +16,7 @@ impl<'a> Compiler<'a> {
         std::fs::create_dir_all(consts::BUILD_PATH).expect("Failed to create build directory");
     }
 
-    pub fn check(&self, _: impl AsRef<std::path::Path>) {
+    pub fn check(&self) {
         let source_trimmed = self.source.trim();
 
         let mut lexer = lexer::Lexer::new(source_trimmed, self.filename.to_string());
@@ -96,15 +96,23 @@ impl<'a> Compiler<'a> {
             .expect("Semantic analysis failed");
 
         prepared
-            .verify_module(&context, "main_module")
+            .verify_module(&context, consts::MAIN_MODULE_NAME)
             .expect("Module verification failed");
 
         prepared
-            .compile(&context, "main_module", path.as_ref())
+            .compile(&context, consts::MAIN_MODULE_NAME, path.as_ref())
             .map_err(|err| {
                 eprintln!("Error during code generation: {err}");
                 err
             })
             .expect("Code generation failed");
+
+        prepared
+            .cleanup(path.as_ref())
+            .map_err(|err| {
+                eprintln!("Error during cleanup: {err}");
+                err
+            })
+            .expect("Cleanup failed");
     }
 }

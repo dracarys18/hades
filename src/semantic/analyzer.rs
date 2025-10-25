@@ -47,10 +47,7 @@ impl Analyzer<Prepared> {
 
         //TODO: Add more analysis steps here
         evaluator
-            .eval(|program: &TypedProgram| {
-                println!("Analyzing program with {} statements", program.len());
-                Ok(())
-            })
+            .eval(|program: &TypedProgram| Ok(()))
             .execute(self.data.ast())
     }
 }

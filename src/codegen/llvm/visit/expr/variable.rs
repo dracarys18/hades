@@ -21,7 +21,6 @@ impl<'a> Visit for VariableAccess<'a> {
         let var_ptr = var.value();
         let var_type = var.typ();
         let loaded_val = context.create_load(var_ptr, self.name.inner())?;
-
         Ok(CodegenValue::new(loaded_val, var_type.clone()))
     }
 }

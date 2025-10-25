@@ -1,0 +1,7 @@
+fn main():int {
+    let a = 5 + 3;
+    printf("A is 5 \n");
+    printf("B is 3 \n");
+    printf("A + B IS %d\n", a);
+    return 0;
+}

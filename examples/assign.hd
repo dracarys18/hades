@@ -1,0 +1,11 @@
+fn main():int {
+    let a = "Foo";
+    printf("%s\n", a);
+    a = "Bar";
+    printf("%s\n", a);
+    a = "Pub";
+    printf("%s\n", a);
+    a = "BIIIIIIGGGG STRINGGGG";
+    printf("%s\n", a);
+    return 0;
+}

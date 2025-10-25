@@ -3,12 +3,14 @@ use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
 use crate::typed_ast::TypedExpr;
 
+pub mod assign;
 pub mod binary;
 pub mod call;
 pub mod struct_init;
 pub mod unary;
 pub mod variable;
 
+pub use assign::Assignment;
 pub use binary::BinaryOp;
 pub use call::FunctionCall;
 pub use struct_init::StructInit;
@@ -42,6 +44,10 @@ impl Visit for TypedExpr {
             Self::StructInit { name, fields, .. } => {
                 let struct_init = StructInit::new(name, fields);
                 struct_init.visit(context)
+            }
+            Self::Assign { name, value, .. } => {
+                let assignment = Assignment::new(name, value);
+                assignment.visit(context)
             }
             _ => Err(CodegenError::LLVMBuild {
                 message: format!("Expression type {:?} not implemented", self),

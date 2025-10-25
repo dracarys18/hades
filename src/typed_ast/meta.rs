@@ -153,6 +153,18 @@ impl CompilerContext {
                     span: Span::default(),
                 }),
             },
+            Op::Assign => {
+                if left == right {
+                    Ok(left.clone())
+                } else {
+                    Err(SemanticError::InvalidBinaryOperation {
+                        left: left.to_string(),
+                        op: format!("{op:?}"),
+                        right: right.to_string(),
+                        span: Span::default(),
+                    })
+                }
+            }
             Op::And | Op::Or | Op::BoleanAnd | Op::BooleanOr => match (left, right) {
                 (Types::Bool, Types::Bool) => Ok(Types::Bool),
                 _ => Err(SemanticError::InvalidBinaryOperation {

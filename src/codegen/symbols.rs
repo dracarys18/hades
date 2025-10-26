@@ -2,9 +2,7 @@ use crate::ast::Types;
 use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::semantic::scope::Scope;
 use crate::tokens::Ident;
-use inkwell::types;
-use inkwell::values::{FunctionValue, PointerValue};
-use std::collections::HashMap;
+use inkwell::values::PointerValue;
 
 #[derive(Debug, Clone)]
 pub struct LLVMVariable<'ctx> {

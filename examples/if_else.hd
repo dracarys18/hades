@@ -1,0 +1,18 @@
+fn main():int {
+    let a = 1;
+    let b = 1;
+    let c = a==b;
+
+    if(c) {
+        printf("Voila\n");
+    } else {
+        printf("OOf");
+    }
+
+    if(c!=c) {
+        printf("OOf");
+    } else {
+        printf("Voila\n");
+    }
+    return 0;
+}

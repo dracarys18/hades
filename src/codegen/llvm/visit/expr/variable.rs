@@ -20,7 +20,11 @@ impl<'a> Visit for VariableAccess<'a> {
         let var = context.get_variable(self.name)?;
         let var_ptr = var.value();
         let var_type = var.typ();
-        let loaded_val = context.create_load(var_ptr, self.name.inner())?;
+
+        let symbols = context.symbols();
+        let llvm_type = context.type_converter().to_llvm_type(var_type, symbols)?;
+
+        let loaded_val = context.create_load(var_ptr, llvm_type, self.name.inner())?;
         Ok(CodegenValue::new(loaded_val, var_type.clone()))
     }
 }

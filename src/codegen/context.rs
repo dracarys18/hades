@@ -139,11 +139,11 @@ impl<'ctx> LLVMContext<'ctx> {
     pub fn create_load(
         &self,
         ptr: PointerValue<'ctx>,
+        element_type: BasicTypeEnum<'ctx>,
         name: &str,
     ) -> CodegenResult<BasicValueEnum<'ctx>> {
-        let ptr_type: BasicTypeEnum = ptr.get_type().into();
         self.builder
-            .build_load(ptr_type, ptr, name)
+            .build_load(element_type, ptr, name)
             .map_err(|_| CodegenError::LLVMBuild {
                 message: format!("Failed to load value from {}", name),
             })

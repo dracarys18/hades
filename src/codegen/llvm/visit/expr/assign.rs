@@ -110,7 +110,7 @@ fn generic_sub<'a>(
         BasicValueEnum::IntValue(curr) => {
             let new_value = context
                 .builder()
-                .build_int_sub(curr, add.into_int_value(), "add_assign")
+                .build_int_sub(curr, add.into_int_value(), "sub_assign")
                 .map_err(|e| CodegenError::LLVMBuild {
                     message: format!("Failed to build add for assignment: {e:?}"),
                 })?;
@@ -119,7 +119,7 @@ fn generic_sub<'a>(
         BasicValueEnum::FloatValue(curr) => {
             let new_value = context
                 .builder()
-                .build_float_sub(curr, add.into_float_value(), "add_assign")
+                .build_float_sub(curr, add.into_float_value(), "sub_assign")
                 .map_err(|e| CodegenError::LLVMBuild {
                     message: format!("Failed to build add for assignment: {e:?}"),
                 })?;

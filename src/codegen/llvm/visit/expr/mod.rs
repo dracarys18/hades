@@ -45,8 +45,10 @@ impl Visit for TypedExpr {
                 let struct_init = StructInit::new(name, fields);
                 struct_init.visit(context)
             }
-            Self::Assign { name, value, .. } => {
-                let assignment = Assignment::new(name, value);
+            Self::Assign {
+                name, value, op, ..
+            } => {
+                let assignment = Assignment::new(name, op, value);
                 assignment.visit(context)
             }
             _ => Err(CodegenError::LLVMBuild {

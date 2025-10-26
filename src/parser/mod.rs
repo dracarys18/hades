@@ -372,6 +372,7 @@ impl Parser {
         let start = self.char_pos;
         self.expect(&TokenKind::For)?;
         let init = self.parse_stmt_expr()?;
+        self.expect(&TokenKind::Semicolon)?;
         let cond = self.parse_while_expr()?;
         self.expect(&TokenKind::Semicolon)?;
         let update = self.parse_stmt_expr()?;
@@ -656,7 +657,7 @@ impl Parser {
                 let value = self.parse_assignment()?;
                 return Ok(Expr::Assign {
                     name,
-                    op: Some(op),
+                    op,
                     value: Box::new(value),
                 });
             } else {

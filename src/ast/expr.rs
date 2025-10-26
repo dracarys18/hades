@@ -22,7 +22,7 @@ pub enum Expr {
     },
     Assign {
         name: Ident,
-        op: Option<Op>,
+        op: Op,
         value: Box<Expr>,
     },
     Call {

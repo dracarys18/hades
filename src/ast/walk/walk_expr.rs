@@ -75,22 +75,7 @@ impl WalkAst for Expr {
                 let var_type = ctx.get_variable_type(name)?;
                 let typed_value = value.walk(ctx)?;
 
-                let result_type = match op {
-                    Some(assign_op) => {
-                        ctx.infer_binary_type(&var_type, assign_op, &typed_value.get_type())?
-                    }
-                    None => {
-                        if var_type != typed_value.get_type() {
-                            return Err(SemanticError::TypeMismatch {
-                                expected: var_type.clone().to_string(),
-                                found: typed_value.get_type().to_string(),
-                                span: crate::error::Span::default(),
-                            });
-                        }
-                        var_type.clone()
-                    }
-                };
-
+                let result_type = ctx.infer_binary_type(&var_type, op, &typed_value.get_type())?;
                 Ok(TypedExpr::Assign {
                     name: name.clone(),
                     op: op.clone(),

@@ -29,7 +29,7 @@ pub enum TypedExpr {
     },
     Assign {
         name: Ident,
-        op: Option<Op>,
+        op: Op,
         value: Box<TypedExpr>,
         typ: Types,
     },

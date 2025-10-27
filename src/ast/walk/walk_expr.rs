@@ -1,7 +1,10 @@
+use crate::ast::{AssignExpr, BinaryExpr};
 use crate::error::SemanticError;
 use crate::{
     ast::{Expr, Types, WalkAst},
-    typed_ast::{CompilerContext, Params, TypedExpr, TypedExprAst},
+    typed_ast::{
+        CompilerContext, Params, TypedAssignExpr, TypedBinaryExpr, TypedExpr, TypedExprAst,
+    },
 };
 
 impl WalkAst for Expr {
@@ -47,20 +50,7 @@ impl WalkAst for Expr {
                     types: Types::Struct(name.clone()),
                 })
             }
-            Expr::Binary { left, op, right } => {
-                let typed_left = left.walk(ctx)?;
-                let typed_right = right.walk(ctx)?;
-
-                let result_type =
-                    ctx.infer_binary_type(&typed_left.get_type(), op, &typed_right.get_type())?;
-
-                Ok(TypedExpr::Binary {
-                    left: Box::new(typed_left),
-                    op: op.clone(),
-                    right: Box::new(typed_right),
-                    typ: result_type,
-                })
-            }
+            Expr::Binary(binary) => Ok(TypedExpr::Binary(binary.walk(ctx)?)),
             Expr::Unary { op, expr } => {
                 let typed_expr = expr.walk(ctx)?;
                 let result_type = ctx.infer_unary_type(op, &typed_expr.get_type())?;
@@ -71,18 +61,7 @@ impl WalkAst for Expr {
                     typ: result_type,
                 })
             }
-            Expr::Assign { name, op, value } => {
-                let var_type = ctx.get_variable_type(name)?;
-                let typed_value = value.walk(ctx)?;
-
-                let result_type = ctx.infer_binary_type(&var_type, op, &typed_value.get_type())?;
-                Ok(TypedExpr::Assign {
-                    name: name.clone(),
-                    op: op.clone(),
-                    value: Box::new(typed_value),
-                    typ: result_type,
-                })
-            }
+            Expr::Assign(assign) => Ok(TypedExpr::Assign(assign.walk(ctx)?)),
             Expr::Call { func, args } => {
                 let sig = ctx.get_function_signature(func)?;
 
@@ -147,6 +126,37 @@ impl WalkAst for crate::ast::ExprAst {
         Ok(TypedExprAst {
             expr: typed_expr,
             span: self.span.clone(),
+        })
+    }
+}
+
+impl WalkAst for AssignExpr {
+    type Output = TypedAssignExpr;
+    fn walk(&self, ctx: &mut CompilerContext) -> Result<Self::Output, crate::error::SemanticError> {
+        let var_type = ctx.get_variable_type(&self.name)?;
+        let typed_value = self.value.walk(ctx)?;
+        let result_type = ctx.infer_binary_type(&var_type, &self.op, &typed_value.get_type())?;
+        Ok(TypedAssignExpr {
+            name: self.name.clone(),
+            op: self.op.clone(),
+            value: Box::new(typed_value),
+            typ: result_type,
+        })
+    }
+}
+
+impl WalkAst for BinaryExpr {
+    type Output = TypedBinaryExpr;
+    fn walk(&self, ctx: &mut CompilerContext) -> Result<Self::Output, crate::error::SemanticError> {
+        let typed_left = self.left.walk(ctx)?;
+        let typed_right = self.right.walk(ctx)?;
+        let result_type =
+            ctx.infer_binary_type(&typed_left.get_type(), &self.op, &typed_right.get_type())?;
+        Ok(TypedBinaryExpr {
+            left: Box::new(typed_left),
+            op: self.op.clone(),
+            right: Box::new(typed_right),
+            typ: result_type,
         })
     }
 }

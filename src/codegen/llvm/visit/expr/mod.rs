@@ -1,7 +1,7 @@
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
-use crate::typed_ast::TypedExpr;
+use crate::typed_ast::{TypedAssignExpr, TypedBinaryExpr, TypedExpr};
 
 pub mod assign;
 pub mod binary;
@@ -27,12 +27,7 @@ impl Visit for TypedExpr {
                 let var_access = VariableAccess::new(ident);
                 var_access.visit(context)
             }
-            Self::Binary {
-                left, op, right, ..
-            } => {
-                let binary_op = BinaryOp::new(left, op, right);
-                binary_op.visit(context)
-            }
+            Self::Binary(binary) => binary.visit(context),
             Self::Unary { op, expr, .. } => {
                 let unary_op = UnaryOp::new(op, expr);
                 unary_op.visit(context)
@@ -45,15 +40,26 @@ impl Visit for TypedExpr {
                 let struct_init = StructInit::new(name, fields);
                 struct_init.visit(context)
             }
-            Self::Assign {
-                name, value, op, ..
-            } => {
-                let assignment = Assignment::new(name, op, value);
-                assignment.visit(context)
-            }
+            Self::Assign(assign) => assign.visit(context),
             _ => Err(CodegenError::LLVMBuild {
                 message: format!("Expression type {:?} not implemented", self),
             }),
         }
+    }
+}
+
+impl Visit for TypedAssignExpr {
+    type Output<'ctx> = CodegenValue<'ctx>;
+    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
+        let assignment = Assignment::new(&self.name, &self.op, &self.value);
+        assignment.visit(context)
+    }
+}
+
+impl Visit for TypedBinaryExpr {
+    type Output<'ctx> = CodegenValue<'ctx>;
+    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
+        let binary_op = BinaryOp::new(&self.left, &self.op, &self.right);
+        binary_op.visit(context)
     }
 }

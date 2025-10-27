@@ -9,7 +9,7 @@ mod value;
 
 pub use ast::*;
 pub use builtins::BUILTIN_FUNCTIONS;
-pub use expr::TypedExpr;
+pub use expr::{TypedAssignExpr, TypedBinaryExpr, TypedExpr};
 pub use function::{FunctionSignature, Params};
 pub use meta::CompilerContext;
 pub use value::TypedValue;

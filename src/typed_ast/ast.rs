@@ -1,4 +1,12 @@
-use crate::{ast::Types, error::Span, tokens::Ident, typed_ast::function::FunctionSignature};
+use crate::{
+    ast::Types,
+    error::Span,
+    tokens::Ident,
+    typed_ast::{
+        expr::{TypedAssignExpr, TypedBinaryExpr},
+        function::FunctionSignature,
+    },
+};
 use derive_more::Debug;
 use indexmap::IndexMap;
 
@@ -59,9 +67,9 @@ pub struct TypedWhile {
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct TypedFor {
-    pub init: TypedExprAst,
-    pub cond: TypedExprAst,
-    pub update: TypedExprAst,
+    pub init: TypedLet,
+    pub cond: TypedBinaryExpr,
+    pub update: TypedAssignExpr,
     pub body: TypedBlock,
     pub span: Span,
 }

@@ -115,7 +115,7 @@ impl Visit for TypedFor {
     type Output<'ctx> = ();
 
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
-        self.init.expr().visit(context)?;
+        self.init.visit(context)?;
 
         let loop_header = context.create_basic_block("for.header");
         let loop_body = context.create_basic_block("for.body");
@@ -125,7 +125,7 @@ impl Visit for TypedFor {
         context.build_unconditional_branch(loop_header)?;
         context.position_at_end(loop_header);
 
-        let cond_val = self.cond.expr().visit(context)?;
+        let cond_val = self.cond.visit(context)?;
         let cond_int = cond_val.value.into_int_value();
 
         context.build_conditional_branch(cond_int.into(), loop_body, loop_exit)?;
@@ -140,7 +140,7 @@ impl Visit for TypedFor {
         }
 
         context.position_at_end(loop_update);
-        self.update.expr().visit(context)?;
+        self.update.visit(context)?;
         context.build_unconditional_branch(loop_header)?;
 
         context.position_at_end(loop_exit);

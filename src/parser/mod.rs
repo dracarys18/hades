@@ -371,19 +371,17 @@ impl Parser {
     fn parse_for_stmt(&mut self) -> ParseResult<Stmt> {
         let start = self.char_pos;
         self.expect(&TokenKind::For)?;
-        let init = self.parse_stmt_expr()?;
+        let init = self.parse_let_stmt()?;
+        let cond = self.parse_while_expr()?.unwrap_binary();
         self.expect(&TokenKind::Semicolon)?;
-        let cond = self.parse_while_expr()?;
-        self.expect(&TokenKind::Semicolon)?;
-        let update = self.parse_stmt_expr()?;
+        let update = self.parse_assignment()?.unwrap_assign();
         let body = self.parse_stmt_or_block()?;
         let end = self.char_pos;
-        let span = Span::new(start, end);
 
         Ok(Stmt::For(For {
-            init: ExprAst { expr: init, span },
-            cond: ExprAst { expr: cond, span },
-            update: ExprAst { expr: update, span },
+            init: init.unwrap_let(),
+            cond: cond.clone(),
+            update: update.clone(),
             body: Block::new(body.into(), Span::new(start, end)),
             span: Span::new(start, end),
         }))
@@ -572,11 +570,11 @@ impl Parser {
 
             let right = self.parse_binary_with_flags(next_min_prec, allow_struct_literals)?;
 
-            left = Expr::Binary {
+            left = Expr::Binary(BinaryExpr {
                 left: Box::new(left),
                 op,
                 right: Box::new(right),
-            };
+            });
         }
 
         Ok(left)
@@ -655,11 +653,11 @@ impl Parser {
             if let Expr::Ident(name) = expr {
                 let op = Op::from_token(&self.next().unwrap()).unwrap();
                 let value = self.parse_assignment()?;
-                return Ok(Expr::Assign {
+                return Ok(Expr::Assign(AssignExpr {
                     name,
                     op,
                     value: Box::new(value),
-                });
+                }));
             } else {
                 let span = self.current_span();
                 let source_id = self.source_id.clone();

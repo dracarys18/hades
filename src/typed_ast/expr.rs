@@ -16,28 +16,34 @@ pub enum TypedExpr {
         fields: IndexMap<Ident, TypedExpr>,
         types: Types,
     },
-    Binary {
-        left: Box<TypedExpr>,
-        op: Op,
-        right: Box<TypedExpr>,
-        typ: Types,
-    },
+    Binary(TypedBinaryExpr),
     Unary {
         op: Op,
         expr: Box<TypedExpr>,
         typ: Types,
     },
-    Assign {
-        name: Ident,
-        op: Op,
-        value: Box<TypedExpr>,
-        typ: Types,
-    },
+    Assign(TypedAssignExpr),
     Call {
         func: Ident,
         args: Vec<TypedExpr>,
         typ: Types,
     },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedAssignExpr {
+    pub name: Ident,
+    pub op: Op,
+    pub value: Box<TypedExpr>,
+    pub typ: Types,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedBinaryExpr {
+    pub left: Box<TypedExpr>,
+    pub op: Op,
+    pub right: Box<TypedExpr>,
+    pub typ: Types,
 }
 
 impl TypedExpr {
@@ -46,9 +52,9 @@ impl TypedExpr {
             TypedExpr::Value(val) => val.get_type(),
             TypedExpr::Ident { typ, .. } => typ.clone(),
             TypedExpr::StructInit { types, .. } => types.clone(),
-            TypedExpr::Binary { typ, .. } => typ.clone(),
+            TypedExpr::Binary(TypedBinaryExpr { typ, .. }) => typ.clone(),
             TypedExpr::Unary { typ, .. } => typ.clone(),
-            TypedExpr::Assign { typ, .. } => typ.clone(),
+            TypedExpr::Assign(TypedAssignExpr { typ, .. }) => typ.clone(),
             TypedExpr::Call { typ, .. } => typ.clone(),
         }
     }

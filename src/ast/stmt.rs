@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Program, Types},
+    ast::{AssignExpr, BinaryExpr, Program, Types},
     error::Span,
     impl_span,
     tokens::Ident,
@@ -59,9 +59,9 @@ pub struct While {
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct For {
-    pub init: ExprAst,
-    pub cond: ExprAst,
-    pub update: ExprAst,
+    pub init: Let,
+    pub cond: BinaryExpr,
+    pub update: AssignExpr,
     pub body: Block,
     pub span: Span,
 }
@@ -113,6 +113,13 @@ impl_span!(Return);
 impl_span!(Block);
 
 impl Stmt {
+    pub fn unwrap_let(self) -> Let {
+        if let Stmt::Let(le) = self {
+            le
+        } else {
+            panic!("Stmt is not a Let");
+        }
+    }
     pub fn span(&self) -> &Span {
         match self {
             Stmt::Let(le) => le.span(),

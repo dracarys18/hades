@@ -48,11 +48,13 @@ fn main() {
                 .output
                 .unwrap_or_else(|| PathBuf::from(format!("{}/output", consts::BUILD_PATH)));
 
-            compiler.compile(&path);
+            let res = compiler.compile(&path);
 
-            Command::new(path)
-                .status()
-                .expect("Failed to run the compiled program");
+            if res {
+                Command::new(path)
+                    .status()
+                    .expect("Failed to run the compiled program");
+            }
         }
     }
 }

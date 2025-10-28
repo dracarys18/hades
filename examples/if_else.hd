@@ -1,16 +1,16 @@
 fn main():int {
-    let a = 1;
+    let a = 2;
     let b = 1;
     let c = a==b;
 
-    if(c) {
+    if(!c) {
         printf("Voila\n");
     } else {
-        printf("OOf");
+        printf("OOf\n");
     }
 
-    if(c!=c) {
-        printf("OOf");
+    if(c) {
+        printf("OOf\n");
     } else {
         printf("Voila\n");
     }

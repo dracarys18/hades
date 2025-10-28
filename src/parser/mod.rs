@@ -581,18 +581,24 @@ impl Parser {
     }
 
     fn parse_unary_with_flags(&mut self, allow_struct_literals: bool) -> ParseResult<Expr> {
-        if self
-            .peek()
-            .is_some_and(|tok| token_matches!(tok, TokenKind::Minus))
-        {
-            self.next();
-            let expr = self.parse_unary_with_flags(allow_struct_literals)?;
-            Ok(Expr::Unary {
-                op: Op::Minus,
-                expr: Box::new(expr),
-            })
-        } else {
-            self.parse_primary_with_flags(allow_struct_literals)
+        match self.peek() {
+            tok if tok.is_some_and(|token| token_matches!(token, TokenKind::Minus)) => {
+                self.next();
+                let expr = self.parse_unary_with_flags(allow_struct_literals)?;
+                Ok(Expr::Unary {
+                    op: Op::Minus,
+                    expr: Box::new(expr),
+                })
+            }
+            tok if tok.is_some_and(|token| token_matches!(token, TokenKind::Bang)) => {
+                self.next();
+                let expr = self.parse_unary_with_flags(allow_struct_literals)?;
+                Ok(Expr::Unary {
+                    op: Op::Not,
+                    expr: Box::new(expr),
+                })
+            }
+            _ => self.parse_primary_with_flags(allow_struct_literals),
         }
     }
 

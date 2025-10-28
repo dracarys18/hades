@@ -55,7 +55,7 @@ impl<'a> Compiler<'a> {
             .expect("Semantic analysis failed");
     }
 
-    pub fn compile(&self, path: impl AsRef<std::path::Path>) {
+    pub fn compile(&self, path: impl AsRef<std::path::Path>) -> bool {
         let context = Context::create();
 
         let source_trimmed = self.source.trim();
@@ -74,45 +74,40 @@ impl<'a> Compiler<'a> {
                 for e in err {
                     e.eprint(source_trimmed);
                 }
-                return;
+                return false;
             }
         };
 
         let analyzer = Analyzer::<Unprepared>::new();
-        let prepared = analyzer
-            .prepare(&program)
-            .map_err(|err| {
-                eprintln!("Error during semantic analysis: {err}");
-                err
-            })
-            .expect("Semantic analysis preparation failed");
 
-        prepared
-            .analyze()
-            .map_err(|err| {
-                eprintln!("Error during semantic analysis: {err}");
-                err
-            })
-            .expect("Semantic analysis failed");
+        let prepared = analyzer.prepare(&program);
+        if let Err(err) = prepared {
+            eprintln!("Error during semantic analysis: {err}");
+            return false;
+        }
 
-        prepared
-            .verify_module(&context, consts::MAIN_MODULE_NAME)
-            .expect("Module verification failed");
+        let prepared = prepared.unwrap();
 
-        prepared
-            .compile(&context, consts::MAIN_MODULE_NAME, path.as_ref())
-            .map_err(|err| {
-                eprintln!("Error during code generation: {err}");
-                err
-            })
-            .expect("Code generation failed");
+        if let Err(err) = prepared.analyze() {
+            eprintln!("Error during semantic analysis: {err}");
+            return false;
+        }
 
-        prepared
-            .cleanup(path.as_ref())
-            .map_err(|err| {
-                eprintln!("Error during cleanup: {err}");
-                err
-            })
-            .expect("Cleanup failed");
+        if let Err(err) = prepared.verify_module(&context, consts::MAIN_MODULE_NAME) {
+            eprintln!("Module verification failed: {err}");
+            return false;
+        }
+
+        if let Err(err) = prepared.compile(&context, consts::MAIN_MODULE_NAME, path.as_ref()) {
+            eprintln!("Module optimization failed: {err}");
+            return false;
+        }
+
+        if let Err(err) = prepared.cleanup(path.as_ref()) {
+            eprintln!("Module optimization failed: {err}");
+            return false;
+        }
+
+        true
     }
 }

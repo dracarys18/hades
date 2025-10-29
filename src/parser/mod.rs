@@ -709,8 +709,21 @@ impl Parser {
             Some(tok) if token_matches!(tok, TokenKind::LeftBrace) => {
                 self.parse_struct_literal(name)
             }
+            Some(tok) if token_matches!(tok, TokenKind::Dot) => {
+                self.parse_struct_field_access(name)
+            }
             _ => Ok(Expr::Ident(name)),
         }
+    }
+
+    fn parse_struct_field_access(&mut self, name: Ident) -> ParseResult<Expr> {
+        self.next();
+        let field_name = self.expect_identifier()?;
+
+        Ok(Expr::FieldAccess(FieldAccessExpr {
+            name,
+            field: field_name,
+        }))
     }
 
     fn parse_struct_literal(&mut self, name: Ident) -> ParseResult<Expr> {

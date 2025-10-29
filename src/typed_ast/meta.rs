@@ -28,6 +28,10 @@ impl CompilerContext {
         }
     }
 
+    pub fn structs(&self) -> &Structs {
+        &self.structs
+    }
+
     pub fn enter_function(
         &mut self,
         name: Ident,

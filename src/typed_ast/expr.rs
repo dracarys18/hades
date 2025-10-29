@@ -22,12 +22,21 @@ pub enum TypedExpr {
         expr: Box<TypedExpr>,
         typ: Types,
     },
+    FieldAccess(TypedFieldAccess),
     Assign(TypedAssignExpr),
     Call {
         func: Ident,
         args: Vec<TypedExpr>,
         typ: Types,
     },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedFieldAccess {
+    pub name: Ident,
+    pub field: Ident,
+    pub struct_type: Types,
+    pub field_type: Types,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -56,6 +65,7 @@ impl TypedExpr {
             TypedExpr::Unary { typ, .. } => typ.clone(),
             TypedExpr::Assign(TypedAssignExpr { typ, .. }) => typ.clone(),
             TypedExpr::Call { typ, .. } => typ.clone(),
+            TypedExpr::FieldAccess(TypedFieldAccess { field_type, .. }) => field_type.clone(),
         }
     }
 }

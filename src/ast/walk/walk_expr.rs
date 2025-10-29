@@ -1,9 +1,10 @@
-use crate::ast::{AssignExpr, BinaryExpr};
+use crate::ast::{AssignExpr, BinaryExpr, FieldAccessExpr};
 use crate::error::SemanticError;
 use crate::{
     ast::{Expr, Types, WalkAst},
     typed_ast::{
         CompilerContext, Params, TypedAssignExpr, TypedBinaryExpr, TypedExpr, TypedExprAst,
+        TypedFieldAccess,
     },
 };
 
@@ -114,6 +115,7 @@ impl WalkAst for Expr {
                     typ: return_type,
                 })
             }
+            Expr::FieldAccess(field) => Ok(TypedExpr::FieldAccess(field.walk(ctx)?)),
         }
     }
 }
@@ -125,7 +127,7 @@ impl WalkAst for crate::ast::ExprAst {
 
         Ok(TypedExprAst {
             expr: typed_expr,
-            span: self.span.clone(),
+            span: self.span,
         })
     }
 }
@@ -158,5 +160,33 @@ impl WalkAst for BinaryExpr {
             right: Box::new(typed_right),
             typ: result_type,
         })
+    }
+}
+
+impl WalkAst for FieldAccessExpr {
+    type Output = TypedFieldAccess;
+    fn walk(&self, ctx: &mut CompilerContext) -> Result<Self::Output, SemanticError> {
+        let strc = ctx.get_variable_type(&self.name)?;
+
+        if let Types::Struct(ref struct_name) = strc {
+            let field = ctx.get_struct_type(struct_name)?;
+            let field_type = field.get(&self.field).ok_or(SemanticError::UnknownField {
+                struct_name: struct_name.clone(),
+                field_name: self.field.clone(),
+            })?;
+
+            Ok(TypedFieldAccess {
+                name: self.name.clone(),
+                field: self.field.clone(),
+                struct_type: strc,
+                field_type: field_type.clone(),
+            })
+        } else {
+            Err(SemanticError::TypeMismatch {
+                expected: "Struct".to_string(),
+                found: strc.to_string(),
+                span: crate::error::Span::default(),
+            })
+        }
     }
 }

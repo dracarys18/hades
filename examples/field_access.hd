@@ -1,0 +1,16 @@
+struct Foo {
+  bar: int
+}
+
+struct Bar {
+  foo: string
+}
+
+fn main(): int {
+    let s = Foo {bar: 1};
+    let f = s.bar;
+    let b = Bar {foo: "Alice"};
+    printf("Value is %d", f);
+    printf("Field value %s", b.foo);
+    return 0;
+}

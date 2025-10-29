@@ -17,6 +17,7 @@ pub enum Expr {
         expr: Box<Expr>,
     },
     Assign(AssignExpr),
+    FieldAccess(FieldAccessExpr),
     Call {
         func: Ident,
         args: Vec<Expr>,
@@ -39,6 +40,12 @@ impl Expr {
             panic!("Expected an AssignExpr")
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FieldAccessExpr {
+    pub name: Ident,
+    pub field: Ident,
 }
 
 #[derive(Debug, Clone, PartialEq)]

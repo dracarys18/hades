@@ -24,7 +24,6 @@ impl Structs {
     }
 
     pub fn field_index(&self, name: &Ident, field_name: &Ident) -> usize {
-        println!("Structs::field_index: name = {:?}, field_name = {:?}", name, field_name);
         let field = self.inner.get(name).expect(GOOLAG_MESSAGE);
         field.get_index_of(field_name).expect(GOOLAG_MESSAGE)
     }

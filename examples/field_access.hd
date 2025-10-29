@@ -7,10 +7,9 @@ struct Bar {
 }
 
 fn main(): int {
-    let s = Foo {bar: 1};
-    let f = s.bar;
     let b = Bar {foo: "Alice"};
-    printf("Value is %d", f);
-    printf("Field value %s", b.foo);
+    let c = Bar {foo: "Bob"};
+    printf("Value is %s\n", c.foo);
+    printf("Value is %s\n", b.foo);
     return 0;
 }

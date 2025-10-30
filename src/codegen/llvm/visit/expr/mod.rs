@@ -51,7 +51,7 @@ impl Visit for TypedExpr {
 impl Visit for TypedAssignExpr {
     type Output<'ctx> = CodegenValue<'ctx>;
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
-        let assignment = Assignment::new(&self.name, &self.op, &self.value);
+        let assignment = Assignment::new(&self.target, &self.op, &self.value);
         assignment.visit(context)
     }
 }
@@ -73,10 +73,7 @@ impl Visit for TypedFieldAccess {
             .value
             .into_struct_value();
 
-        let struct_name = match self.struct_type {
-            Types::Struct(ref name) => name,
-            _ => panic!("{}", GOOLAG_MESSAGE),
-        };
+        let struct_name = self.struct_type.unwrap_struct_name();
         let strct = context.symbols().structs();
         let field_index = strct.field_index(struct_name, &self.field);
         let field_val =

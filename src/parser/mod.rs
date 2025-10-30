@@ -656,18 +656,30 @@ impl Parser {
         let expr = self.parse_binary(0)?;
 
         if self.peek_assignment_op().is_some() {
-            if let Expr::Ident(name) = expr {
-                let op = Op::from_token(&self.next().unwrap()).unwrap();
-                let value = self.parse_assignment()?;
-                return Ok(Expr::Assign(AssignExpr {
-                    name,
-                    op,
-                    value: Box::new(value),
-                }));
-            } else {
-                let span = self.current_span();
-                let source_id = self.source_id.clone();
-                return Err(ParseError::invalid_assignment_target(span, source_id));
+            match expr {
+                Expr::Ident(name) => {
+                    let op = Op::from_token(&self.next().unwrap()).unwrap();
+                    let value = self.parse_assignment()?;
+                    return Ok(Expr::Assign(AssignExpr {
+                        target: AssignTarget::Ident(name),
+                        op,
+                        value: Box::new(value),
+                    }));
+                }
+                Expr::FieldAccess(field) => {
+                    let op = Op::from_token(&self.next().unwrap()).unwrap();
+                    let value = self.parse_assignment()?;
+                    return Ok(Expr::Assign(AssignExpr {
+                        target: AssignTarget::FieldAccess(field),
+                        op,
+                        value: Box::new(value),
+                    }));
+                }
+                _ => {
+                    let span = self.current_span();
+                    let source_id = self.source_id.clone();
+                    return Err(ParseError::invalid_assignment_target(span, source_id));
+                }
             }
         }
 

@@ -11,6 +11,9 @@ pub struct LLVMVariable<'ctx> {
 }
 
 impl<'ctx> LLVMVariable<'ctx> {
+    pub fn new(value: PointerValue<'ctx>, typ: Types) -> Self {
+        Self { value, typ }
+    }
     pub fn value(&self) -> PointerValue<'ctx> {
         self.value
     }

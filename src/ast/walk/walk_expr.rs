@@ -1,10 +1,10 @@
-use crate::ast::{AssignExpr, BinaryExpr, FieldAccessExpr};
+use crate::ast::{AssignExpr, AssignTarget, BinaryExpr, FieldAccessExpr};
 use crate::error::SemanticError;
 use crate::{
     ast::{Expr, Types, WalkAst},
     typed_ast::{
-        CompilerContext, Params, TypedAssignExpr, TypedBinaryExpr, TypedExpr, TypedExprAst,
-        TypedFieldAccess,
+        CompilerContext, Params, TypedAssignExpr, TypedAssignTarget, TypedBinaryExpr, TypedExpr,
+        TypedExprAst, TypedFieldAccess,
     },
 };
 
@@ -135,15 +135,34 @@ impl WalkAst for crate::ast::ExprAst {
 impl WalkAst for AssignExpr {
     type Output = TypedAssignExpr;
     fn walk(&self, ctx: &mut CompilerContext) -> Result<Self::Output, crate::error::SemanticError> {
-        let var_type = ctx.get_variable_type(&self.name)?;
-        let typed_value = self.value.walk(ctx)?;
-        let result_type = ctx.infer_binary_type(&var_type, &self.op, &typed_value.get_type())?;
-        Ok(TypedAssignExpr {
-            name: self.name.clone(),
-            op: self.op.clone(),
-            value: Box::new(typed_value),
-            typ: result_type,
-        })
+        match self.target {
+            AssignTarget::Ident(ref ident) => {
+                let var_type = ctx.get_variable_type(&ident)?;
+                let typed_value = self.value.walk(ctx)?;
+                let result_type =
+                    ctx.infer_binary_type(&var_type, &self.op, &typed_value.get_type())?;
+
+                Ok(TypedAssignExpr {
+                    target: TypedAssignTarget::Ident(ident.clone()),
+                    op: self.op.clone(),
+                    value: Box::new(typed_value),
+                    typ: result_type,
+                })
+            }
+            AssignTarget::FieldAccess(ref field) => {
+                let field = field.walk(ctx)?;
+                let value = self.value.walk(ctx)?;
+                let result_type =
+                    ctx.infer_binary_type(&field.field_type, &self.op, &value.get_type())?;
+
+                Ok(TypedAssignExpr {
+                    target: TypedAssignTarget::FieldAccess(field.clone()),
+                    op: self.op.clone(),
+                    value: Box::new(value),
+                    typ: result_type,
+                })
+            }
+        }
     }
 }
 

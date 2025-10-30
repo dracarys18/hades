@@ -2,19 +2,52 @@ use inkwell::values::BasicValueEnum;
 
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
-use crate::codegen::{context::LLVMContext, llvm::visit::expr::variable::VariableAccess};
-use crate::tokens::{Ident, Op};
-use crate::typed_ast::TypedExpr;
+use crate::codegen::{
+    context::LLVMContext, llvm::visit::expr::variable::VariableAccess, symbols::LLVMVariable,
+};
+use crate::tokens::Op;
+use crate::typed_ast::{TypedAssignTarget, TypedExpr};
 
 pub struct Assignment<'a> {
-    pub name: &'a Ident,
+    pub target: &'a TypedAssignTarget,
     pub op: &'a Op,
     pub value: &'a TypedExpr,
 }
 
 impl<'a> Assignment<'a> {
-    pub fn new(name: &'a Ident, op: &'a Op, value: &'a TypedExpr) -> Self {
-        Self { name, op, value }
+    pub fn new(target: &'a TypedAssignTarget, op: &'a Op, value: &'a TypedExpr) -> Self {
+        Self { target, op, value }
+    }
+
+    fn get_target_ptr<'b>(&self, ctx: &mut LLVMContext<'b>) -> CodegenResult<LLVMVariable<'b>> {
+        match self.target {
+            TypedAssignTarget::Ident(ident) => ctx.get_variable(ident),
+            TypedAssignTarget::FieldAccess(field) => {
+                let struct_val = VariableAccess::new(&field.name)
+                    .visit(ctx)?
+                    .value
+                    .into_struct_value();
+
+                let struct_name = field.struct_type.unwrap_struct_name();
+                let strct = ctx.symbols().structs();
+                let field_index = strct.field_index(struct_name, &field.field);
+                let field_val = struct_val.get_field_at_index(field_index as u32).ok_or(
+                    CodegenError::LLVMBuild {
+                        message: format!(
+                            "Failed to get field '{}' at index {} from struct '{}'",
+                            field.field.inner(),
+                            field_index,
+                            field.name.inner()
+                        ),
+                    },
+                )?;
+
+                Ok(LLVMVariable::new(
+                    field_val.into_pointer_value(),
+                    field.field_type.clone(),
+                ))
+            }
+        }
     }
 }
 
@@ -22,9 +55,9 @@ impl<'a> Visit for Assignment<'a> {
     type Output<'ctx> = CodegenValue<'ctx>;
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
         let value_val = self.value.visit(context)?;
-        let var_ptr = context.get_variable(self.name)?;
+        let var_ptr = self.get_target_ptr(context)?;
 
-        let current_value = VariableAccess::new(self.name).visit(context)?;
+        let current_value = self.target.visit(context)?;
         match self.op {
             Op::PlusEqual => {
                 let new_value = generate_add(context, current_value.value, value_val.value)?;
@@ -69,6 +102,19 @@ impl<'a> Visit for Assignment<'a> {
             _ => Err(CodegenError::LLVMBuild {
                 message: format!("Unsupported assignment operator: {:?}", self.op),
             }),
+        }
+    }
+}
+
+impl Visit for TypedAssignTarget {
+    type Output<'ctx> = CodegenValue<'ctx>;
+    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
+        match self {
+            Self::Ident(ident) => {
+                let current_value = VariableAccess::new(ident).visit(context)?;
+                Ok(current_value)
+            }
+            Self::FieldAccess(field) => field.visit(context),
         }
     }
 }

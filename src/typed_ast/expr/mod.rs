@@ -1,4 +1,7 @@
+mod assign;
+
 use crate::ast::Types;
+pub use assign::*;
 use indexmap::IndexMap;
 
 use super::value::TypedValue;
@@ -37,14 +40,6 @@ pub struct TypedFieldAccess {
     pub field: Ident,
     pub struct_type: Types,
     pub field_type: Types,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct TypedAssignExpr {
-    pub name: Ident,
-    pub op: Op,
-    pub value: Box<TypedExpr>,
-    pub typ: Types,
 }
 
 #[derive(Debug, Clone, PartialEq)]

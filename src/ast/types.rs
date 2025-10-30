@@ -36,4 +36,12 @@ impl Types {
             _ => Types::Struct(type_str.to_owned()),
         }
     }
+
+    pub fn unwrap_struct_name(&self) -> &Ident {
+        if let Types::Struct(name) = self {
+            name
+        } else {
+            panic!("Expected a Struct type")
+        }
+    }
 }

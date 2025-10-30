@@ -1,3 +1,7 @@
+mod assignment;
+
+pub use assignment::*;
+
 use indexmap::IndexMap;
 
 use super::value::Value;
@@ -46,13 +50,6 @@ impl Expr {
 pub struct FieldAccessExpr {
     pub name: Ident,
     pub field: Ident,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct AssignExpr {
-    pub name: Ident,
-    pub op: Op,
-    pub value: Box<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

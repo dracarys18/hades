@@ -8,7 +8,7 @@ mod struc;
 mod value;
 
 pub use ast::*;
-pub use expr::{TypedAssignExpr, TypedBinaryExpr, TypedExpr, TypedFieldAccess};
+pub use expr::{TypedAssignExpr, TypedAssignTarget, TypedBinaryExpr, TypedExpr, TypedFieldAccess};
 pub use function::{FunctionSignature, Params};
 pub use meta::CompilerContext;
 pub use value::TypedValue;

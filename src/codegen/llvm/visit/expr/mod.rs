@@ -1,9 +1,9 @@
-use crate::ast::Types;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
-use crate::consts::GOOLAG_MESSAGE;
-use crate::typed_ast::{TypedAssignExpr, TypedBinaryExpr, TypedExpr, TypedFieldAccess};
+use crate::typed_ast::{
+    TypedArrayIndex, TypedAssignExpr, TypedBinaryExpr, TypedExpr, TypedFieldAccess,
+};
 
 pub mod assign;
 pub mod binary;
@@ -15,6 +15,7 @@ pub mod variable;
 pub use assign::Assignment;
 pub use binary::BinaryOp;
 pub use call::FunctionCall;
+use inkwell::types::BasicType;
 pub use struct_init::StructInit;
 pub use unary::UnaryOp;
 pub use variable::VariableAccess;
@@ -44,6 +45,7 @@ impl Visit for TypedExpr {
             }
             Self::Assign(assign) => assign.visit(context),
             Self::FieldAccess(field) => field.visit(context),
+            Self::ArrayIndex(index) => index.visit(context),
         }
     }
 }
@@ -53,6 +55,45 @@ impl Visit for TypedAssignExpr {
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
         let assignment = Assignment::new(&self.target, &self.op, &self.value);
         assignment.visit(context)
+    }
+}
+
+impl Visit for TypedArrayIndex {
+    type Output<'ctx> = CodegenValue<'ctx>;
+
+    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
+        let array_value = context.get_variable(&self.name)?;
+        let index_value = self.index.visit(context)?;
+
+        let symbols = context.symbols();
+        let type_conv = context.type_converter();
+
+        let llvm_array_type = type_conv.to_llvm_type(&self.typ, symbols)?;
+        let llvm_val_type = type_conv.to_llvm_type(&self.typ.get_array_elem_type(), symbols)?;
+
+        let llvm_value = unsafe {
+            context.builder().build_in_bounds_gep(
+                llvm_array_type,
+                array_value.value(),
+                &[
+                    context.context().i64_type().const_zero(),
+                    index_value.value.into_int_value(),
+                ],
+                "array_idx_access",
+            )
+        }
+        .map_err(|e| CodegenError::LLVMBuild {
+            message: format!("Failed to build GEP for array index access: {e}"),
+        })?;
+
+        let val = context
+            .builder()
+            .build_load(llvm_val_type, llvm_value, "array_idx_load")?;
+
+        Ok(CodegenValue {
+            value: val,
+            type_info: self.typ.clone(),
+        })
     }
 }
 

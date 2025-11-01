@@ -1,11 +1,11 @@
-use crate::ast::Types;
+use crate::ast::{ArrayType, Types};
 use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::tokens::Ident;
 use crate::typed_ast::CompilerContext;
 use inkwell::AddressSpace;
 use inkwell::context::Context;
 use inkwell::types::{
-    AnyTypeEnum, ArrayType, BasicType, BasicTypeEnum, FloatType, FunctionType, IntType, StructType,
+    AnyTypeEnum, BasicType, BasicTypeEnum, FloatType, FunctionType, IntType, StructType,
 };
 
 pub struct TypeConverter<'ctx> {
@@ -36,10 +36,22 @@ impl<'ctx> TypeConverter<'ctx> {
             }
             Types::Generic(_) => {
                 return Err(CodegenError::TypeConversion {
-                    from: format!("{:?}", ty),
+                    from: format!("{ty:?}"),
                     to: "LLVM type".to_string(),
                 });
             }
+            Types::Array(arr) => match arr {
+                ArrayType::IntArray(size) => {
+                    let elem_type = self.context.i64_type();
+                    let array_type = elem_type.array_type(*size as u32);
+                    array_type.into()
+                }
+                ArrayType::FloatArray(size) => {
+                    let elem_type = self.context.f64_type();
+                    let array_type = elem_type.array_type(*size as u32);
+                    array_type.into()
+                }
+            },
         };
 
         Ok(llvm_type)

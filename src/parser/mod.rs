@@ -602,6 +602,26 @@ impl Parser {
         }
     }
 
+    fn parse_array_literal(&mut self) -> ParseResult<Expr> {
+        let elem =
+            self.parse_comma_separated(|parse| parse.parse_assignment(), &TokenKind::RightBracket)?;
+
+        self.expect(&TokenKind::RightBracket)?;
+
+        Ok(Expr::Value(Value::Array(ArrayLiteral::new(elem))))
+    }
+
+    fn parse_array_index(&mut self, name: Ident) -> ParseResult<Expr> {
+        self.expect(&TokenKind::LeftBracket)?;
+        let index_expr = self.parse_primary_with_flags(false)?;
+        self.expect(&TokenKind::RightBracket)?;
+
+        Ok(Expr::ArrayIndex(ArrayIndexExpr {
+            var: name,
+            index: Box::new(index_expr),
+        }))
+    }
+
     fn parse_primary_with_flags(&mut self, allow_struct_literals: bool) -> ParseResult<Expr> {
         let start_pos = self.char_pos;
         let source_id = self.source_id.clone();
@@ -630,6 +650,7 @@ impl Parser {
                     self.expect(&TokenKind::RightParen)?;
                     Ok(expr)
                 }
+                TokenKind::LeftBracket => self.parse_array_literal(),
                 _ => {
                     let span = tok.span().into_range();
                     Err(ParseError::unexpected_token(
@@ -723,6 +744,9 @@ impl Parser {
             }
             Some(tok) if token_matches!(tok, TokenKind::Dot) => {
                 self.parse_struct_field_access(name)
+            }
+            Some(tok) if token_matches!(tok, TokenKind::LeftBracket) => {
+                self.parse_array_index(name)
             }
             _ => Ok(Expr::Ident(name)),
         }

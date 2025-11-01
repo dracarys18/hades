@@ -15,6 +15,7 @@ pub enum Expr {
         name: Ident,
         fields: IndexMap<Ident, Expr>,
     },
+    ArrayIndex(ArrayIndexExpr),
     Binary(BinaryExpr),
     Unary {
         op: Op,
@@ -57,4 +58,10 @@ pub struct BinaryExpr {
     pub left: Box<Expr>,
     pub op: Op,
     pub right: Box<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ArrayIndexExpr {
+    pub var: Ident,
+    pub index: Box<Expr>,
 }

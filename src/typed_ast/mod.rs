@@ -8,10 +8,13 @@ mod struc;
 mod value;
 
 pub use ast::*;
-pub use expr::{TypedAssignExpr, TypedAssignTarget, TypedBinaryExpr, TypedExpr, TypedFieldAccess};
+pub use expr::{
+    TypedArrayIndex, TypedAssignExpr, TypedAssignTarget, TypedBinaryExpr, TypedExpr,
+    TypedFieldAccess,
+};
 pub use function::{FunctionSignature, Params};
 pub use meta::CompilerContext;
-pub use value::TypedValue;
+pub use value::{TypedArrayLiteral, TypedValue};
 
 use crate::{
     ast::{Program, WalkAst},

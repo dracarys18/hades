@@ -51,6 +51,16 @@ impl<'ctx> TypeConverter<'ctx> {
                     let array_type = elem_type.array_type(*size as u32);
                     array_type.into()
                 }
+                ArrayType::BoolArray(size) => {
+                    let elem_type = self.context.bool_type();
+                    let array_type = elem_type.array_type(*size as u32);
+                    array_type.into()
+                }
+                ArrayType::StringArray(size) => {
+                    let elem_type = self.context.ptr_type(AddressSpace::default());
+                    let array_type = elem_type.array_type(*size as u32);
+                    array_type.into()
+                }
             },
         };
 

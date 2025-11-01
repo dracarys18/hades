@@ -3,8 +3,7 @@ use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
 use crate::typed_ast::{TypedArrayLiteral, TypedValue};
-use inkwell::types::{BasicType, BasicTypeEnum};
-use inkwell::values::BasicValueEnum;
+use inkwell::types::BasicType;
 
 impl Visit for TypedValue {
     type Output<'ctx> = CodegenValue<'ctx>;
@@ -51,6 +50,21 @@ impl Visit for TypedArrayLiteral {
                     .map(|v| v.into_float_value())
                     .collect::<Vec<_>>(),
             ),
+            Types::Array(ArrayType::BoolArray(_)) => context.context().bool_type().const_array(
+                &values
+                    .iter()
+                    .map(|v| v.into_int_value())
+                    .collect::<Vec<_>>(),
+            ),
+            Types::Array(ArrayType::StringArray(_)) => context
+                .context()
+                .ptr_type(inkwell::AddressSpace::default())
+                .const_array(
+                    &values
+                        .iter()
+                        .map(|v| v.into_pointer_value())
+                        .collect::<Vec<_>>(),
+                ),
             typ => unimplemented!("Array for type {} is not implemented yet", typ),
         };
 

@@ -4,6 +4,8 @@ use crate::tokens::Ident;
 pub enum ArrayType {
     IntArray(usize),
     FloatArray(usize),
+    StringArray(usize),
+    BoolArray(usize),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -31,6 +33,8 @@ impl std::fmt::Display for Types {
             Types::Array(arr_type) => match arr_type {
                 ArrayType::IntArray(size) => write!(f, "int[{size}]"),
                 ArrayType::FloatArray(size) => write!(f, "float[{size}]"),
+                ArrayType::StringArray(size) => write!(f, "string[{size}]"),
+                ArrayType::BoolArray(size) => write!(f, "bool[{size}]"),
             },
         }
     }
@@ -46,6 +50,7 @@ impl Types {
             "void" => Types::Void,
             "[]int" => Types::Array(ArrayType::IntArray(0)),
             "[]float" => Types::Array(ArrayType::FloatArray(0)),
+            "[]string" => Types::Array(ArrayType::FloatArray(0)),
             _ => Types::Struct(type_str.to_owned()),
         }
     }
@@ -54,6 +59,8 @@ impl Types {
         match self {
             Self::Int => ArrayType::IntArray(size),
             Self::Float => ArrayType::FloatArray(size),
+            Self::String => ArrayType::StringArray(size),
+            Self::Bool => ArrayType::BoolArray(size),
             _ => unimplemented!("Array type for {:?} is not implemented yet", self),
         }
     }
@@ -63,6 +70,8 @@ impl Types {
             match arr_type {
                 ArrayType::IntArray(size) => *size,
                 ArrayType::FloatArray(size) => *size,
+                ArrayType::StringArray(size) => *size,
+                ArrayType::BoolArray(size) => *size,
             }
         } else {
             panic!("Expected an Array type")
@@ -74,12 +83,13 @@ impl Types {
             match arr_type {
                 ArrayType::IntArray(_) => Types::Int,
                 ArrayType::FloatArray(_) => Types::Float,
+                ArrayType::StringArray(_) => Types::String,
+                ArrayType::BoolArray(_) => Types::Bool,
             }
         } else {
             panic!("Expected an Array type")
         }
     }
-
 
     pub fn unwrap_struct_name(&self) -> &Ident {
         if let Types::Struct(name) = self {

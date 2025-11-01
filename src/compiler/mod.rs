@@ -37,6 +37,7 @@ impl<'a> Compiler<'a> {
             }
         };
 
+        dbg!(&program);
         let analyzer = Analyzer::<Unprepared>::new();
         let analyzer = analyzer
             .prepare(&program)

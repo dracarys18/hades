@@ -26,6 +26,7 @@ pub enum TypedExpr {
         typ: Types,
     },
     FieldAccess(TypedFieldAccess),
+    ArrayIndex(TypedArrayIndex),
     Assign(TypedAssignExpr),
     Call {
         func: Ident,
@@ -50,6 +51,13 @@ pub struct TypedBinaryExpr {
     pub typ: Types,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedArrayIndex {
+    pub name: Ident,
+    pub index: Box<TypedExpr>,
+    pub typ: Types,
+}
+
 impl TypedExpr {
     pub fn get_type(&self) -> Types {
         match self {
@@ -61,6 +69,7 @@ impl TypedExpr {
             TypedExpr::Assign(TypedAssignExpr { typ, .. }) => typ.clone(),
             TypedExpr::Call { typ, .. } => typ.clone(),
             TypedExpr::FieldAccess(TypedFieldAccess { field_type, .. }) => field_type.clone(),
+            TypedExpr::ArrayIndex(TypedArrayIndex { typ, .. }) => typ.clone(),
         }
     }
 }

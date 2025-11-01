@@ -1,5 +1,6 @@
-use crate::ast::{AssignExpr, AssignTarget, BinaryExpr, FieldAccessExpr};
+use crate::ast::{ArrayIndexExpr, AssignExpr, AssignTarget, BinaryExpr, FieldAccessExpr};
 use crate::error::SemanticError;
+use crate::typed_ast::TypedArrayIndex;
 use crate::{
     ast::{Expr, Types, WalkAst},
     typed_ast::{
@@ -116,6 +117,7 @@ impl WalkAst for Expr {
                 })
             }
             Expr::FieldAccess(field) => Ok(TypedExpr::FieldAccess(field.walk(ctx)?)),
+            Expr::ArrayIndex(index) => index.walk(ctx).map(TypedExpr::ArrayIndex),
         }
     }
 }
@@ -137,7 +139,7 @@ impl WalkAst for AssignExpr {
     fn walk(&self, ctx: &mut CompilerContext) -> Result<Self::Output, crate::error::SemanticError> {
         match self.target {
             AssignTarget::Ident(ref ident) => {
-                let var_type = ctx.get_variable_type(&ident)?;
+                let var_type = ctx.get_variable_type(ident)?;
                 let typed_value = self.value.walk(ctx)?;
                 let result_type =
                     ctx.infer_binary_type(&var_type, &self.op, &typed_value.get_type())?;
@@ -163,6 +165,29 @@ impl WalkAst for AssignExpr {
                 })
             }
         }
+    }
+}
+
+impl WalkAst for ArrayIndexExpr {
+    type Output = TypedArrayIndex;
+
+    fn walk(&self, ctx: &mut CompilerContext) -> Result<Self::Output, SemanticError> {
+        let var_type = ctx.get_variable_type(&self.var)?;
+        let index = self.index.walk(ctx)?;
+
+        if Types::Int != index.get_type() {
+            return Err(SemanticError::TypeMismatch {
+                expected: "Int".to_string(),
+                found: index.get_type().to_string(),
+                span: crate::error::Span::default(),
+            });
+        }
+
+        Ok(TypedArrayIndex {
+            name: self.var.clone(),
+            index: Box::new(index),
+            typ: var_type,
+        })
     }
 }
 

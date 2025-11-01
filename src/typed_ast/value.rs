@@ -1,4 +1,5 @@
 use crate::ast::Types;
+use crate::typed_ast::TypedExpr;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypedValue {
@@ -6,6 +7,7 @@ pub enum TypedValue {
     Float(f64),
     Boolean(bool),
     String(String),
+    Array(TypedArrayLiteral),
 }
 
 impl TypedValue {
@@ -15,6 +17,14 @@ impl TypedValue {
             Self::Float(_) => Types::Float,
             Self::Boolean(_) => Types::Bool,
             Self::String(_) => Types::String,
+            Self::Array(arr) => arr.elem_typ.clone(),
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedArrayLiteral {
+    pub elements: Vec<TypedExpr>,
+    pub size: usize,
+    pub elem_typ: Types,
 }

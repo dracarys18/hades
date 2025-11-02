@@ -15,7 +15,6 @@ pub mod variable;
 pub use assign::Assignment;
 pub use binary::BinaryOp;
 pub use call::FunctionCall;
-use inkwell::types::BasicType;
 pub use struct_init::StructInit;
 pub use unary::UnaryOp;
 pub use variable::VariableAccess;

@@ -1,6 +1,6 @@
 use crate::ast::{StructDef, WalkAst};
 use crate::error::SemanticError;
-use crate::typed_ast::{CompilerContext, TypedStructDef};
+use crate::typed_ast::TypedStructDef;
 
 impl WalkAst for StructDef {
     type Output = TypedStructDef;

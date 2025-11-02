@@ -65,6 +65,15 @@ impl Visit for TypedArrayLiteral {
                         .map(|v| v.into_pointer_value())
                         .collect::<Vec<_>>(),
                 ),
+            Types::Array(ArrayType::StructArray(_, name)) => {
+                let struct_type = type_converter.convert_struct_type(name, symbols)?;
+                struct_type.const_array(
+                    &values
+                        .iter()
+                        .map(|v| v.into_struct_value())
+                        .collect::<Vec<_>>(),
+                )
+            }
             typ => unimplemented!("Array for type {} is not implemented yet", typ),
         };
 

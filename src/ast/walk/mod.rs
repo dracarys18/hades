@@ -12,7 +12,6 @@ mod walk_structdef;
 mod walk_value;
 mod walk_while;
 
-use crate::ast::Stmt;
 use crate::error::SemanticError;
 use crate::typed_ast::*;
 

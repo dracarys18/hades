@@ -6,6 +6,7 @@ pub enum ArrayType {
     FloatArray(usize),
     StringArray(usize),
     BoolArray(usize),
+    StructArray(usize, Ident),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -35,6 +36,7 @@ impl std::fmt::Display for Types {
                 ArrayType::FloatArray(size) => write!(f, "float[{size}]"),
                 ArrayType::StringArray(size) => write!(f, "string[{size}]"),
                 ArrayType::BoolArray(size) => write!(f, "bool[{size}]"),
+                ArrayType::StructArray(size, name) => write!(f, "struct {name}[{size}]"),
             },
         }
     }
@@ -61,6 +63,7 @@ impl Types {
             Self::Float => ArrayType::FloatArray(size),
             Self::String => ArrayType::StringArray(size),
             Self::Bool => ArrayType::BoolArray(size),
+            Self::Struct(name) => ArrayType::StructArray(size, name.to_owned()),
             _ => unimplemented!("Array type for {:?} is not implemented yet", self),
         }
     }
@@ -72,6 +75,7 @@ impl Types {
                 ArrayType::FloatArray(size) => *size,
                 ArrayType::StringArray(size) => *size,
                 ArrayType::BoolArray(size) => *size,
+                ArrayType::StructArray(size, _) => *size,
             }
         } else {
             panic!("Expected an Array type")
@@ -85,6 +89,7 @@ impl Types {
                 ArrayType::FloatArray(_) => Types::Float,
                 ArrayType::StringArray(_) => Types::String,
                 ArrayType::BoolArray(_) => Types::Bool,
+                ArrayType::StructArray(_, name) => Types::Struct(name.to_owned()),
             }
         } else {
             panic!("Expected an Array type")

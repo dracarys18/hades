@@ -61,6 +61,11 @@ impl<'ctx> TypeConverter<'ctx> {
                     let array_type = elem_type.array_type(*size as u32);
                     array_type.into()
                 }
+                ArrayType::StructArray(size, name) => {
+                    let struct_type = self.convert_struct_type(name, compiler_ctx)?;
+                    let array_type = struct_type.array_type(*size as u32);
+                    array_type.into()
+                }
             },
         };
 

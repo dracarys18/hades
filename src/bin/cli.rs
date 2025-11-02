@@ -1,18 +1,5 @@
-mod ast;
-mod cmd;
-mod codegen;
-mod compiler;
-mod consts;
-mod error;
-mod evaluator;
-mod lexer;
-mod macros;
-mod parser;
-mod semantic;
-mod tokens;
-mod typed_ast;
-
 use clap::Parser;
+use hades::{cmd, compiler, consts};
 use std::{path::PathBuf, process::Command};
 
 fn main() {

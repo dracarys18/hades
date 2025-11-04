@@ -108,35 +108,40 @@ impl Visit for TypedFieldAccess {
     type Output<'ctx> = CodegenValue<'ctx>;
 
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
-        let struct_val = VariableAccess::new(&self.name)
-            .visit(context)?
-            .value
-            .into_struct_value();
+        let compiler_context = context.symbols();
+        let struct_ptr = context.get_variable(&self.name)?;
+        let struct_type = context
+            .type_converter()
+            .to_llvm_type(&self.struct_type, compiler_context)?;
 
         let struct_name = self.struct_type.unwrap_struct_name();
         let strct = context.symbols().structs();
         let field_index = strct.field_index(struct_name, &self.field);
-        let field_val =
-            struct_val
-                .get_field_at_index(field_index as u32)
-                .ok_or(CodegenError::LLVMBuild {
-                    message: format!(
-                        "Failed to get field '{}' at index {} from struct '{}'",
-                        self.field.inner(),
-                        field_index,
-                        self.name.inner()
-                    ),
-                })?;
 
-        let compiler_context = context.symbols();
+        let zero = context.context().i32_type().const_zero();
+        let field_index = context
+            .context()
+            .i32_type()
+            .const_int(field_index as u64, false);
+
+        let field_val = unsafe {
+            context.builder().build_in_bounds_gep(
+                struct_type,
+                struct_ptr.value(),
+                &[zero, field_index],
+                "struct_fetch",
+            )
+        }
+        .map_err(|_| CodegenError::LLVMBuild {
+            message: "Failed to create struct field pointer".to_string(),
+        })?;
+
         let type_conv = context.type_converter();
         let field_llvm_type = type_conv.to_llvm_type(&self.field_type, compiler_context)?;
 
-        let field_val = context.builder().build_load(
-            field_llvm_type,
-            field_val.into_pointer_value(),
-            "field_access",
-        )?;
+        let field_val = context
+            .builder()
+            .build_load(field_llvm_type, field_val, "field_access")?;
 
         Ok(CodegenValue {
             value: field_val,

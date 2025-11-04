@@ -1,15 +1,11 @@
-struct Foo {
+struct Bar {
+  foo: string,
   bar: int
 }
 
-struct Bar {
-  foo: string
-}
-
 fn main(): int {
-    let b = Bar {foo: "Alice"};
-    let c = Bar {foo: "Bob"};
-    printf("Value is %s\n", c.foo);
+    let b = Bar {foo: "Alice", bar: 3};
     printf("Value is %s\n", b.foo);
+    printf("Value is %d\n", b.bar);
     return 0;
 }

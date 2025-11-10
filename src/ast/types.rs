@@ -97,10 +97,10 @@ impl Types {
     }
 
     pub fn unwrap_struct_name(&self) -> &Ident {
-        if let Types::Struct(name) = self {
-            name
-        } else {
-            panic!("Expected a Struct type")
+        match self {
+            Types::Struct(name) => name,
+            Types::Array(ArrayType::StructArray(_, name)) => name,
+            _ => panic!("Expected a Struct type"),
         }
     }
 }

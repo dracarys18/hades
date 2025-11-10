@@ -617,7 +617,7 @@ impl Parser {
         self.expect(&TokenKind::RightBracket)?;
 
         Ok(Expr::ArrayIndex(ArrayIndexExpr {
-            var: name,
+            expr: Box::new(Expr::Ident(name)),
             index: Box::new(index_expr),
         }))
     }
@@ -726,40 +726,50 @@ impl Parser {
     }
 
     fn parse_postfix_expr(&mut self, name: Ident) -> ParseResult<Expr> {
-        match self.peek() {
-            Some(tok) if token_matches!(tok, TokenKind::LeftParen) => {
-                self.parse_function_call(name)
-            }
-            _ => Ok(Expr::Ident(name)),
-        }
+        let expr = Expr::Ident(name);
+        self.parse_postfix_chain(expr)
     }
 
     fn parse_postfix_expr_with_struct(&mut self, name: Ident) -> ParseResult<Expr> {
-        match self.peek() {
+        let expr = match self.peek() {
             Some(tok) if token_matches!(tok, TokenKind::LeftParen) => {
-                self.parse_function_call(name)
+                self.parse_function_call(name)?
             }
             Some(tok) if token_matches!(tok, TokenKind::LeftBrace) => {
-                self.parse_struct_literal(name)
-            }
-            Some(tok) if token_matches!(tok, TokenKind::Dot) => {
-                self.parse_struct_field_access(name)
+                self.parse_struct_literal(name)?
             }
             Some(tok) if token_matches!(tok, TokenKind::LeftBracket) => {
-                self.parse_array_index(name)
+                self.parse_array_index(name)?
             }
-            _ => Ok(Expr::Ident(name)),
-        }
+            _ => Expr::Ident(name),
+        };
+        self.parse_postfix_chain(expr)
     }
 
-    fn parse_struct_field_access(&mut self, name: Ident) -> ParseResult<Expr> {
-        self.next();
-        let field_name = self.expect_identifier()?;
-
-        Ok(Expr::FieldAccess(FieldAccessExpr {
-            name,
-            field: field_name,
-        }))
+    fn parse_postfix_chain(&mut self, mut expr: Expr) -> ParseResult<Expr> {
+        loop {
+            match self.peek() {
+                Some(tok) if token_matches!(tok, TokenKind::Dot) => {
+                    self.next();
+                    let field_name = self.expect_identifier()?;
+                    expr = Expr::FieldAccess(FieldAccessExpr {
+                        expr: Box::new(expr),
+                        field: field_name,
+                    });
+                }
+                Some(tok) if token_matches!(tok, TokenKind::LeftBracket) => {
+                    self.next();
+                    let index_expr = self.parse_primary_with_flags(false)?;
+                    self.expect(&TokenKind::RightBracket)?;
+                    expr = Expr::ArrayIndex(ArrayIndexExpr {
+                        expr: Box::new(expr),
+                        index: Box::new(index_expr),
+                    });
+                }
+                _ => break,
+            }
+        }
+        Ok(expr)
     }
 
     fn parse_struct_literal(&mut self, name: Ident) -> ParseResult<Expr> {

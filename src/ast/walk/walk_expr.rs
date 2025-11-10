@@ -1,4 +1,6 @@
-use crate::ast::{ArrayIndexExpr, AssignExpr, AssignTarget, BinaryExpr, FieldAccessExpr};
+use crate::ast::{
+    ArrayIndexExpr, ArrayType, AssignExpr, AssignTarget, BinaryExpr, FieldAccessExpr,
+};
 use crate::error::SemanticError;
 use crate::typed_ast::TypedArrayIndex;
 use crate::{
@@ -172,7 +174,8 @@ impl WalkAst for ArrayIndexExpr {
     type Output = TypedArrayIndex;
 
     fn walk(&self, ctx: &mut CompilerContext) -> Result<Self::Output, SemanticError> {
-        let var_type = ctx.get_variable_type(&self.var)?;
+        let typed_expr = self.expr.walk(ctx)?;
+        let expr_type = typed_expr.get_type();
         let index = self.index.walk(ctx)?;
 
         if Types::Int != index.get_type() {
@@ -184,9 +187,9 @@ impl WalkAst for ArrayIndexExpr {
         }
 
         Ok(TypedArrayIndex {
-            name: self.var.clone(),
+            expr: Box::new(typed_expr),
             index: Box::new(index),
-            typ: var_type,
+            typ: expr_type,
         })
     }
 }
@@ -210,27 +213,30 @@ impl WalkAst for BinaryExpr {
 impl WalkAst for FieldAccessExpr {
     type Output = TypedFieldAccess;
     fn walk(&self, ctx: &mut CompilerContext) -> Result<Self::Output, SemanticError> {
-        let strc = ctx.get_variable_type(&self.name)?;
+        let typed_expr = self.expr.walk(ctx)?;
+        let strc = typed_expr.get_type();
 
-        if let Types::Struct(ref struct_name) = strc {
-            let field = ctx.get_struct_type(struct_name)?;
-            let field_type = field.get(&self.field).ok_or(SemanticError::UnknownField {
-                struct_name: struct_name.clone(),
-                field_name: self.field.clone(),
-            })?;
+        match strc {
+            Types::Struct(ref struct_name)
+            | Types::Array(ArrayType::StructArray(_, ref struct_name)) => {
+                let field = ctx.get_struct_type(struct_name)?;
+                let field_type = field.get(&self.field).ok_or(SemanticError::UnknownField {
+                    struct_name: struct_name.clone(),
+                    field_name: self.field.clone(),
+                })?;
 
-            Ok(TypedFieldAccess {
-                name: self.name.clone(),
-                field: self.field.clone(),
-                struct_type: strc,
-                field_type: field_type.clone(),
-            })
-        } else {
-            Err(SemanticError::TypeMismatch {
+                Ok(TypedFieldAccess {
+                    expr: Box::new(typed_expr),
+                    field: self.field.clone(),
+                    struct_type: strc,
+                    field_type: field_type.clone(),
+                })
+            }
+            _ => Err(SemanticError::TypeMismatch {
                 expected: "Struct".to_string(),
                 found: strc.to_string(),
                 span: crate::error::Span::default(),
-            })
+            }),
         }
     }
 }

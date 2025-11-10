@@ -49,7 +49,7 @@ impl Expr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FieldAccessExpr {
-    pub name: Ident,
+    pub expr: Box<Expr>,
     pub field: Ident,
 }
 
@@ -62,6 +62,6 @@ pub struct BinaryExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ArrayIndexExpr {
-    pub var: Ident,
+    pub expr: Box<Expr>,
     pub index: Box<Expr>,
 }

@@ -37,7 +37,7 @@ pub enum TypedExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypedFieldAccess {
-    pub name: Ident,
+    pub expr: Box<TypedExpr>,
     pub field: Ident,
     pub struct_type: Types,
     pub field_type: Types,
@@ -53,7 +53,7 @@ pub struct TypedBinaryExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypedArrayIndex {
-    pub name: Ident,
+    pub expr: Box<TypedExpr>,
     pub index: Box<TypedExpr>,
     pub typ: Types,
 }

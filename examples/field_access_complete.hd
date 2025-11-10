@@ -1,0 +1,24 @@
+struct Point {
+    x: int,
+    y: int
+}
+
+struct Line {
+    start: Point,
+    end: Point
+}
+
+fn main(): int {
+    let p = Point {x: 10, y: 20};
+    let line = Line {
+        start: Point {x: 0, y: 0},
+        end: Point {x: 100, y: 200}
+    };
+    printf("Basic field access: %d, %d\n", p.x, p.y);
+
+    printf("Struct init field access: %d\n", Point {x: 42, y: 84}.y);
+
+    printf("Nested field access: %d, %d\n", line.start.x, line.end.y);
+
+    return 0;
+}

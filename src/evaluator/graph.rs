@@ -11,6 +11,14 @@ pub struct GraphNode {
 }
 
 impl GraphNode {
+    pub fn default() -> Self {
+        Self::new()
+    }
+
+    pub fn default_boxed() -> Arc<Self> {
+        Arc::new(Self::new())
+    }
+
     pub fn new() -> Self {
         Self {
             evaluators: Vec::new(),

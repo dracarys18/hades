@@ -61,7 +61,35 @@ impl Visit for TypedArrayIndex {
     type Output<'ctx> = CodegenValue<'ctx>;
 
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
-        let array_value = context.get_variable(&self.name)?;
+        let array_ptr = match self.expr.as_ref() {
+            crate::typed_ast::TypedExpr::Ident { ident, .. } => {
+                context.get_variable(&ident)?.value()
+            }
+            _ => {
+                let array_value = self.expr.visit(context)?;
+                if array_value.value.is_pointer_value() {
+                    array_value.value.into_pointer_value()
+                } else {
+                    let symbols = context.symbols();
+                    let array_type = context
+                        .type_converter()
+                        .to_llvm_type(&array_value.type_info, symbols)?;
+                    let temp_ptr = context
+                        .builder()
+                        .build_alloca(array_type, "temp_array")
+                        .map_err(|e| CodegenError::LLVMBuild {
+                            message: format!("Failed to create temporary array allocation: {e}"),
+                        })?;
+                    context
+                        .builder()
+                        .build_store(temp_ptr, array_value.value)
+                        .map_err(|e| CodegenError::LLVMBuild {
+                            message: format!("Failed to store temporary array: {e}"),
+                        })?;
+                    temp_ptr
+                }
+            }
+        };
         let index_value = self.index.visit(context)?;
 
         let symbols = context.symbols();
@@ -73,7 +101,7 @@ impl Visit for TypedArrayIndex {
         let llvm_value = unsafe {
             context.builder().build_in_bounds_gep(
                 llvm_array_type,
-                array_value.value(),
+                array_ptr,
                 &[
                     context.context().i64_type().const_zero(),
                     index_value.value.into_int_value(),
@@ -109,7 +137,36 @@ impl Visit for TypedFieldAccess {
 
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
         let compiler_context = context.symbols();
-        let struct_ptr = context.get_variable(&self.name)?;
+
+        let struct_ptr = match self.expr.as_ref() {
+            crate::typed_ast::TypedExpr::Ident { ident, .. } => {
+                context.get_variable(&ident)?.value()
+            }
+            _ => {
+                let struct_value = self.expr.visit(context)?;
+                if struct_value.value.is_pointer_value() {
+                    struct_value.value.into_pointer_value()
+                } else {
+                    let struct_type = context
+                        .type_converter()
+                        .to_llvm_type(&self.struct_type, compiler_context)?;
+                    let temp_ptr = context
+                        .builder()
+                        .build_alloca(struct_type, "temp_struct")
+                        .map_err(|e| CodegenError::LLVMBuild {
+                            message: format!("Failed to create temporary struct allocation: {e}"),
+                        })?;
+                    context
+                        .builder()
+                        .build_store(temp_ptr, struct_value.value)
+                        .map_err(|e| CodegenError::LLVMBuild {
+                            message: format!("Failed to store temporary struct: {e}"),
+                        })?;
+                    temp_ptr
+                }
+            }
+        };
+
         let struct_type = context
             .type_converter()
             .to_llvm_type(&self.struct_type, compiler_context)?;
@@ -127,7 +184,7 @@ impl Visit for TypedFieldAccess {
         let field_val = unsafe {
             context.builder().build_in_bounds_gep(
                 struct_type,
-                struct_ptr.value(),
+                struct_ptr,
                 &[zero, field_index],
                 "struct_fetch",
             )

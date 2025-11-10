@@ -23,29 +23,42 @@ impl<'a> Assignment<'a> {
         match self.target {
             TypedAssignTarget::Ident(ident) => ctx.get_variable(ident),
             TypedAssignTarget::FieldAccess(field) => {
-                let struct_val = VariableAccess::new(&field.name)
-                    .visit(ctx)?
-                    .value
-                    .into_struct_value();
+                let symbols = ctx.symbols();
+
+                let struct_ptr = match field.expr.as_ref() {
+                    crate::typed_ast::TypedExpr::Ident { ident, .. } => {
+                        ctx.get_variable(ident)?.value()
+                    }
+                    _ => field.expr.visit(ctx)?.value.into_pointer_value(),
+                };
+
+                let struct_type = ctx
+                    .type_converter()
+                    .to_llvm_type(&field.struct_type, symbols)?;
 
                 let struct_name = field.struct_type.unwrap_struct_name();
-                let strct = ctx.symbols().structs();
+                let strct = symbols.structs();
                 let field_index = strct.field_index(struct_name, &field.field);
-                let field_val = struct_val.get_field_at_index(field_index as u32).ok_or(
-                    CodegenError::LLVMBuild {
-                        message: format!(
-                            "Failed to get field '{}' at index {} from struct '{}'",
-                            field.field.inner(),
-                            field_index,
-                            field.name.inner()
-                        ),
-                    },
-                )?;
 
-                Ok(LLVMVariable::new(
-                    field_val.into_pointer_value(),
-                    field.field_type.clone(),
-                ))
+                let zero = ctx.context().i32_type().const_zero();
+                let field_index_val = ctx
+                    .context()
+                    .i32_type()
+                    .const_int(field_index as u64, false);
+
+                let field_ptr = unsafe {
+                    ctx.builder().build_in_bounds_gep(
+                        struct_type,
+                        struct_ptr,
+                        &[zero, field_index_val],
+                        "field_assign_ptr",
+                    )
+                }
+                .map_err(|_| CodegenError::LLVMBuild {
+                    message: "Failed to create struct field pointer for assignment".to_string(),
+                })?;
+
+                Ok(LLVMVariable::new(field_ptr, field.field_type.clone()))
             }
         }
     }

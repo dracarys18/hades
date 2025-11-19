@@ -110,4 +110,42 @@ impl<'a> Compiler<'a> {
 
         true
     }
+
+    pub fn emit_llvm(
+        &self,
+        context: &inkwell::context::Context,
+        _source_path: &std::path::Path,
+    ) -> Result<(), String> {
+        let source_trimmed = self.source.trim();
+
+        let mut lexer = lexer::Lexer::new(source_trimmed, self.filename.to_string());
+        lexer
+            .tokenize()
+            .map_err(|err| format!("{err}"))
+            .expect("Tokenizing failed");
+
+        let mut parser = parser::Parser::new(lexer.into_tokens(), self.filename.to_string());
+        let program = match parser.parse() {
+            Ok(prog) => prog,
+            Err(err) => {
+                let err = err.into_errors();
+                for e in err {
+                    e.eprint(source_trimmed);
+                }
+                return Err("Parsing failed".to_string());
+            }
+        };
+
+        let analyzer = Analyzer::<Unprepared>::new();
+
+        let prepared = analyzer.prepare(&program).map_err(|e| e.to_string())?;
+        prepared.analyze().map_err(|e| e.to_string())?;
+
+        let ir = prepared
+            .generate_ir(context, consts::MAIN_MODULE_NAME)
+            .map_err(|e| e.to_string())?;
+
+        println!("{}", ir);
+        Ok(())
+    }
 }

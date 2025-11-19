@@ -25,8 +25,8 @@ impl Visit for TypedExpr {
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
         match self {
             Self::Value(value) => value.visit(context),
-            Self::Ident { ident, .. } => {
-                let var_access = VariableAccess::new(ident);
+            Self::Ident { ident, typ } => {
+                let var_access = VariableAccess::new(ident, typ.visit_options());
                 var_access.visit(context)
             }
             Self::Binary(binary) => binary.visit(context),
@@ -61,65 +61,33 @@ impl Visit for TypedArrayIndex {
     type Output<'ctx> = CodegenValue<'ctx>;
 
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
-        let array_ptr = match self.expr.as_ref() {
-            crate::typed_ast::TypedExpr::Ident { ident, .. } => {
-                context.get_variable(&ident)?.value()
-            }
-            _ => {
-                let array_value = self.expr.visit(context)?;
-                if array_value.value.is_pointer_value() {
-                    array_value.value.into_pointer_value()
-                } else {
-                    let symbols = context.symbols();
-                    let array_type = context
-                        .type_converter()
-                        .to_llvm_type(&array_value.type_info, symbols)?;
-                    let temp_ptr = context
-                        .builder()
-                        .build_alloca(array_type, "temp_array")
-                        .map_err(|e| CodegenError::LLVMBuild {
-                            message: format!("Failed to create temporary array allocation: {e}"),
-                        })?;
-                    context
-                        .builder()
-                        .build_store(temp_ptr, array_value.value)
-                        .map_err(|e| CodegenError::LLVMBuild {
-                            message: format!("Failed to store temporary array: {e}"),
-                        })?;
-                    temp_ptr
-                }
-            }
-        };
+        let array_value = self.expr.visit(context)?;
+        let array_ptr = array_value.value.into_pointer_value();
+
         let index_value = self.index.visit(context)?;
-
         let symbols = context.symbols();
-        let type_conv = context.type_converter();
+        let elem_type = context
+            .type_converter()
+            .to_llvm_type(&self.typ.get_array_elem_type(), symbols)?;
+        let array_type = context.type_converter().to_llvm_type(&self.typ, symbols)?;
 
-        let llvm_array_type = type_conv.to_llvm_type(&self.typ, symbols)?;
-        let llvm_val_type = type_conv.to_llvm_type(&self.typ.get_array_elem_type(), symbols)?;
-
-        let llvm_value = unsafe {
+        let zero = context.context().i32_type().const_zero();
+        let elem_ptr = unsafe {
             context.builder().build_in_bounds_gep(
-                llvm_array_type,
+                array_type,
                 array_ptr,
-                &[
-                    context.context().i64_type().const_zero(),
-                    index_value.value.into_int_value(),
-                ],
-                "array_idx_access",
-            )
-        }
-        .map_err(|e| CodegenError::LLVMBuild {
-            message: format!("Failed to build GEP for array index access: {e}"),
-        })?;
+                &[zero, index_value.value.into_int_value()],
+                "array_elem_ptr",
+            )?
+        };
 
         let val = context
             .builder()
-            .build_load(llvm_val_type, llvm_value, "array_idx_load")?;
+            .build_load(elem_type, elem_ptr, "array_elem")?;
 
         Ok(CodegenValue {
             value: val,
-            type_info: self.typ.clone(),
+            type_info: self.typ.get_array_elem_type(),
         })
     }
 }

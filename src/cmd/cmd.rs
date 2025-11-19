@@ -1,4 +1,4 @@
-use super::args::{BuildArgs, CheckArgs, RunArgs};
+use super::args::{BuildArgs, CheckArgs, EmitLlvmArgs, RunArgs};
 use clap::{Parser, Subcommand};
 
 #[derive(Debug, Parser)]
@@ -17,4 +17,5 @@ pub enum Commands {
     Build(BuildArgs),
     Check(CheckArgs),
     Run(RunArgs),
+    EmitLlvm(EmitLlvmArgs),
 }

@@ -20,3 +20,9 @@ pub struct RunArgs {
     pub source: PathBuf,
     pub output: Option<PathBuf>,
 }
+
+#[derive(Debug, Args)]
+pub struct EmitLlvmArgs {
+    #[arg(required = true)]
+    pub source: PathBuf,
+}

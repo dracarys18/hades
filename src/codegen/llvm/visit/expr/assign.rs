@@ -1,5 +1,6 @@
 use inkwell::values::BasicValueEnum;
 
+use crate::codegen::VisitOptions;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
 use crate::codegen::{
@@ -124,7 +125,8 @@ impl Visit for TypedAssignTarget {
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
         match self {
             Self::Ident(ident) => {
-                let current_value = VariableAccess::new(ident).visit(context)?;
+                let current_value =
+                    VariableAccess::new(ident, VisitOptions::new()).visit(context)?;
                 Ok(current_value)
             }
             Self::FieldAccess(field) => field.visit(context),

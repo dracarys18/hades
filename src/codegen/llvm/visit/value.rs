@@ -1,9 +1,9 @@
-use crate::ast::{ArrayType, Types};
+use crate::ast::Types;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
 use crate::typed_ast::{TypedArrayLiteral, TypedValue};
-use inkwell::types::BasicType;
+use inkwell::values::BasicValueEnum;
 
 impl Visit for TypedValue {
     type Output<'ctx> = CodegenValue<'ctx>;
@@ -22,84 +22,39 @@ impl Visit for TypedValue {
 impl Visit for TypedArrayLiteral {
     type Output<'ctx> = CodegenValue<'ctx>;
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
-        let value = self
-            .elements
-            .iter()
-            .map(|v| v.visit(context))
-            .collect::<Result<Vec<_>, _>>()?;
-
         let symbols = context.symbols();
-        let type_converter = context.type_converter();
-        let var_type =
-            type_converter.to_llvm_type(&self.elem_typ.get_array_elem_type(), symbols)?;
-        let llvm_array_type = type_converter.to_llvm_type(&self.elem_typ, symbols)?;
+        let array_type = context
+            .type_converter()
+            .to_llvm_type(&self.elem_typ, symbols)?;
+        let elem_type = self.elem_typ.get_array_elem_type();
+        let llvm_elem_type = context.type_converter().to_llvm_type(&elem_type, symbols)?;
 
-        let values: Vec<_> = value.iter().map(|v| v.value).collect();
+        let array_ptr = context.builder().build_alloca(array_type, "array")?;
 
-        let array = match &self.elem_typ {
-            Types::Array(ArrayType::IntArray(_)) => context.context().i64_type().const_array(
-                &values
-                    .iter()
-                    .map(|v| v.into_int_value())
-                    .collect::<Vec<_>>(),
-            ),
+        for (i, element) in self.elements.iter().enumerate() {
+            let elem_value = element.visit(context)?;
+            let actual_value = match (&elem_type, elem_value.value) {
+                (Types::String, val) => val,
+                (_, BasicValueEnum::PointerValue(ptr)) => {
+                    context.builder().build_load(llvm_elem_type, ptr, "elem")?
+                }
+                (_, val) => val,
+            };
 
-            Types::Array(ArrayType::FloatArray(_)) => context.context().f64_type().const_array(
-                &values
-                    .iter()
-                    .map(|v| v.into_float_value())
-                    .collect::<Vec<_>>(),
-            ),
-            Types::Array(ArrayType::BoolArray(_)) => context.context().bool_type().const_array(
-                &values
-                    .iter()
-                    .map(|v| v.into_int_value())
-                    .collect::<Vec<_>>(),
-            ),
-            Types::Array(ArrayType::StringArray(_)) => context
-                .context()
-                .ptr_type(inkwell::AddressSpace::default())
-                .const_array(
-                    &values
-                        .iter()
-                        .map(|v| v.into_pointer_value())
-                        .collect::<Vec<_>>(),
-                ),
-            Types::Array(ArrayType::StructArray(_, name)) => {
-                let struct_type = type_converter.convert_struct_type(name, symbols)?;
-                struct_type.const_array(
-                    &values
-                        .iter()
-                        .map(|v| v.into_struct_value())
-                        .collect::<Vec<_>>(),
-                )
-            }
-            typ => unimplemented!("Array for type {} is not implemented yet", typ),
-        };
+            let zero = context.context().i32_type().const_zero();
+            let index = context.context().i32_type().const_int(i as u64, false);
+            let elem_ptr = unsafe {
+                context.builder().build_in_bounds_gep(
+                    array_type,
+                    array_ptr,
+                    &[zero, index],
+                    "elem_ptr",
+                )?
+            };
+            context.builder().build_store(elem_ptr, actual_value)?;
+        }
 
-        let global = context.module().add_global(var_type, None, "array");
-        global.set_initializer(&array);
-        global.set_constant(true);
-
-        let size = context
-            .context()
-            .i32_type()
-            .const_int(self.elements.len() as u64, false);
-        let array_ptr = context
-            .builder()
-            .build_array_alloca(llvm_array_type, size, "arr_ptr")
-            .map_err(|_| CodegenError::LLVMBuild {
-                message: "Failed to create array alloca".to_string(),
-            })?;
-
-        context.builder().build_memcpy(
-            array_ptr,
-            8,
-            global.as_pointer_value(),
-            8,
-            llvm_array_type.size_of().unwrap(),
-        )?;
-        Ok(CodegenValue::new(array.into(), self.elem_typ.clone()))
+        Ok(CodegenValue::new(array_ptr.into(), self.elem_typ.clone()))
     }
 }
 

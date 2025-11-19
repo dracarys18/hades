@@ -1,5 +1,6 @@
 use clap::Parser;
 use hades::{cmd, compiler, consts};
+use inkwell::context::Context;
 use std::{path::PathBuf, process::Command};
 
 fn main() {
@@ -41,6 +42,18 @@ fn main() {
                 Command::new(path)
                     .status()
                     .expect("Failed to run the compiled program");
+            }
+        }
+
+        cmd::Commands::EmitLlvm(args) => {
+            let source = std::fs::read_to_string(&args.source).expect("Failed to read source file");
+            let compiler = compiler::Compiler::new(&source, args.source.to_str().unwrap());
+            compiler.prepare();
+
+            let context = Context::create();
+
+            if let Err(e) = compiler.emit_llvm(&context, &args.source) {
+                eprintln!("Failed to emit LLVM IR: {e}");
             }
         }
     }

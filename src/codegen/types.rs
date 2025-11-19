@@ -133,9 +133,7 @@ impl<'ctx> TypeConverter<'ctx> {
     }
 
     pub fn ptr_type(&self) -> inkwell::types::PointerType<'ctx> {
-        self.context
-            .i8_type()
-            .ptr_type(inkwell::AddressSpace::default())
+        self.context.ptr_type(inkwell::AddressSpace::default())
     }
 
     pub fn is_numeric(&self, ty: &Types) -> bool {

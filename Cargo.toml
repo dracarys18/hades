@@ -22,6 +22,7 @@ inkwell = { version = "0.5.0", features = ["llvm18-0"], default-features = false
 derive_more = { version = "2.0.1", features = ["debug"] }
 rayon = "1.11.0"
 thiserror = "2.0.8"
+memchr = "2.7.6"
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }

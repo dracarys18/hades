@@ -19,7 +19,7 @@ impl<'a> Compiler<'a> {
     pub fn check(&self) {
         let source_trimmed = self.source.trim();
 
-        let mut lexer = lexer::Lexer::new(source_trimmed, self.filename.to_string());
+        let mut lexer = lexer::Lexer::new(source_trimmed.as_bytes(), self.filename.to_string());
         lexer
             .tokenize()
             .map_err(|err| eprintln!("{err}"))
@@ -60,7 +60,7 @@ impl<'a> Compiler<'a> {
 
         let source_trimmed = self.source.trim();
 
-        let mut lexer = lexer::Lexer::new(source_trimmed, self.filename.to_string());
+        let mut lexer = lexer::Lexer::new(source_trimmed.as_bytes(), self.filename.to_string());
         lexer
             .tokenize()
             .map_err(|err| eprintln!("{err}"))
@@ -118,7 +118,7 @@ impl<'a> Compiler<'a> {
     ) -> Result<(), String> {
         let source_trimmed = self.source.trim();
 
-        let mut lexer = lexer::Lexer::new(source_trimmed, self.filename.to_string());
+        let mut lexer = lexer::Lexer::new(source_trimmed.as_bytes(), self.filename.to_string());
         lexer
             .tokenize()
             .map_err(|err| format!("{err}"))

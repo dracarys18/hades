@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::{error::Error, lexer::simd::bytes::Byte};
 use std::ops::Range;
 
 #[derive(Debug)]
@@ -32,7 +32,7 @@ impl LexError {
         ))
     }
 
-    pub fn unexpected_character(ch: char, span: Range<usize>, source_id: String) -> Self {
+    pub fn unexpected_character(ch: Byte, span: Range<usize>, source_id: String) -> Self {
         Self(Box::new(
             Error::new_with_span(format!("Unexpected character '{ch}'"), span, source_id)
                 .with_help("Remove or replace the invalid character".to_string()),

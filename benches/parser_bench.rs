@@ -208,16 +208,16 @@ fn main(): int {
 
 const CRAZY_NESTED_BLOCKS: &str = r#"
 fn main(): int {
-    {
-        {
-            {
-                {
-                    {
-                        {
-                            {
-                                {
-                                    {
-                                        {
+    if true {
+        if true {
+            if true {
+                if true {
+                    if true {
+                        if true {
+                            if true {
+                                if true {
+                                    if true {
+                                        if true {
                                             let x = 42;
                                             printf("Deep in the nesting\n");
                                         }
@@ -376,8 +376,20 @@ fn main(): int {
 const CRAZY_NESTED_EXPRESSIONS: &str = r#"
 fn main(): int {
     let x = ((((((((((1 + 2) * 3) - 4) / 2) + 5) * 6) - 7) / 2) + 8) * 9);
+    let a = 1;
+    let b = 2;
+    let c = 3;
+    let d = 4;
+    let e = 5;
+    let f = 6;
+    let g = 7;
+    let h = 8;
+    let i = 9;
+    let j = 10;
+    let k = 11;
+    let l = 12;
     let y = (((((a > b) && (c < d)) || (e == f)) && (g != h)) || ((i >= j) && (k <= l)));
-    let z = !!!!!!!!!!true;
+    let z = !!!!!true;
     return x;
 }
 "#;
@@ -391,9 +403,9 @@ fn process(c: Container): int {
     if c.value > 0 {
         let i = 0;
         while i < c.value {
-            {
-                {
-                    if i > 0 {
+            if i > 0 {
+                if i < 10 {
+                    if i > 5 {
                         let temp = Container { value: i };
                         if temp.value > 0 {
                             printf("Value: %d\n", temp.value);
@@ -413,7 +425,7 @@ fn main(): int {
         if outer > 0 {
             let inner = 0;
             while inner < 2 {
-                {
+                if inner >= 0 {
                     let c = Container { value: outer + inner };
                     let result = process(c);
                     if result > 0 {
@@ -430,7 +442,7 @@ fn main(): int {
 "#;
 
 fn lex_and_parse(source: &str) -> Program {
-    let mut lexer = Lexer::new(source, "bench.hd".to_string());
+    let mut lexer = Lexer::new(source.as_bytes(), "bench.hd".to_string());
     lexer.tokenize().unwrap();
     let tokens = lexer.into_tokens();
     let mut parser = Parser::new(tokens, "bench.hd".to_string());
@@ -720,15 +732,15 @@ fn bench_parser_only(c: &mut Criterion) {
     let mut group = c.benchmark_group("parser_only");
 
     // Pre-lex the code samples to benchmark parser only
-    let mut lexer = Lexer::new(HELLO_WORLD, "bench.hd".to_string());
+    let mut lexer = Lexer::new(HELLO_WORLD.as_bytes(), "bench.hd".to_string());
     lexer.tokenize().unwrap();
     let hello_tokens = lexer.into_tokens();
 
-    let mut lexer = Lexer::new(NESTED_STRUCTS, "bench.hd".to_string());
+    let mut lexer = Lexer::new(NESTED_STRUCTS.as_bytes(), "bench.hd".to_string());
     lexer.tokenize().unwrap();
     let nested_tokens = lexer.into_tokens();
 
-    let mut lexer = Lexer::new(LARGE_PROGRAM, "bench.hd".to_string());
+    let mut lexer = Lexer::new(LARGE_PROGRAM.as_bytes(), "bench.hd".to_string());
     lexer.tokenize().unwrap();
     let large_tokens = lexer.into_tokens();
 

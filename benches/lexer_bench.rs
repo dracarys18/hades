@@ -171,7 +171,7 @@ fn bench_lexer_simple(c: &mut Criterion) {
 
     group.bench_function("simple_expr", |b| {
         b.iter(|| {
-            let mut lexer = Lexer::new(black_box(SIMPLE_EXPR), "bench.hd".to_string());
+            let mut lexer = Lexer::new(black_box(SIMPLE_EXPR.as_bytes()), "bench.hd".to_string());
             lexer.tokenize().unwrap();
             black_box(lexer.get_tokens());
         });
@@ -179,7 +179,7 @@ fn bench_lexer_simple(c: &mut Criterion) {
 
     group.bench_function("function_def", |b| {
         b.iter(|| {
-            let mut lexer = Lexer::new(black_box(FUNCTION_DEF), "bench.hd".to_string());
+            let mut lexer = Lexer::new(black_box(FUNCTION_DEF.as_bytes()), "bench.hd".to_string());
             lexer.tokenize().unwrap();
             black_box(lexer.get_tokens());
         });
@@ -187,7 +187,7 @@ fn bench_lexer_simple(c: &mut Criterion) {
 
     group.bench_function("hello_world", |b| {
         b.iter(|| {
-            let mut lexer = Lexer::new(black_box(HELLO_WORLD), "bench.hd".to_string());
+            let mut lexer = Lexer::new(black_box(HELLO_WORLD.as_bytes()), "bench.hd".to_string());
             lexer.tokenize().unwrap();
             black_box(lexer.get_tokens());
         });
@@ -201,7 +201,10 @@ fn bench_lexer_medium(c: &mut Criterion) {
 
     group.bench_function("struct_with_methods", |b| {
         b.iter(|| {
-            let mut lexer = Lexer::new(black_box(STRUCT_WITH_METHODS), "bench.hd".to_string());
+            let mut lexer = Lexer::new(
+                black_box(STRUCT_WITH_METHODS.as_bytes()),
+                "bench.hd".to_string(),
+            );
             lexer.tokenize().unwrap();
             black_box(lexer.get_tokens());
         });
@@ -209,7 +212,8 @@ fn bench_lexer_medium(c: &mut Criterion) {
 
     group.bench_function("nested_structs", |b| {
         b.iter(|| {
-            let mut lexer = Lexer::new(black_box(NESTED_STRUCTS), "bench.hd".to_string());
+            let mut lexer =
+                Lexer::new(black_box(NESTED_STRUCTS.as_bytes()), "bench.hd".to_string());
             lexer.tokenize().unwrap();
             black_box(lexer.get_tokens());
         });
@@ -217,7 +221,7 @@ fn bench_lexer_medium(c: &mut Criterion) {
 
     group.bench_function("control_flow", |b| {
         b.iter(|| {
-            let mut lexer = Lexer::new(black_box(CONTROL_FLOW), "bench.hd".to_string());
+            let mut lexer = Lexer::new(black_box(CONTROL_FLOW.as_bytes()), "bench.hd".to_string());
             lexer.tokenize().unwrap();
             black_box(lexer.get_tokens());
         });
@@ -225,7 +229,7 @@ fn bench_lexer_medium(c: &mut Criterion) {
 
     group.bench_function("arrays", |b| {
         b.iter(|| {
-            let mut lexer = Lexer::new(black_box(ARRAYS), "bench.hd".to_string());
+            let mut lexer = Lexer::new(black_box(ARRAYS.as_bytes()), "bench.hd".to_string());
             lexer.tokenize().unwrap();
             black_box(lexer.get_tokens());
         });
@@ -239,7 +243,7 @@ fn bench_lexer_large(c: &mut Criterion) {
 
     group.bench_function("large_program", |b| {
         b.iter(|| {
-            let mut lexer = Lexer::new(black_box(LARGE_PROGRAM), "bench.hd".to_string());
+            let mut lexer = Lexer::new(black_box(LARGE_PROGRAM.as_bytes()), "bench.hd".to_string());
             lexer.tokenize().unwrap();
             black_box(lexer.get_tokens());
         });
@@ -263,7 +267,7 @@ fn bench_lexer_scaling(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::from_parameter(size), &code, |b, code| {
             b.iter(|| {
-                let mut lexer = Lexer::new(black_box(code), "bench.hd".to_string());
+                let mut lexer = Lexer::new(black_box(code.as_bytes()), "bench.hd".to_string());
                 lexer.tokenize().unwrap();
                 black_box(lexer.get_tokens());
             });
@@ -283,7 +287,7 @@ fn bench_lexer_token_types(c: &mut Criterion) {
             .collect::<Vec<_>>()
             .join(" ");
         b.iter(|| {
-            let mut lexer = Lexer::new(black_box(&code), "bench.hd".to_string());
+            let mut lexer = Lexer::new(black_box(code.as_bytes()), "bench.hd".to_string());
             lexer.tokenize().unwrap();
             black_box(lexer.get_tokens());
         });
@@ -296,7 +300,7 @@ fn bench_lexer_token_types(c: &mut Criterion) {
             .collect::<Vec<_>>()
             .join(" ");
         b.iter(|| {
-            let mut lexer = Lexer::new(black_box(&code), "bench.hd".to_string());
+            let mut lexer = Lexer::new(black_box(code.as_bytes()), "bench.hd".to_string());
             lexer.tokenize().unwrap();
             black_box(lexer.get_tokens());
         });
@@ -306,7 +310,7 @@ fn bench_lexer_token_types(c: &mut Criterion) {
     group.bench_function("many_keywords", |b| {
         let code = "let fn if else while for struct return break continue true false ".repeat(20);
         b.iter(|| {
-            let mut lexer = Lexer::new(black_box(&code), "bench.hd".to_string());
+            let mut lexer = Lexer::new(black_box(code.as_bytes()), "bench.hd".to_string());
             lexer.tokenize().unwrap();
             black_box(lexer.get_tokens());
         });
@@ -319,7 +323,7 @@ fn bench_lexer_token_types(c: &mut Criterion) {
             .collect::<Vec<_>>()
             .join(" ");
         b.iter(|| {
-            let mut lexer = Lexer::new(black_box(&code), "bench.hd".to_string());
+            let mut lexer = Lexer::new(black_box(code.as_bytes()), "bench.hd".to_string());
             lexer.tokenize().unwrap();
             black_box(lexer.get_tokens());
         });
@@ -329,7 +333,7 @@ fn bench_lexer_token_types(c: &mut Criterion) {
     group.bench_function("many_operators", |b| {
         let code = "+ - * / == != < > <= >= && || ".repeat(20);
         b.iter(|| {
-            let mut lexer = Lexer::new(black_box(&code), "bench.hd".to_string());
+            let mut lexer = Lexer::new(black_box(code.as_bytes()), "bench.hd".to_string());
             lexer.tokenize().unwrap();
             black_box(lexer.get_tokens());
         });

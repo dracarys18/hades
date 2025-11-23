@@ -308,6 +308,7 @@ dependencies = [
  "derive_more",
  "indexmap",
  "inkwell",
+ "memchr",
  "once_cell",
  "phf",
  "rayon",

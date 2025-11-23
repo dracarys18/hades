@@ -1,31 +1,44 @@
 # Hades
+Hades is a statically typed systems programming language which uses LLVM as compiler backend. It aims to provide simple C like syntax with some static analysis so you don't shoot yourself in the foot
 
-> A statically typed, systems programming language with LLVM backend
+## Getting Started
 
-Hades is a toy, statically typed programming language built with Rust and LLVM in the backend(WIP).
+### Prerequisites
 
-## Current Status
-**Phase**: Early Development (Parser & AST Complete)
+You'll need the following installed on your system:
 
-The Hades compiler currently includes:
-- Lexical analysis (tokenizer)
-- Syntax parsing with error recovery
-- Abstract Syntax Tree (AST) generation
-- Basic error reporting with diagnostics
+- Rust (latest stable version)
+- LLVM 15 or later
 
-## TODO List
+### Building from Source
 
-### Completed
-- [x] **Lexer**: Tokenize source code into language tokens
-- [x] **Parser**: Build Abstract Syntax Tree from tokens
-- [x] **AST**: Define and implement language constructs
-- [x] **Error Reporting**: Basic diagnostic messages with source location
+Clone the repository and build the compiler:
 
-### In Progress / Remaining
-- [ ] **Semantic Analysis**: Type checking and symbol resolution
-- [ ] **LLVM Integration**: Set up LLVM bindings for code generation
-- [ ] **Code Generation**: Generate LLVM IR from AST
-- [ ] **Standard Library**: Implement basic built-in functions
-- [ ] **Memory Management**: Design allocation and deallocation strategy
-- [ ] **Optimization**: Basic LLVM optimization passes
+```bash
+git clone https://github.com/dracarys18/hades.git
+cd hades
+cargo build --release
+```
 
+The compiled binary will be available at `target/release/hades`.
+
+### Examples
+Examples are available in `examples/` directory.
+
+## Project Status
+
+The Hades compiler is currently in early development. Here's what's working:
+- [x] Lexer
+- [x] Parser
+- [x] Code generation
+- [x] Semantic analysis and type checking
+
+The language is functional enough to write simple programs, but many features are still being developed. Expect breaking changes as the language evolves.
+
+## Contributing
+
+Hades is an open source project and contributions are welcome. Whether you want to fix bugs, add features, or improve documentation, your help is appreciated.
+
+## License
+
+This project is licensed under the MIT License. See the LICENSE file for details.

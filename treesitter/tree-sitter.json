@@ -1,0 +1,42 @@
+{
+  "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/config.schema.json",
+  "grammars": [
+    {
+      "name": "hades",
+      "camelcase": "Hades",
+      "title": "Hades Parser",
+      "scope": "source.hades",
+      "file-types": [
+        "hd"
+      ],
+      "injection-regex": "^hades$",
+      "class-name": "TreeSitterHades"
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "license": "MIT",
+    "description": "Treesitter parser for Hades Programming Language",
+    "authors": [
+      {
+        "name": "Karthikey Hegde",
+        "email": "me@karthihegde.dev",
+        "url": ""
+      }
+    ],
+    "links": {
+      "repository": "https://github.com/tree-sitter/tree-sitter-hades",
+      "funding": ""
+    }
+  },
+  "bindings": {
+    "c": true,
+    "go": true,
+    "java": false,
+    "node": true,
+    "python": true,
+    "rust": true,
+    "swift": true,
+    "zig": false
+  }
+}

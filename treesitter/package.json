@@ -5,7 +5,7 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tree-sitter/tree-sitter-hades.git"
+    "url": "git+https://github.com/dracarys18/hades.git"
   },
   "funding": "",
   "license": "MIT",

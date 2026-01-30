@@ -148,4 +148,25 @@ impl<'a> Compiler<'a> {
         println!("{}", ir);
         Ok(())
     }
+
+    pub fn print_ast(&self) {
+        let source_trimmed = self.source.trim();
+        let mut lexer = lexer::Lexer::new(source_trimmed.as_bytes(), self.filename.to_string());
+        lexer
+            .tokenize()
+            .map_err(|err| eprintln!("{err}"))
+            .expect("Tokenizing failed");
+        let mut parser = parser::Parser::new(lexer.into_tokens(), self.filename.to_string());
+        let program = match parser.parse() {
+            Ok(prog) => prog,
+            Err(err) => {
+                let err = err.into_errors();
+                for e in err {
+                    e.eprint(source_trimmed);
+                }
+                return;
+            }
+        };
+        println!("{:#?}", program);
+    }
 }

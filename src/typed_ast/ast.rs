@@ -95,6 +95,12 @@ pub struct TypedReturn {
     pub span: Span,
 }
 
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedModuleDecl {
+    pub name: Ident,
+    pub span: Span,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypedStmt {
     Let(TypedLet),
@@ -107,4 +113,5 @@ pub enum TypedStmt {
     FuncDef(TypedFuncDef),
     Block(TypedBlock),
     Return(TypedReturn),
+    ModuleDecl(TypedModuleDecl),
 }

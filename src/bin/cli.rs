@@ -56,5 +56,12 @@ fn main() {
                 eprintln!("Failed to emit LLVM IR: {e}");
             }
         }
+
+        cmd::Commands::PrintAst(args) => {
+            let source = std::fs::read_to_string(&args.source).expect("Failed to read source file");
+            let compiler = compiler::Compiler::new(&source, args.source.to_str().unwrap());
+            compiler.prepare();
+            compiler.print_ast();
+        }
     }
 }

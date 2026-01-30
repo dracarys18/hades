@@ -160,6 +160,7 @@ impl Parser {
             TokenKind::Fn => 2,
             TokenKind::Let => 3,
             TokenKind::Newline => 1,
+            TokenKind::Module => 6,
         }
     }
 
@@ -267,6 +268,7 @@ impl Parser {
             Some(tok) if token_matches!(tok, TokenKind::For) => self.parse_for_stmt(),
             Some(tok) if token_matches!(tok, TokenKind::Return) => self.parse_return_stmt(),
             Some(tok) if token_matches!(tok, TokenKind::Continue) => self.parse_continue_stmt(),
+            Some(tok) if token_matches!(tok, TokenKind::Module) => self.parse_module(),
             _ => self.parse_expr_stmt(),
         }
     }
@@ -300,6 +302,16 @@ impl Parser {
             return_type,
             body: Block::new(body.into(), Span::new(start, end)),
             span: Span::new(start, end),
+        }))
+    }
+
+    fn parse_module(&mut self) -> ParseResult<Stmt> {
+        self.expect(&TokenKind::Module)?;
+        let name = self.expect_identifier()?;
+
+        Ok(Stmt::ModuleDecl(ModuleDecl {
+            name,
+            span: Span::new(self.char_pos, self.char_pos),
         }))
     }
 

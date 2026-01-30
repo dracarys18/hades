@@ -23,6 +23,7 @@ static KEYWORDS: phf::Map<&'static str, TokenKind> = phf_map! {
     "continue" => TokenKind::Continue,
     "true" => TokenKind::True,
     "false" => TokenKind::False,
+    "module"=> TokenKind::Module,
 };
 
 pub struct Lexer {

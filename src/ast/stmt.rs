@@ -87,6 +87,13 @@ pub struct Return {
     pub expr: Option<ExprAst>,
     pub span: Span,
 }
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct ModuleDecl {
+    pub name: Ident,
+    pub span: Span,
+}
+
 #[derive(Clone, PartialEq, Debug)]
 pub enum Stmt {
     Let(Let),
@@ -97,6 +104,7 @@ pub enum Stmt {
     For(For),
     StructDef(StructDef),
     FuncDef(FuncDef),
+    ModuleDecl(ModuleDecl),
     Block(Block),
     Return(Return),
 }
@@ -111,6 +119,7 @@ impl_span!(StructDef);
 impl_span!(FuncDef);
 impl_span!(Return);
 impl_span!(Block);
+impl_span!(ModuleDecl);
 
 impl Stmt {
     pub fn unwrap_let(self) -> Let {
@@ -132,6 +141,7 @@ impl Stmt {
             Stmt::FuncDef(f) => f.span(),
             Stmt::Block(b) => b.span(),
             Stmt::Return(r) => r.span(),
+            Stmt::ModuleDecl(m) => m.span(),
         }
     }
 }

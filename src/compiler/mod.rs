@@ -56,15 +56,8 @@ impl<'a> Compiler {
     }
 
     pub fn compile(&self, entry_path: impl AsRef<Path>, output_path: impl AsRef<Path>) -> bool {
-        let entry_path = entry_path.as_ref();
         let output_path = output_path.as_ref();
-        let project_dir = if entry_path.is_dir() {
-            entry_path
-        } else {
-            entry_path.parent().unwrap_or_else(|| Path::new("."))
-        };
-
-        let mut registry = Registry::new(project_dir);
+        let mut registry = Registry::new(entry_path.as_ref());
 
         let program = match registry.load(entry_path) {
             Ok(p) => p,

@@ -35,6 +35,14 @@ pub struct TypedContinue {
 }
 
 #[derive(Clone, PartialEq, Debug)]
+pub struct TypedImport {
+    pub module: String,
+    pub prefix: String,
+    #[debug(skip)]
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
 pub struct TypedExprAst {
     pub expr: TypedExpr,
     pub span: Span,
@@ -114,4 +122,5 @@ pub enum TypedStmt {
     Block(TypedBlock),
     Return(TypedReturn),
     ModuleDecl(TypedModuleDecl),
+    Import(TypedImport),
 }

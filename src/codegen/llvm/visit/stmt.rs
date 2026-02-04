@@ -26,6 +26,7 @@ impl Visit for TypedStmt {
             }
             Self::StructDef(_) => Ok(()),
             Self::ModuleDecl(_) => Ok(()),
+            Self::Import(_) => Ok(()),
         }
     }
 }

@@ -66,9 +66,7 @@ impl Registry {
         let mut merged_ast = Vec::new();
         for module in modules {
             for stmt in &module.ast {
-                if !matches!(stmt, Stmt::Import(_)) {
-                    merged_ast.push(stmt.clone());
-                }
+                merged_ast.push(stmt.clone());
             }
         }
 

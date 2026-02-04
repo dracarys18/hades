@@ -4,6 +4,7 @@ mod walk_expr;
 mod walk_for;
 mod walk_func;
 mod walk_if;
+mod walk_import;
 mod walk_let;
 mod walk_moduledecl;
 mod walk_program;

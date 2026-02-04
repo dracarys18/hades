@@ -67,6 +67,10 @@ pub enum SemanticError {
         name: Ident,
         span: Span,
     },
+    InvalidImport {
+        name: Ident,
+        span: Span,
+    },
 }
 
 impl std::fmt::Display for SemanticError {
@@ -144,6 +148,9 @@ impl std::fmt::Display for SemanticError {
             }
             SemanticError::InvalidModuleName { name, .. } => {
                 write!(f, "Invalid module name: {}", name.inner())
+            }
+            SemanticError::InvalidImport { name, .. } => {
+                write!(f, "Invalid import: {}", name.inner())
             }
         }
     }

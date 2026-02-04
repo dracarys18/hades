@@ -1,6 +1,8 @@
+use std::str::FromStr;
+
 use crate::{
     ast::{AssignExpr, BinaryExpr, Program, Types},
-    error::Span,
+    error::{SemanticError, Span},
     impl_span,
     tokens::Ident,
 };
@@ -158,6 +160,15 @@ impl Stmt {
             Stmt::Return(r) => r.span(),
             Stmt::ModuleDecl(m) => m.span(),
             Stmt::Import(i) => i.span(),
+        }
+    }
+}
+
+impl std::fmt::Display for ImportPrefix {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ImportPrefix::Std => write!(f, "std"),
+            ImportPrefix::Local => write!(f, "local"),
         }
     }
 }

@@ -1,10 +1,8 @@
 use crate::error::Error;
 use std::ops::Range;
 
-#[derive(Debug)]
 pub struct ParseError(Box<Error>);
 
-#[derive(Debug)]
 pub struct FinalParseError(Vec<ParseError>);
 
 impl FinalParseError {

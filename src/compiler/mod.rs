@@ -1,6 +1,9 @@
+use crate::ast::Program;
+use crate::module::Registry;
 use crate::semantic::analyzer::{Analyzer, Unprepared};
 use crate::{consts, lexer, parser};
 use inkwell::context::Context;
+use std::path::Path;
 
 pub struct Compiler<'a> {
     source: &'a str,
@@ -55,38 +58,35 @@ impl<'a> Compiler<'a> {
             .expect("Semantic analysis failed");
     }
 
-    pub fn compile(&self, path: impl AsRef<std::path::Path>) -> bool {
-        let context = Context::create();
+    pub fn compile(&self, entry_path: impl AsRef<Path>, output_path: impl AsRef<Path>) -> bool {
+        let entry_path = entry_path.as_ref();
+        let output_path = output_path.as_ref();
+        let project_dir = if entry_path.is_dir() {
+            entry_path
+        } else {
+            entry_path.parent().unwrap_or_else(|| Path::new("."))
+        };
 
-        let source_trimmed = self.source.trim();
+        let mut registry = Registry::new(project_dir, Path::new("std"));
 
-        let mut lexer = lexer::Lexer::new(source_trimmed.as_bytes(), self.filename.to_string());
-        lexer
-            .tokenize()
-            .map_err(|err| eprintln!("{err}"))
-            .expect("Tokenizing failed");
-
-        let mut parser = parser::Parser::new(lexer.into_tokens(), self.filename.to_string());
-        let program = match parser.parse() {
-            Ok(prog) => prog,
+        let program = match registry.load(entry_path) {
+            Ok(p) => p,
             Err(err) => {
-                let err = err.into_errors();
-                for e in err {
-                    e.eprint(source_trimmed);
-                }
+                eprintln!("Failed to load modules: {err}");
                 return false;
             }
         };
 
+        let context = Context::create();
         let analyzer = Analyzer::<Unprepared>::new();
 
-        let prepared = analyzer.prepare(&program);
-        if let Err(err) = prepared {
-            eprintln!("Error during semantic analysis: {err}");
-            return false;
-        }
-
-        let prepared = prepared.unwrap();
+        let prepared = match analyzer.prepare(&program) {
+            Ok(p) => p,
+            Err(err) => {
+                eprintln!("Error during semantic analysis: {err}");
+                return false;
+            }
+        };
 
         if let Err(err) = prepared.analyze() {
             eprintln!("Error during semantic analysis: {err}");
@@ -98,13 +98,13 @@ impl<'a> Compiler<'a> {
             return false;
         }
 
-        if let Err(err) = prepared.compile(&context, consts::MAIN_MODULE_NAME, path.as_ref()) {
-            eprintln!("Module optimization failed: {err}");
+        if let Err(err) = prepared.compile(&context, consts::MAIN_MODULE_NAME, output_path) {
+            eprintln!("Compilation failed: {err}");
             return false;
         }
 
-        if let Err(err) = prepared.cleanup(path.as_ref()) {
-            eprintln!("Module optimization failed: {err}");
+        if let Err(err) = prepared.cleanup(output_path) {
+            eprintln!("Cleanup failed: {err}");
             return false;
         }
 
@@ -113,31 +113,20 @@ impl<'a> Compiler<'a> {
 
     pub fn emit_llvm(
         &self,
+        entry_path: impl AsRef<Path>,
         context: &inkwell::context::Context,
-        _source_path: &std::path::Path,
     ) -> Result<(), String> {
-        let source_trimmed = self.source.trim();
-
-        let mut lexer = lexer::Lexer::new(source_trimmed.as_bytes(), self.filename.to_string());
-        lexer
-            .tokenize()
-            .map_err(|err| format!("{err}"))
-            .expect("Tokenizing failed");
-
-        let mut parser = parser::Parser::new(lexer.into_tokens(), self.filename.to_string());
-        let program = match parser.parse() {
-            Ok(prog) => prog,
-            Err(err) => {
-                let err = err.into_errors();
-                for e in err {
-                    e.eprint(source_trimmed);
-                }
-                return Err("Parsing failed".to_string());
-            }
+        let entry_path = entry_path.as_ref();
+        let project_dir = if entry_path.is_dir() {
+            entry_path
+        } else {
+            entry_path.parent().unwrap_or_else(|| Path::new("."))
         };
 
-        let analyzer = Analyzer::<Unprepared>::new();
+        let mut registry = Registry::new(project_dir, Path::new("std"));
+        let program = registry.load(entry_path).map_err(|e| e.to_string())?;
 
+        let analyzer = Analyzer::<Unprepared>::new();
         let prepared = analyzer.prepare(&program).map_err(|e| e.to_string())?;
         prepared.analyze().map_err(|e| e.to_string())?;
 

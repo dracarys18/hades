@@ -1,10 +1,10 @@
 use super::Builtin;
 use crate::codegen::{
-    LLVMContext,
     error::{CodegenError, CodegenResult},
+    LLVMContext,
 };
-use inkwell::AddressSpace;
 use inkwell::values::{AnyValueEnum, BasicMetadataValueEnum, FunctionValue};
+use inkwell::AddressSpace;
 
 pub struct Printf;
 

@@ -4,9 +4,9 @@ use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
 use crate::tokens::Op;
 use crate::typed_ast::TypedExpr;
+use inkwell::values::{BasicValueEnum, FloatValue, IntValue};
 use inkwell::FloatPredicate;
 use inkwell::IntPredicate;
-use inkwell::values::{BasicValueEnum, FloatValue, IntValue};
 
 pub struct BinaryOp<'a> {
     pub left: &'a TypedExpr,

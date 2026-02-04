@@ -9,6 +9,7 @@ pub mod error;
 pub mod evaluator;
 pub mod lexer;
 pub mod macros;
+pub mod module;
 pub mod parser;
 pub mod semantic;
 pub mod tokens;

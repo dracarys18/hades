@@ -95,6 +95,19 @@ pub struct ModuleDecl {
 }
 
 #[derive(Clone, PartialEq, Debug)]
+pub enum ImportPrefix {
+    Std,
+    Local,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct Import {
+    pub prefix: ImportPrefix,
+    pub module: String,
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
 pub enum Stmt {
     Let(Let),
     Continue(Continue),
@@ -105,6 +118,7 @@ pub enum Stmt {
     StructDef(StructDef),
     FuncDef(FuncDef),
     ModuleDecl(ModuleDecl),
+    Import(Import),
     Block(Block),
     Return(Return),
 }
@@ -120,6 +134,7 @@ impl_span!(FuncDef);
 impl_span!(Return);
 impl_span!(Block);
 impl_span!(ModuleDecl);
+impl_span!(Import);
 
 impl Stmt {
     pub fn unwrap_let(self) -> Let {
@@ -142,6 +157,7 @@ impl Stmt {
             Stmt::Block(b) => b.span(),
             Stmt::Return(r) => r.span(),
             Stmt::ModuleDecl(m) => m.span(),
+            Stmt::Import(i) => i.span(),
         }
     }
 }

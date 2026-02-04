@@ -2,7 +2,7 @@ mod printf;
 
 use super::context::LLVMContext;
 use super::error::CodegenResult;
-use indexmap::{IndexMap, indexmap};
+use indexmap::{indexmap, IndexMap};
 use inkwell::values::{AnyValueEnum, BasicMetadataValueEnum, FunctionValue};
 use once_cell::sync::Lazy;
 pub use printf::Printf;

@@ -1,0 +1,9 @@
+import std::math
+
+fn main(): int {
+    let a: int = 42;
+    let b: int = 17;
+    let min_val: int = min(a, b);
+    let max_val: int = max(a, b);
+    return max_val;
+}

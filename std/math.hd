@@ -1,0 +1,13 @@
+fn min(a: int, b: int): int {
+    if a < b {
+        return a;
+    }
+    return b;
+}
+
+fn max(a: int, b: int): int {
+    if a > b {
+        return a;
+    }
+    return b;
+}

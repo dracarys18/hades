@@ -18,6 +18,9 @@ impl WalkAst for Stmt {
             Stmt::Block(block) => block.walk(ctx).map(TypedStmt::Block),
             Stmt::Return(ret) => ret.walk(ctx).map(TypedStmt::Return),
             Stmt::ModuleDecl(m) => m.walk(ctx).map(TypedStmt::ModuleDecl),
+            Stmt::Import(_) => Ok(TypedStmt::Continue(crate::typed_ast::TypedContinue {
+                span: crate::error::Span::default(),
+            })),
         }
     }
 }

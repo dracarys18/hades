@@ -62,13 +62,9 @@ echo ""
 current_category=""
 
 while IFS= read -r file; do
-    # Skip subdirectories that are part of module tests (not standalone examples)
-    # e.g., skip examples/module_test/complex/main.hd
-    if echo "$file" | grep -q "module_test/.*/.*/main.hd"; then
-        continue
-    fi
     # Extract category (first directory after examples/)
     category=$(echo "$file" | cut -d'/' -f2)
+    
     # Print category header when it changes
     if [ "$current_category" != "$category" ]; then
         if [ -n "$current_category" ]; then
@@ -79,6 +75,7 @@ while IFS= read -r file; do
         echo -e "${YELLOW}${category_display}:${NC}"
         current_category="$category"
     fi
+    
     test_example "$file"
 done < <(find examples -name "main.hd" -type f | sort)
 

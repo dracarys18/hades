@@ -19,8 +19,8 @@ pub struct Registry {
 }
 
 impl Registry {
-    pub fn new(project_dir: impl AsRef<Path>, stdlib_dir: impl AsRef<Path>) -> Self {
-        let resolver = Resolver::new(project_dir, stdlib_dir);
+    pub fn new(project_dir: impl AsRef<Path>) -> Self {
+        let resolver = Resolver::new(project_dir);
         let loader = Loader::new(resolver.clone());
 
         Self {

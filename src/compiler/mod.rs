@@ -64,7 +64,7 @@ impl<'a> Compiler {
             entry_path.parent().unwrap_or_else(|| Path::new("."))
         };
 
-        let mut registry = Registry::new(project_dir, Path::new("std"));
+        let mut registry = Registry::new(project_dir);
 
         let program = match registry.load(entry_path) {
             Ok(p) => p,
@@ -120,7 +120,7 @@ impl<'a> Compiler {
             entry_path.parent().unwrap_or_else(|| Path::new("."))
         };
 
-        let mut registry = Registry::new(project_dir, Path::new("std"));
+        let mut registry = Registry::new(project_dir);
         let program = registry.load(entry_path).map_err(|e| e.to_string())?;
 
         let analyzer = Analyzer::<Unprepared>::new();

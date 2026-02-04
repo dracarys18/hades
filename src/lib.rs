@@ -12,5 +12,6 @@ pub mod macros;
 pub mod module;
 pub mod parser;
 pub mod semantic;
+pub mod stdlib;
 pub mod tokens;
 pub mod typed_ast;

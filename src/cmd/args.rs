@@ -26,3 +26,9 @@ pub struct EmitLlvmArgs {
     #[arg(required = true)]
     pub source: PathBuf,
 }
+
+#[derive(Debug, Args)]
+pub struct PrintAstArgs {
+    #[arg(required = true)]
+    pub source: PathBuf,
+}

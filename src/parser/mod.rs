@@ -160,6 +160,11 @@ impl Parser {
             TokenKind::Fn => 2,
             TokenKind::Let => 3,
             TokenKind::Newline => 1,
+            TokenKind::Module => 6,
+            TokenKind::Import => 6,
+            TokenKind::Std => 3,
+            TokenKind::Self_ => 4,
+            TokenKind::DoubleColon => 2,
         }
     }
 
@@ -267,6 +272,8 @@ impl Parser {
             Some(tok) if token_matches!(tok, TokenKind::For) => self.parse_for_stmt(),
             Some(tok) if token_matches!(tok, TokenKind::Return) => self.parse_return_stmt(),
             Some(tok) if token_matches!(tok, TokenKind::Continue) => self.parse_continue_stmt(),
+            Some(tok) if token_matches!(tok, TokenKind::Module) => self.parse_module(),
+            Some(tok) if token_matches!(tok, TokenKind::Import) => self.parse_import(),
             _ => self.parse_expr_stmt(),
         }
     }
@@ -299,6 +306,52 @@ impl Parser {
             params,
             return_type,
             body: Block::new(body.into(), Span::new(start, end)),
+            span: Span::new(start, end),
+        }))
+    }
+
+    fn parse_module(&mut self) -> ParseResult<Stmt> {
+        self.expect(&TokenKind::Module)?;
+        let name = self.expect_identifier()?;
+
+        Ok(Stmt::ModuleDecl(ModuleDecl {
+            name,
+            span: Span::new(self.char_pos, self.char_pos),
+        }))
+    }
+
+    fn parse_import(&mut self) -> ParseResult<Stmt> {
+        use crate::ast::{Import, ImportPrefix};
+
+        let start = self.char_pos;
+        self.expect(&TokenKind::Import)?;
+
+        let prefix = match self.peek() {
+            Some(tok) if token_matches!(tok, TokenKind::Std) => {
+                self.next();
+                ImportPrefix::Std
+            }
+            Some(tok) if token_matches!(tok, TokenKind::Self_) => {
+                self.next();
+                ImportPrefix::Local
+            }
+            _ => {
+                return Err(ParseError::unexpected_token(
+                    self.peek().cloned(),
+                    "std or self",
+                    self.char_pos..self.char_pos + 1,
+                    self.source_id.clone(),
+                ));
+            }
+        };
+
+        self.expect(&TokenKind::DoubleColon)?;
+        let module_name = self.expect_identifier()?;
+        let end = self.char_pos;
+
+        Ok(Stmt::Import(Import {
+            prefix,
+            module: module_name.inner().to_string(),
             span: Span::new(start, end),
         }))
     }

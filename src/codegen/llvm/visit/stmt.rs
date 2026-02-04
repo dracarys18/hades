@@ -1,4 +1,4 @@
-use inkwell::types::{AnyType, AnyTypeEnum, FunctionType};
+use inkwell::types::{AnyType, AnyTypeEnum, BasicType, FunctionType};
 
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult};
@@ -25,6 +25,8 @@ impl Visit for TypedStmt {
                 Ok(())
             }
             Self::StructDef(_) => Ok(()),
+            Self::ModuleDecl(_) => Ok(()),
+            Self::Import(_) => Ok(()),
         }
     }
 }
@@ -194,22 +196,16 @@ impl Visit for TypedFuncDef {
             param_types.push(llvm_type.into());
         }
 
-        let return_type: AnyTypeEnum = if sigature.return_type == crate::ast::Types::Void {
-            context.type_converter().void_type().into()
-        } else {
-            context
-                .type_converter()
-                .to_llvm_type(&sigature.return_type, symbols)?
-                .as_any_type_enum()
-        };
-
         let fn_type: FunctionType = if sigature.return_type == crate::ast::Types::Void {
             context
                 .type_converter()
                 .void_type()
                 .fn_type(&param_types, false)
         } else {
-            context.type_converter().fn_type(&return_type)
+            let return_type = context
+                .type_converter()
+                .to_llvm_type(&sigature.return_type, symbols)?;
+            return_type.fn_type(&param_types, false)
         };
 
         let function = context

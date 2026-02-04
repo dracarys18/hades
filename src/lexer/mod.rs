@@ -23,6 +23,10 @@ static KEYWORDS: phf::Map<&'static str, TokenKind> = phf_map! {
     "continue" => TokenKind::Continue,
     "true" => TokenKind::True,
     "false" => TokenKind::False,
+    "module"=> TokenKind::Module,
+    "import" => TokenKind::Import,
+    "std" => TokenKind::Std,
+    "self" => TokenKind::Self_,
 };
 
 pub struct Lexer {
@@ -349,7 +353,12 @@ impl Lexer {
                 }
                 c if c.eq(&b':') => {
                     self.next();
-                    self.push_token(tok!(TokenKind::Colon, start_pos, self.pos));
+                    if self.peek_and_check(b':') {
+                        self.next();
+                        self.push_token(tok!(TokenKind::DoubleColon, start_pos, self.pos));
+                    } else {
+                        self.push_token(tok!(TokenKind::Colon, start_pos, self.pos));
+                    }
                 }
                 _ => {}
             }

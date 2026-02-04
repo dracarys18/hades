@@ -1,0 +1,6 @@
+import self::base
+
+fn add_three(a: int, b: int, c: int): int {
+    let temp: int = base_add(a, b);
+    return base_add(temp, c);
+}

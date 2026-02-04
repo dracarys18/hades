@@ -1,0 +1,11 @@
+import self::math_ops
+import self::helpers
+
+fn main(): int {
+    let x: int = 4;
+    let sq: int = square(x);
+    let dbl: int = double(x);
+    let result: int = sq + dbl;
+    printf("%d\n", result);
+    return 0;
+}

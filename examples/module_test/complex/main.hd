@@ -1,0 +1,12 @@
+import std::math
+
+fn compute(): int {
+    let x: int = 100;
+    let y: int = 50;
+    let m: int = min(x, y);
+    return m + max(x, y);
+}
+
+fn main(): int {
+    return compute();
+}

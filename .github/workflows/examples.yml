@@ -8,10 +8,7 @@ on:
 
 jobs:
   test-examples:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
@@ -21,119 +18,15 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Install LLVM (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Install LLVM
         run: |
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
           sudo ./llvm.sh 18 all
           echo "LLVM_SYS_180_PREFIX=/usr/lib/llvm-18" >> $GITHUB_ENV
 
-      - name: Install LLVM (macOS)
-        if: matrix.os == 'macos-latest'
-        run: |
-          brew install llvm@18 zstd
-          echo "LLVM_SYS_180_PREFIX=$(brew --prefix llvm@18)" >> $GITHUB_ENV
-          echo "RUSTFLAGS=-L $(brew --prefix zstd)/lib" >> $GITHUB_ENV
-
       - name: Build
         run: cargo build --release
 
-      - name: Test Basics - hello_world
-        run: |
-          OUTPUT=$(cargo run --release -- run examples/basics/hello_world.hd)
-          echo "$OUTPUT"
-          echo "$OUTPUT" | grep -q "Hello world"
-
-      - name: Test Operations - addition
-        run: |
-          OUTPUT=$(cargo run --release -- run examples/operations/addition.hd)
-          echo "$OUTPUT"
-          echo "$OUTPUT" | grep -q "A is 5"
-          echo "$OUTPUT" | grep -q "B is 3"
-          echo "$OUTPUT" | grep -q "A + B IS 8"
-
-      - name: Test Operations - assign
-        run: |
-          OUTPUT=$(cargo run --release -- run examples/operations/assign.hd)
-          echo "$OUTPUT"
-          echo "$OUTPUT" | grep -q "Foo"
-          echo "$OUTPUT" | grep -q "Bar"
-          echo "$OUTPUT" | grep -q "BIIIIIIGGGG STRINGGGG"
-
-      - name: Test Operations - expr
-        run: |
-          OUTPUT=$(cargo run --release -- run examples/operations/expr.hd)
-          echo "$OUTPUT"
-          echo "$OUTPUT" | grep -q "36"
-
-      - name: Test Arrays - array_simple
-        run: |
-          OUTPUT=$(cargo run --release -- run examples/arrays/array_simple.hd)
-          echo "$OUTPUT"
-          echo "$OUTPUT" | grep -q "a\[0\] = 10"
-          echo "$OUTPUT" | grep -q "a\[1\] = 20"
-          echo "$OUTPUT" | grep -q "a\[2\] = 30"
-
-      - name: Test Arrays - arrays
-        run: |
-          OUTPUT=$(cargo run --release -- run examples/arrays/arrays.hd)
-          echo "$OUTPUT"
-          echo "$OUTPUT" | grep -q "Array value 12"
-          echo "$OUTPUT" | grep -q "String array value Queen"
-
-      - name: Test Arrays - string_array
-        run: |
-          OUTPUT=$(cargo run --release -- run examples/arrays/string_array.hd)
-          echo "$OUTPUT"
-          echo "$OUTPUT" | grep -q "s\[0\] = Hello"
-          echo "$OUTPUT" | grep -q "s\[1\] = World"
-
-      - name: Test Control Flow - if_else
-        run: |
-          OUTPUT=$(cargo run --release -- run examples/control_flow/if_else.hd)
-          echo "$OUTPUT"
-          echo "$OUTPUT" | grep -q "Voila"
-
-      - name: Test Loops - for
-        run: |
-          OUTPUT=$(cargo run --release -- run examples/loops/for.hd)
-          echo "$OUTPUT"
-          echo "$OUTPUT" | grep -q "10"
-          echo "$OUTPUT" | grep -q "1"
-
-      - name: Test Loops - while
-        run: |
-          OUTPUT=$(cargo run --release -- run examples/loops/while.hd)
-          echo "$OUTPUT"
-          echo "$OUTPUT" | grep -q "A is 8"
-          echo "$OUTPUT" | grep -q "A is 1"
-
-      - name: Test Structs - field_access
-        run: |
-          OUTPUT=$(cargo run --release -- run examples/structs/field_access.hd)
-          echo "$OUTPUT"
-          echo "$OUTPUT" | grep -q "Value is Alice"
-          echo "$OUTPUT" | grep -q "Value is 3"
-
-      - name: Test Structs - field_access_complete
-        run: |
-          OUTPUT=$(cargo run --release -- run examples/structs/field_access_complete.hd)
-          echo "$OUTPUT"
-          echo "$OUTPUT" | grep -q "Basic field access: 10, 20"
-          echo "$OUTPUT" | grep -q "Struct init field access: 84"
-          echo "$OUTPUT" | grep -q "Nested field access: 0, 200"
-
-      - name: Test Structs - field_access_extended
-        run: |
-          OUTPUT=$(cargo run --release -- run examples/structs/field_access_extended.hd)
-          echo "$OUTPUT"
-          echo "$OUTPUT" | grep -q "Basic field access: 10, 20"
-          echo "$OUTPUT" | grep -q "Array struct field access: 10"
-
-      - name: Test Structs - field_modify
-        run: |
-          OUTPUT=$(cargo run --release -- run examples/structs/field_modify.hd)
-          echo "$OUTPUT"
-          echo "$OUTPUT" | grep -q "Before 1"
-          echo "$OUTPUT" | grep -q "After 2"
+      - name: Test
+        run: bash scripts/test_examples.sh

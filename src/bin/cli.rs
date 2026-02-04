@@ -8,35 +8,33 @@ fn main() {
 
     match cmd.command {
         cmd::Commands::Build(args) => {
-            let source = std::fs::read_to_string(&args.source).expect("Failed to read source file");
-            let compiler = compiler::Compiler::new(&source, args.source.to_str().unwrap());
-
+            let compiler = compiler::Compiler::new();
             compiler.prepare();
+
             let path = args.output.unwrap_or_else(|| {
                 std::path::PathBuf::from(format!("{}/output", consts::BUILD_PATH))
             });
 
-            compiler.compile(path);
+            compiler.compile(&args.source, path);
         }
 
         cmd::Commands::Check(args) => {
             let source = std::fs::read_to_string(&args.source).expect("Failed to read source file");
-            let compiler = compiler::Compiler::new(&source, args.source.to_str().unwrap());
+            let compiler = compiler::Compiler::new();
 
             compiler.prepare();
-            compiler.check();
+            compiler.check(&source, args.source.to_str().unwrap());
         }
 
         cmd::Commands::Run(args) => {
-            let source = std::fs::read_to_string(&args.source).expect("Failed to read source file");
-            let compiler = compiler::Compiler::new(&source, args.source.to_str().unwrap());
+            let compiler = compiler::Compiler::new();
             compiler.prepare();
 
             let path = args
                 .output
                 .unwrap_or_else(|| PathBuf::from(format!("{}/output", consts::BUILD_PATH)));
 
-            let res = compiler.compile(&path);
+            let res = compiler.compile(&args.source, &path);
 
             if res {
                 Command::new(path)
@@ -46,15 +44,21 @@ fn main() {
         }
 
         cmd::Commands::EmitLlvm(args) => {
-            let source = std::fs::read_to_string(&args.source).expect("Failed to read source file");
-            let compiler = compiler::Compiler::new(&source, args.source.to_str().unwrap());
+            let compiler = compiler::Compiler::new();
             compiler.prepare();
 
             let context = Context::create();
 
-            if let Err(e) = compiler.emit_llvm(&context, &args.source) {
+            if let Err(e) = compiler.emit_llvm(&args.source, &context) {
                 eprintln!("Failed to emit LLVM IR: {e}");
             }
+        }
+
+        cmd::Commands::PrintAst(args) => {
+            let source = std::fs::read_to_string(&args.source).expect("Failed to read source file");
+            let compiler = compiler::Compiler::new();
+            compiler.prepare();
+            compiler.print_ast(&source, args.source.to_str().unwrap());
         }
     }
 }

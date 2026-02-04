@@ -1,0 +1,11 @@
+import self::utils
+
+fn main(): int {
+    let a: int = 5;
+    let b: int = 3;
+    let sum: int = add(a, b);
+    let product: int = multiply(a, b);
+    let result: int = sum + product;
+    printf("%d\n", result);
+    return 0;
+}

@@ -1,5 +1,5 @@
 use crate::{
-    ast::Types,
+    ast::{ImportPrefix, Types},
     error::Span,
     tokens::Ident,
     typed_ast::{
@@ -30,6 +30,14 @@ pub struct TypedLet {
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct TypedContinue {
+    #[debug(skip)]
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedImport {
+    pub module: String,
+    pub prefix: ImportPrefix,
     #[debug(skip)]
     pub span: Span,
 }
@@ -95,6 +103,12 @@ pub struct TypedReturn {
     pub span: Span,
 }
 
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedModuleDecl {
+    pub name: Ident,
+    pub span: Span,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypedStmt {
     Let(TypedLet),
@@ -107,4 +121,6 @@ pub enum TypedStmt {
     FuncDef(TypedFuncDef),
     Block(TypedBlock),
     Return(TypedReturn),
+    ModuleDecl(TypedModuleDecl),
+    Import(TypedImport),
 }

@@ -17,6 +17,8 @@ impl WalkAst for Stmt {
             Stmt::FuncDef(f) => f.walk(ctx).map(TypedStmt::FuncDef),
             Stmt::Block(block) => block.walk(ctx).map(TypedStmt::Block),
             Stmt::Return(ret) => ret.walk(ctx).map(TypedStmt::Return),
+            Stmt::ModuleDecl(m) => m.walk(ctx).map(TypedStmt::ModuleDecl),
+            Stmt::Import(import) => import.walk(ctx).map(TypedStmt::Import),
         }
     }
 }

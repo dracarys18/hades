@@ -1,5 +1,4 @@
 mod expr;
-mod ident;
 mod program;
 mod stmt;
 mod types;

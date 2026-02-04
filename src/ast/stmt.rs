@@ -1,6 +1,8 @@
+use std::str::FromStr;
+
 use crate::{
     ast::{AssignExpr, BinaryExpr, Program, Types},
-    error::Span,
+    error::{SemanticError, Span},
     impl_span,
     tokens::Ident,
 };
@@ -87,6 +89,26 @@ pub struct Return {
     pub expr: Option<ExprAst>,
     pub span: Span,
 }
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct ModuleDecl {
+    pub name: Ident,
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum ImportPrefix {
+    Std,
+    Local,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct Import {
+    pub prefix: ImportPrefix,
+    pub module: String,
+    pub span: Span,
+}
+
 #[derive(Clone, PartialEq, Debug)]
 pub enum Stmt {
     Let(Let),
@@ -97,6 +119,8 @@ pub enum Stmt {
     For(For),
     StructDef(StructDef),
     FuncDef(FuncDef),
+    ModuleDecl(ModuleDecl),
+    Import(Import),
     Block(Block),
     Return(Return),
 }
@@ -111,6 +135,8 @@ impl_span!(StructDef);
 impl_span!(FuncDef);
 impl_span!(Return);
 impl_span!(Block);
+impl_span!(ModuleDecl);
+impl_span!(Import);
 
 impl Stmt {
     pub fn unwrap_let(self) -> Let {
@@ -132,6 +158,17 @@ impl Stmt {
             Stmt::FuncDef(f) => f.span(),
             Stmt::Block(b) => b.span(),
             Stmt::Return(r) => r.span(),
+            Stmt::ModuleDecl(m) => m.span(),
+            Stmt::Import(i) => i.span(),
+        }
+    }
+}
+
+impl std::fmt::Display for ImportPrefix {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ImportPrefix::Std => write!(f, "std"),
+            ImportPrefix::Local => write!(f, "local"),
         }
     }
 }

@@ -1,31 +1,31 @@
+use crate::ast::Program;
+use crate::module::Registry;
 use crate::semantic::analyzer::{Analyzer, Unprepared};
 use crate::{consts, lexer, parser};
 use inkwell::context::Context;
+use std::path::Path;
 
-pub struct Compiler<'a> {
-    source: &'a str,
-    filename: &'a str,
-}
+pub struct Compiler {}
 
-impl<'a> Compiler<'a> {
-    pub fn new(source: &'a str, filename: &'a str) -> Self {
-        Self { source, filename }
+impl<'a> Compiler {
+    pub fn new() -> Self {
+        Self {}
     }
 
     pub fn prepare(&self) {
         std::fs::create_dir_all(consts::BUILD_PATH).expect("Failed to create build directory");
     }
 
-    pub fn check(&self) {
-        let source_trimmed = self.source.trim();
+    pub fn check(&self, source: &'a str, filename: &'a str) {
+        let source_trimmed = source.trim();
 
-        let mut lexer = lexer::Lexer::new(source_trimmed.as_bytes(), self.filename.to_string());
+        let mut lexer = lexer::Lexer::new(source_trimmed.as_bytes(), filename.to_string());
         lexer
             .tokenize()
             .map_err(|err| eprintln!("{err}"))
             .expect("Tokenizing failed");
 
-        let mut parser = parser::Parser::new(lexer.into_tokens(), self.filename.to_string());
+        let mut parser = parser::Parser::new(lexer.into_tokens(), filename.to_string());
         let program = match parser.parse() {
             Ok(prog) => prog,
             Err(err) => {
@@ -55,38 +55,27 @@ impl<'a> Compiler<'a> {
             .expect("Semantic analysis failed");
     }
 
-    pub fn compile(&self, path: impl AsRef<std::path::Path>) -> bool {
-        let context = Context::create();
+    pub fn compile(&self, entry_path: impl AsRef<Path>, output_path: impl AsRef<Path>) -> bool {
+        let output_path = output_path.as_ref();
 
-        let source_trimmed = self.source.trim();
-
-        let mut lexer = lexer::Lexer::new(source_trimmed.as_bytes(), self.filename.to_string());
-        lexer
-            .tokenize()
-            .map_err(|err| eprintln!("{err}"))
-            .expect("Tokenizing failed");
-
-        let mut parser = parser::Parser::new(lexer.into_tokens(), self.filename.to_string());
-        let program = match parser.parse() {
-            Ok(prog) => prog,
+        let program = match Registry::load(entry_path) {
+            Ok(p) => p,
             Err(err) => {
-                let err = err.into_errors();
-                for e in err {
-                    e.eprint(source_trimmed);
-                }
+                eprintln!("Failed to load modules: {err}");
                 return false;
             }
         };
 
+        let context = Context::create();
         let analyzer = Analyzer::<Unprepared>::new();
 
-        let prepared = analyzer.prepare(&program);
-        if let Err(err) = prepared {
-            eprintln!("Error during semantic analysis: {err}");
-            return false;
-        }
-
-        let prepared = prepared.unwrap();
+        let prepared = match analyzer.prepare(&program) {
+            Ok(p) => p,
+            Err(err) => {
+                eprintln!("Error during semantic analysis: {err}");
+                return false;
+            }
+        };
 
         if let Err(err) = prepared.analyze() {
             eprintln!("Error during semantic analysis: {err}");
@@ -98,13 +87,13 @@ impl<'a> Compiler<'a> {
             return false;
         }
 
-        if let Err(err) = prepared.compile(&context, consts::MAIN_MODULE_NAME, path.as_ref()) {
-            eprintln!("Module optimization failed: {err}");
+        if let Err(err) = prepared.compile(&context, consts::MAIN_MODULE_NAME, output_path) {
+            eprintln!("Compilation failed: {err}");
             return false;
         }
 
-        if let Err(err) = prepared.cleanup(path.as_ref()) {
-            eprintln!("Module optimization failed: {err}");
+        if let Err(err) = prepared.cleanup(output_path) {
+            eprintln!("Cleanup failed: {err}");
             return false;
         }
 
@@ -113,31 +102,12 @@ impl<'a> Compiler<'a> {
 
     pub fn emit_llvm(
         &self,
+        entry_path: impl AsRef<Path>,
         context: &inkwell::context::Context,
-        _source_path: &std::path::Path,
     ) -> Result<(), String> {
-        let source_trimmed = self.source.trim();
-
-        let mut lexer = lexer::Lexer::new(source_trimmed.as_bytes(), self.filename.to_string());
-        lexer
-            .tokenize()
-            .map_err(|err| format!("{err}"))
-            .expect("Tokenizing failed");
-
-        let mut parser = parser::Parser::new(lexer.into_tokens(), self.filename.to_string());
-        let program = match parser.parse() {
-            Ok(prog) => prog,
-            Err(err) => {
-                let err = err.into_errors();
-                for e in err {
-                    e.eprint(source_trimmed);
-                }
-                return Err("Parsing failed".to_string());
-            }
-        };
+        let program = Registry::load(entry_path).map_err(|e| e.to_string())?;
 
         let analyzer = Analyzer::<Unprepared>::new();
-
         let prepared = analyzer.prepare(&program).map_err(|e| e.to_string())?;
         prepared.analyze().map_err(|e| e.to_string())?;
 
@@ -147,5 +117,26 @@ impl<'a> Compiler<'a> {
 
         println!("{}", ir);
         Ok(())
+    }
+
+    pub fn print_ast(&self, source: &'a str, filename: &'a str) {
+        let source_trimmed = source.trim();
+        let mut lexer = lexer::Lexer::new(source_trimmed.as_bytes(), filename.to_string());
+        lexer
+            .tokenize()
+            .map_err(|err| eprintln!("{err}"))
+            .expect("Tokenizing failed");
+        let mut parser = parser::Parser::new(lexer.into_tokens(), filename.to_string());
+        let program = match parser.parse() {
+            Ok(prog) => prog,
+            Err(err) => {
+                let err = err.into_errors();
+                for e in err {
+                    e.eprint(source_trimmed);
+                }
+                return;
+            }
+        };
+        println!("{:#?}", program);
     }
 }

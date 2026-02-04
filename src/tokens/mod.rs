@@ -87,6 +87,11 @@ pub enum TokenKind {
     While,
     Fn,
     Let,
+    Module,
+    Import,
+    Std,
+    Self_,
+    DoubleColon,
 }
 
 impl std::fmt::Display for TokenKind {
@@ -138,6 +143,11 @@ impl std::fmt::Display for TokenKind {
             TokenKind::While => write!(f, "while"),
             TokenKind::Fn => write!(f, "fn"),
             TokenKind::Let => write!(f, "let"),
+            TokenKind::Module => write!(f, "module"),
+            TokenKind::Import => write!(f, "import"),
+            TokenKind::Std => write!(f, "std"),
+            TokenKind::Self_ => write!(f, "self"),
+            TokenKind::DoubleColon => write!(f, "::"),
         }
     }
 }

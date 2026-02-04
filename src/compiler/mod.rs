@@ -57,9 +57,8 @@ impl<'a> Compiler {
 
     pub fn compile(&self, entry_path: impl AsRef<Path>, output_path: impl AsRef<Path>) -> bool {
         let output_path = output_path.as_ref();
-        let mut registry = Registry::new(entry_path.as_ref());
 
-        let program = match registry.load(entry_path) {
+        let program = match Registry::load(entry_path) {
             Ok(p) => p,
             Err(err) => {
                 eprintln!("Failed to load modules: {err}");
@@ -106,15 +105,7 @@ impl<'a> Compiler {
         entry_path: impl AsRef<Path>,
         context: &inkwell::context::Context,
     ) -> Result<(), String> {
-        let entry_path = entry_path.as_ref();
-        let project_dir = if entry_path.is_dir() {
-            entry_path
-        } else {
-            entry_path.parent().unwrap_or_else(|| Path::new("."))
-        };
-
-        let mut registry = Registry::new(project_dir);
-        let program = registry.load(entry_path).map_err(|e| e.to_string())?;
+        let program = Registry::load(entry_path).map_err(|e| e.to_string())?;
 
         let analyzer = Analyzer::<Unprepared>::new();
         let prepared = analyzer.prepare(&program).map_err(|e| e.to_string())?;

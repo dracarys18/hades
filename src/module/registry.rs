@@ -1,7 +1,7 @@
 use indexmap::IndexMap;
-use petgraph::Graph;
 use petgraph::algo::{is_cyclic_directed, toposort};
 use petgraph::graph::NodeIndex;
+use petgraph::Graph;
 use std::path::{Path, PathBuf};
 
 use crate::ast::{Import, Program, Stmt};
@@ -20,12 +20,14 @@ pub struct Registry {
 
 pub struct EntryPath {
     pub path: PathBuf,
+    pub project_dir: PathBuf,
 }
 
 impl EntryPath {
     pub fn new_checked(entry_path: PathBuf) -> Result<Self, ModuleError> {
-        let main_file = if entry_path.is_dir() {
-            entry_path.join("main.hd")
+        let (main_file, project_dir) = if entry_path.is_dir() {
+            let main_file = entry_path.join("main.hd");
+            (main_file, entry_path.clone())
         } else {
             let filename = entry_path
                 .file_name()
@@ -38,9 +40,16 @@ impl EntryPath {
                     filename
                 )));
             }
-            entry_path.to_path_buf()
+            let project_dir = entry_path
+                .parent()
+                .unwrap_or_else(|| Path::new("."))
+                .to_path_buf();
+            (entry_path.to_path_buf(), project_dir)
         };
-        Ok(Self { path: entry_path })
+        Ok(Self {
+            path: main_file,
+            project_dir,
+        })
     }
 }
 
@@ -58,9 +67,14 @@ impl Registry {
         }
     }
 
-    pub fn load(&mut self, entry_path: impl AsRef<Path>) -> Result<Program, ModuleError> {
-        let main_file = EntryPath::new_checked(entry_path.as_ref().to_path_buf())?;
-        self.load_entry(&main_file.path)?;
+    pub fn load(entry_path: impl AsRef<Path>) -> Result<Program, ModuleError> {
+        let entry = EntryPath::new_checked(entry_path.as_ref().to_path_buf())?;
+        let mut registry = Self::new(&entry.project_dir);
+        registry.load_program(&entry.path)
+    }
+
+    fn load_program(&mut self, entry_path: &Path) -> Result<Program, ModuleError> {
+        self.load_entry(&entry_path.to_path_buf())?;
 
         let modules = self.compile_order()?;
 

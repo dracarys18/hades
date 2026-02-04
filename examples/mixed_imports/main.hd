@@ -1,0 +1,12 @@
+import std::math
+import self::calculator
+
+fn main(): int {
+    let x: int = 10;
+    let y: int = 20;
+    let result: int = calculate(x, y);
+    let max_val: int = max(x, y);
+    let final: int = result + max_val;
+    printf("%d\n", final);
+    return 0;
+}

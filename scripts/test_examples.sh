@@ -20,10 +20,11 @@ test_example() {
     local dir=$(dirname "$file")
     local name="${dir#examples/}"
     local expected_file="${dir}/.expected"
+    local abs_file="$PROJECT_ROOT/$file"
 
     echo -n "Testing $name... "
 
-    if OUTPUT=$(hades run "$file" 2>&1); then
+    if OUTPUT=$(hades run "$abs_file" 2>&1); then
         if [ -f "$expected_file" ]; then
             local expected=$(cat "$expected_file")
             if echo "$OUTPUT" | grep -qF "$expected"; then
@@ -43,9 +44,13 @@ test_example() {
             return 0
         fi
     else
+        local exit_code=$?
         echo -e "${RED}✗${NC}"
-        echo "  Compilation/Runtime failed"
+        echo "  File: $abs_file"
+        echo "  Exit code: $exit_code"
         echo "  Output: $OUTPUT"
+        echo "  PWD: $(pwd)"
+        echo "  Which hades: $(which hades)"
         FAILED=$((FAILED + 1))
         return 1
     fi

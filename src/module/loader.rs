@@ -26,19 +26,13 @@ impl Loader {
     }
 
     pub fn load(&self, module_path: &ModulePath) -> Result<Module, ModuleError> {
-        // Check if this is a stdlib module
-        if let ModulePath::Std(name) = module_path {
-            if let Some(source) = self.stdlib.get_module(name) {
-                return self.parse_source(source, module_path, format!("std::{}", name));
-            } else {
-                return Err(ModuleError::NotFound(format!(
-                    "Standard library module '{}' not found",
-                    name
-                )));
-            }
+        match module_path {
+            ModulePath::Local(_) => self.load_local_module(module_path),
+            ModulePath::Std(name) => self.load_std_module(name, module_path),
         }
+    }
 
-        // Load from file system for local modules
+    fn load_local_module(&self, module_path: &ModulePath) -> Result<Module, ModuleError> {
         let file_path = self.resolver.to_file_path(module_path)?;
         let source = std::fs::read_to_string(&file_path)?;
         self.parse_source(
@@ -46,6 +40,21 @@ impl Loader {
             module_path,
             file_path.to_string_lossy().to_string(),
         )
+    }
+
+    fn load_std_module(
+        &self,
+        name: &String,
+        module_path: &ModulePath,
+    ) -> Result<Module, ModuleError> {
+        if let Some(source) = self.stdlib.get_module(name) {
+            return self.parse_source(source, module_path, format!("std::{}", name));
+        } else {
+            return Err(ModuleError::NotFound(format!(
+                "Standard library module '{}' not found",
+                name
+            )));
+        }
     }
 
     pub fn load_from_file(&self, file_path: PathBuf) -> Result<Module, ModuleError> {

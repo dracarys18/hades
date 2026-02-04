@@ -1,7 +1,7 @@
 use indexmap::IndexMap;
+use petgraph::Graph;
 use petgraph::algo::{is_cyclic_directed, toposort};
 use petgraph::graph::NodeIndex;
-use petgraph::Graph;
 use std::path::{Path, PathBuf};
 
 use crate::ast::{Import, Program, Stmt};
@@ -16,6 +16,32 @@ pub struct Registry {
     node_map: IndexMap<ModulePath, NodeIndex>,
     loader: Loader,
     resolver: Resolver,
+}
+
+pub struct EntryPath {
+    pub path: PathBuf,
+}
+
+impl EntryPath {
+    pub fn new_checked(entry_path: PathBuf) -> Result<Self, ModuleError> {
+        let main_file = if entry_path.is_dir() {
+            entry_path.join("main.hd")
+        } else {
+            let filename = entry_path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .ok_or_else(|| ModuleError::NotFound("Invalid file name".to_string()))?;
+
+            if filename != "main.hd" {
+                return Err(ModuleError::NotFound(format!(
+                    "Entry file must be named 'main.hd', found '{}'",
+                    filename
+                )));
+            }
+            entry_path.to_path_buf()
+        };
+        Ok(Self { path: entry_path })
+    }
 }
 
 impl Registry {
@@ -33,33 +59,8 @@ impl Registry {
     }
 
     pub fn load(&mut self, entry_path: impl AsRef<Path>) -> Result<Program, ModuleError> {
-        let entry_path = entry_path.as_ref();
-
-        let main_file = if entry_path.is_dir() {
-            entry_path.join("main.hd")
-        } else {
-            let filename = entry_path
-                .file_name()
-                .and_then(|n| n.to_str())
-                .ok_or_else(|| ModuleError::NotFound("Invalid file name".to_string()))?;
-
-            if filename != "main.hd" {
-                return Err(ModuleError::NotFound(format!(
-                    "Entry file must be named 'main.hd', found '{}'",
-                    filename
-                )));
-            }
-            entry_path.to_path_buf()
-        };
-
-        if !main_file.exists() {
-            return Err(ModuleError::NotFound(format!(
-                "main.hd not found in: {}",
-                entry_path.display()
-            )));
-        }
-
-        self.load_entry(&main_file)?;
+        let main_file = EntryPath::new_checked(entry_path.as_ref().to_path_buf())?;
+        self.load_entry(&main_file.path)?;
 
         let modules = self.compile_order()?;
 

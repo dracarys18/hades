@@ -35,10 +35,18 @@ jobs:
           brew install llvm@18 zstd
           echo "LLVM_SYS_180_PREFIX=$(brew --prefix llvm@18)" >> $GITHUB_ENV
           echo "RUSTFLAGS=-L $(brew --prefix zstd)/lib" >> $GITHUB_ENV
+          echo "DYLD_LIBRARY_PATH=$(brew --prefix llvm@18)/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
 
       - name: Build
         run: cargo build --release
 
       - name: Test
+        if: matrix.os == 'macos-latest'
+        run: |
+          export DYLD_LIBRARY_PATH=$(brew --prefix llvm@18)/lib:$DYLD_LIBRARY_PATH
+          bash scripts/test_examples.sh
+
+      - name: Test
+        if: matrix.os == 'ubuntu-latest'
         run: |
           bash scripts/test_examples.sh

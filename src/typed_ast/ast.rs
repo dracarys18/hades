@@ -1,5 +1,5 @@
 use crate::{
-    ast::Types,
+    ast::{ImportPrefix, Types},
     error::Span,
     tokens::Ident,
     typed_ast::{
@@ -10,7 +10,7 @@ use crate::{
 use derive_more::Debug;
 use indexmap::IndexMap;
 
-use super::{expr::TypedExpr, TypedProgram};
+use super::{TypedProgram, expr::TypedExpr};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypedBlock {
@@ -37,7 +37,7 @@ pub struct TypedContinue {
 #[derive(Clone, PartialEq, Debug)]
 pub struct TypedImport {
     pub module: String,
-    pub prefix: String,
+    pub prefix: ImportPrefix,
     #[debug(skip)]
     pub span: Span,
 }

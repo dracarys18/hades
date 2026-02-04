@@ -9,10 +9,7 @@ impl WalkAst for Import {
     ) -> Result<Self::Output, crate::error::SemanticError> {
         Ok(TypedImport {
             module: self.module.clone(),
-            prefix: match self.prefix {
-                crate::ast::ImportPrefix::Std => "std".to_string(),
-                crate::ast::ImportPrefix::Local => "self".to_string(),
-            },
+            prefix: self.prefix.clone(),
             span: self.span.clone(),
         })
     }

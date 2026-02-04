@@ -2,8 +2,6 @@
 
 set -e
 
-HADES_BIN="${HADES_BIN:-cargo run --release --}"
-
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -20,10 +18,10 @@ test_example() {
     local dir=$(dirname "$file")
     local name="${dir#examples/}"
     local expected_file="${dir}/.expected"
-    
+
     echo -n "Testing $name... "
-    
-    if OUTPUT=$($HADES_BIN run "$file" 2>&1); then
+
+    if OUTPUT=$(hades run "$file" 2>&1); then
         if [ -f "$expected_file" ]; then
             # If we have an expected file, validate output matches
             local expected=$(cat "$expected_file")
@@ -53,8 +51,8 @@ test_example() {
     fi
 }
 
-echo "Building hades..."
-cargo build --release
+echo "Installing hades..."
+cargo install --path . --force
 
 echo ""
 echo "Running example tests..."
@@ -69,10 +67,8 @@ while IFS= read -r file; do
     if echo "$file" | grep -q "module_test/.*/.*/main.hd"; then
         continue
     fi
-    
     # Extract category (first directory after examples/)
     category=$(echo "$file" | cut -d'/' -f2)
-    
     # Print category header when it changes
     if [ "$current_category" != "$category" ]; then
         if [ -n "$current_category" ]; then
@@ -83,7 +79,6 @@ while IFS= read -r file; do
         echo -e "${YELLOW}${category_display}:${NC}"
         current_category="$category"
     fi
-    
     test_example "$file"
 done < <(find examples -name "main.hd" -type f | sort)
 

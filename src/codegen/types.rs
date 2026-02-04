@@ -2,11 +2,11 @@ use crate::ast::{ArrayType, Types};
 use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::tokens::Ident;
 use crate::typed_ast::CompilerContext;
+use inkwell::AddressSpace;
 use inkwell::context::Context;
 use inkwell::types::{
     AnyTypeEnum, BasicType, BasicTypeEnum, FloatType, FunctionType, IntType, StructType,
 };
-use inkwell::AddressSpace;
 
 pub struct TypeConverter<'ctx> {
     context: &'ctx Context,

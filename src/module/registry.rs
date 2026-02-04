@@ -1,7 +1,7 @@
 use indexmap::IndexMap;
+use petgraph::Graph;
 use petgraph::algo::{is_cyclic_directed, toposort};
 use petgraph::graph::NodeIndex;
-use petgraph::Graph;
 use std::path::{Path, PathBuf};
 
 use crate::ast::{Import, Program, Stmt};

@@ -341,7 +341,7 @@ impl Parser {
                     "std or self",
                     self.char_pos..self.char_pos + 1,
                     self.source_id.clone(),
-                ))
+                ));
             }
         };
 

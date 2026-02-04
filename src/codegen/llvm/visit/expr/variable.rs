@@ -1,7 +1,7 @@
+use crate::codegen::VisitOptions;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
-use crate::codegen::VisitOptions;
 use crate::tokens::Ident;
 
 pub struct VariableAccess<'a> {

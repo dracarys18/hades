@@ -4,8 +4,8 @@ use crate::codegen::traits::{CodegenVisitor, Visit};
 use crate::semantic::analyzer::{Analyzer, Prepared};
 use crate::typed_ast::TypedProgram;
 use inkwell::{
-    targets::{CodeModel, FileType, RelocMode, Target, TargetMachine},
     OptimizationLevel,
+    targets::{CodeModel, FileType, RelocMode, Target, TargetMachine},
 };
 
 impl Visit for TypedProgram {

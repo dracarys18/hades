@@ -8,7 +8,7 @@ fn main() {
 
     match cmd.command {
         cmd::Commands::Build(args) => {
-            let compiler = compiler::Compiler::new("", "");
+            let compiler = compiler::Compiler::new();
             compiler.prepare();
 
             let path = args.output.unwrap_or_else(|| {
@@ -20,14 +20,14 @@ fn main() {
 
         cmd::Commands::Check(args) => {
             let source = std::fs::read_to_string(&args.source).expect("Failed to read source file");
-            let compiler = compiler::Compiler::new(&source, args.source.to_str().unwrap());
+            let compiler = compiler::Compiler::new();
 
             compiler.prepare();
-            compiler.check();
+            compiler.check(&source, args.source.to_str().unwrap());
         }
 
         cmd::Commands::Run(args) => {
-            let compiler = compiler::Compiler::new("", "");
+            let compiler = compiler::Compiler::new();
             compiler.prepare();
 
             let path = args
@@ -44,7 +44,7 @@ fn main() {
         }
 
         cmd::Commands::EmitLlvm(args) => {
-            let compiler = compiler::Compiler::new("", "");
+            let compiler = compiler::Compiler::new();
             compiler.prepare();
 
             let context = Context::create();
@@ -56,9 +56,9 @@ fn main() {
 
         cmd::Commands::PrintAst(args) => {
             let source = std::fs::read_to_string(&args.source).expect("Failed to read source file");
-            let compiler = compiler::Compiler::new(&source, args.source.to_str().unwrap());
+            let compiler = compiler::Compiler::new();
             compiler.prepare();
-            compiler.print_ast();
+            compiler.print_ast(&source, args.source.to_str().unwrap());
         }
     }
 }

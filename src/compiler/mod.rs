@@ -5,30 +5,27 @@ use crate::{consts, lexer, parser};
 use inkwell::context::Context;
 use std::path::Path;
 
-pub struct Compiler<'a> {
-    source: &'a str,
-    filename: &'a str,
-}
+pub struct Compiler {}
 
-impl<'a> Compiler<'a> {
-    pub fn new(source: &'a str, filename: &'a str) -> Self {
-        Self { source, filename }
+impl<'a> Compiler {
+    pub fn new() -> Self {
+        Self {}
     }
 
     pub fn prepare(&self) {
         std::fs::create_dir_all(consts::BUILD_PATH).expect("Failed to create build directory");
     }
 
-    pub fn check(&self) {
-        let source_trimmed = self.source.trim();
+    pub fn check(&self, source: &'a str, filename: &'a str) {
+        let source_trimmed = source.trim();
 
-        let mut lexer = lexer::Lexer::new(source_trimmed.as_bytes(), self.filename.to_string());
+        let mut lexer = lexer::Lexer::new(source_trimmed.as_bytes(), filename.to_string());
         lexer
             .tokenize()
             .map_err(|err| eprintln!("{err}"))
             .expect("Tokenizing failed");
 
-        let mut parser = parser::Parser::new(lexer.into_tokens(), self.filename.to_string());
+        let mut parser = parser::Parser::new(lexer.into_tokens(), filename.to_string());
         let program = match parser.parse() {
             Ok(prog) => prog,
             Err(err) => {
@@ -138,14 +135,14 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
-    pub fn print_ast(&self) {
-        let source_trimmed = self.source.trim();
-        let mut lexer = lexer::Lexer::new(source_trimmed.as_bytes(), self.filename.to_string());
+    pub fn print_ast(&self, source: &'a str, filename: &'a str) {
+        let source_trimmed = source.trim();
+        let mut lexer = lexer::Lexer::new(source_trimmed.as_bytes(), filename.to_string());
         lexer
             .tokenize()
             .map_err(|err| eprintln!("{err}"))
             .expect("Tokenizing failed");
-        let mut parser = parser::Parser::new(lexer.into_tokens(), self.filename.to_string());
+        let mut parser = parser::Parser::new(lexer.into_tokens(), filename.to_string());
         let program = match parser.parse() {
             Ok(prog) => prog,
             Err(err) => {

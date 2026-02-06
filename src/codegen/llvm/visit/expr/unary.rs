@@ -2,6 +2,7 @@ use crate::ast::Types;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
+use crate::error::Span;
 use crate::tokens::Op;
 use crate::typed_ast::TypedExpr;
 use inkwell::values::BasicValueEnum;
@@ -25,7 +26,7 @@ impl<'a> Visit for UnaryOp<'a> {
 
         let result_type = context
             .symbols()
-            .infer_unary_type(self.op, &operand_val.type_info)
+            .infer_unary_type(self.op, &operand_val.type_info, Span::default())
             .map_err(|_| CodegenError::TypeMismatch {
                 expected: format!("{:?} {:?}", self.op, operand_val.type_info),
                 actual: "incompatible type".to_string(),

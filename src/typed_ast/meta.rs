@@ -57,12 +57,12 @@ impl CompilerContext {
         self.idents.insert(name, typ);
     }
 
-    pub fn get_variable_type(&self, name: &Ident) -> Result<Types, SemanticError> {
+    pub fn get_variable_type(&self, name: &Ident, span: Span) -> Result<Types, SemanticError> {
         self.idents
             .lookup(name)
             .ok_or(SemanticError::UndefinedVariable {
                 name: name.clone(),
-                span: Span::default(),
+                span,
             })
             .cloned()
     }
@@ -71,13 +71,13 @@ impl CompilerContext {
         self.structs.insert(name.clone(), fields);
     }
 
-    pub fn get_struct_type(&self, name: &Ident) -> Result<Field, SemanticError> {
+    pub fn get_struct_type(&self, name: &Ident, span: Span) -> Result<Field, SemanticError> {
         if let Some(fields) = self.structs.fields(name) {
             Ok(fields.clone())
         } else {
             Err(SemanticError::UndefinedStruct {
                 name: name.clone(),
-                span: Span::default(),
+                span,
             })
         }
     }
@@ -107,6 +107,7 @@ impl CompilerContext {
         left: &Types,
         op: &Op,
         right: &Types,
+        span: Span,
     ) -> Result<Types, SemanticError> {
         match op {
             Op::Add
@@ -130,7 +131,7 @@ impl CompilerContext {
                     left: left.to_string().to_string(),
                     op: format!("{op:?}"),
                     right: right.to_string().to_string(),
-                    span: Span::default(),
+                    span,
                 }),
             },
             Op::Eq
@@ -154,7 +155,7 @@ impl CompilerContext {
                     left: left.to_string().to_string(),
                     op: format!("{op:?}"),
                     right: right.to_string().to_string(),
-                    span: Span::default(),
+                    span,
                 }),
             },
             Op::Assign => {
@@ -165,7 +166,7 @@ impl CompilerContext {
                         left: left.to_string(),
                         op: format!("{op:?}"),
                         right: right.to_string(),
-                        span: Span::default(),
+                        span,
                     })
                 }
             }
@@ -175,7 +176,7 @@ impl CompilerContext {
                     left: left.to_string(),
                     op: format!("{op:?}"),
                     right: right.to_string(),
-                    span: Span::default(),
+                    span,
                 }),
             },
             Op::BitAnd | Op::BitOr | Op::BitXor | Op::Shl | Op::Shr => match (left, right) {
@@ -184,19 +185,24 @@ impl CompilerContext {
                     left: left.to_string(),
                     op: format!("{op:?}"),
                     right: right.to_string(),
-                    span: Span::default(),
+                    span,
                 }),
             },
             _ => Err(SemanticError::InvalidBinaryOperation {
                 left: left.to_string(),
                 op: format!("{op:?}"),
                 right: right.to_string(),
-                span: Span::default(),
+                span,
             }),
         }
     }
 
-    pub fn infer_unary_type(&self, op: &Op, operand: &Types) -> Result<Types, SemanticError> {
+    pub fn infer_unary_type(
+        &self,
+        op: &Op,
+        operand: &Types,
+        span: Span,
+    ) -> Result<Types, SemanticError> {
         match op {
             Op::Sub | Op::Minus => match operand {
                 Types::Int => Ok(Types::Int),
@@ -204,7 +210,7 @@ impl CompilerContext {
                 _ => Err(SemanticError::InvalidUnaryOperation {
                     op: format!("{op:?}"),
                     operand: operand.to_string(),
-                    span: Span::default(),
+                    span,
                 }),
             },
             Op::Not => match operand {
@@ -212,7 +218,7 @@ impl CompilerContext {
                 _ => Err(SemanticError::InvalidUnaryOperation {
                     op: format!("{op:?}"),
                     operand: operand.to_string(),
-                    span: Span::default(),
+                    span,
                 }),
             },
             Op::BitNot => match operand {
@@ -220,13 +226,13 @@ impl CompilerContext {
                 _ => Err(SemanticError::InvalidUnaryOperation {
                     op: format!("{op:?}"),
                     operand: operand.to_string(),
-                    span: Span::default(),
+                    span,
                 }),
             },
             _ => Err(SemanticError::InvalidUnaryOperation {
                 op: format!("{op:?}"),
                 operand: operand.to_string(),
-                span: Span::default(),
+                span,
             }),
         }
     }

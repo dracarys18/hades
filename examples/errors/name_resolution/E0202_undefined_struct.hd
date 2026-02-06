@@ -1,0 +1,4 @@
+fn main(): void {
+    let p: Point = Point { x: 10, y: 20 };
+    return;
+}

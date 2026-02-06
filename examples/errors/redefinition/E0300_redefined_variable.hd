@@ -1,0 +1,5 @@
+fn main(): void {
+    let x: int = 10;
+    let x: int = 20;
+    return;
+}

@@ -5,8 +5,12 @@ use crate::typed_ast::{CompilerContext, TypedIf};
 
 impl WalkAst for If {
     type Output = TypedIf;
-    fn walk(&self, ctx: &mut CompilerContext) -> Result<Self::Output, crate::error::SemanticError> {
-        let typed_cond = self.cond.walk(ctx)?;
+    fn walk(
+        &self,
+        ctx: &mut CompilerContext,
+        _span: crate::error::Span,
+    ) -> Result<Self::Output, crate::error::SemanticError> {
+        let typed_cond = self.cond.walk(ctx, self.span)?;
         if typed_cond.get_type() != Types::Bool {
             return Err(SemanticError::TypeMismatch {
                 expected: Types::Bool.to_string(),
@@ -15,9 +19,9 @@ impl WalkAst for If {
             });
         }
 
-        let typed_then = self.then_branch.walk(ctx)?;
+        let typed_then = self.then_branch.walk(ctx, self.span)?;
         let typed_else = match self.else_branch {
-            Some(ref else_stmts) => Some(else_stmts.walk(ctx)?),
+            Some(ref else_stmts) => Some(else_stmts.walk(ctx, self.span)?),
             None => None,
         };
 

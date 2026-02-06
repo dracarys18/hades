@@ -4,9 +4,13 @@ use crate::typed_ast::{CompilerContext, TypedBlock};
 
 impl WalkAst for Block {
     type Output = TypedBlock;
-    fn walk(&self, ctx: &mut CompilerContext) -> Result<Self::Output, SemanticError> {
+    fn walk(
+        &self,
+        ctx: &mut CompilerContext,
+        span: crate::error::Span,
+    ) -> Result<Self::Output, SemanticError> {
         ctx.enter_scope();
-        let typed_stmts = self.stmts.walk(ctx)?;
+        let typed_stmts = self.stmts.walk(ctx, span)?;
         ctx.exit_scope();
         Ok(TypedBlock {
             stmts: typed_stmts,

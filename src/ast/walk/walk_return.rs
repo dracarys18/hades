@@ -3,11 +3,15 @@ use crate::typed_ast::{CompilerContext, TypedReturn};
 
 impl WalkAst for Return {
     type Output = TypedReturn;
-    fn walk(&self, ctx: &mut CompilerContext) -> Result<Self::Output, crate::error::SemanticError> {
+    fn walk(
+        &self,
+        ctx: &mut CompilerContext,
+        _span: crate::error::Span,
+    ) -> Result<Self::Output, crate::error::SemanticError> {
         let expr = self.expr.as_ref();
         let span = self.span.clone();
         let typed_expr = match expr {
-            Some(e) => Some(e.walk(ctx)?),
+            Some(e) => Some(e.walk(ctx, span)?),
             None => None,
         };
 

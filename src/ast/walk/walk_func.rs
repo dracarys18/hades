@@ -4,7 +4,11 @@ use crate::typed_ast::{CompilerContext, FunctionSignature, TypedFuncDef};
 
 impl WalkAst for FuncDef {
     type Output = TypedFuncDef;
-    fn walk(&self, ctx: &mut CompilerContext) -> Result<Self::Output, SemanticError> {
+    fn walk(
+        &self,
+        ctx: &mut CompilerContext,
+        _span: crate::error::Span,
+    ) -> Result<Self::Output, SemanticError> {
         let function_signature = FunctionSignature::new(
             self.params
                 .iter()
@@ -18,7 +22,7 @@ impl WalkAst for FuncDef {
             ctx.insert_variable(param_name.clone(), param_type.clone());
         }
 
-        let typed_body = self.body.walk(ctx)?;
+        let typed_body = self.body.walk(ctx, self.span)?;
         ctx.exit_function();
         Ok(TypedFuncDef {
             name: self.name.clone(),

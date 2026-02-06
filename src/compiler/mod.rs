@@ -38,21 +38,18 @@ impl<'a> Compiler {
         };
 
         let analyzer = Analyzer::<Unprepared>::new();
-        let analyzer = analyzer
-            .prepare(&program)
-            .map_err(|err| {
-                eprintln!("Error during semantic analysis: {err}");
-                err
-            })
-            .expect("Semantic analysis preparation failed");
+        let analyzer = match analyzer.prepare(&program) {
+            Ok(a) => a,
+            Err(err) => {
+                err.eprint(source_trimmed, filename);
+                return;
+            }
+        };
 
-        analyzer
-            .analyze()
-            .map_err(|err| {
-                eprintln!("Error during semantic analysis: {err}");
-                err
-            })
-            .expect("Semantic analysis failed");
+        if let Err(err) = analyzer.analyze() {
+            eprintln!("Error during semantic analysis: {err}");
+            return;
+        }
     }
 
     pub fn compile(&self, entry_path: impl AsRef<Path>, output_path: impl AsRef<Path>) -> bool {

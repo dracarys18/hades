@@ -1,5 +1,6 @@
 use crate::ast::{ArrayType, Types};
 use crate::codegen::error::{CodegenError, CodegenResult};
+use crate::error::Span;
 use crate::tokens::Ident;
 use crate::typed_ast::CompilerContext;
 use inkwell::AddressSpace;
@@ -77,14 +78,12 @@ impl<'ctx> TypeConverter<'ctx> {
         name: &Ident,
         compiler_ctx: &CompilerContext,
     ) -> CodegenResult<StructType<'ctx>> {
-        let struct_def =
-            compiler_ctx
-                .get_struct_type(&name)
-                .map_err(|_| CodegenError::TypeConversion {
-                    from: format!("struct {name}"),
-                    to: "LLVM type".to_string(),
-                })?;
-
+        let struct_def = compiler_ctx
+            .get_struct_type(&name, Span::default())
+            .map_err(|_| CodegenError::TypeConversion {
+                from: format!("struct {name}"),
+                to: "LLVM type".to_string(),
+            })?;
         let mut field_types = Vec::new();
         for (_, field_type) in struct_def.iter() {
             let llvm_field_type = self.to_llvm_type(field_type, compiler_ctx)?;

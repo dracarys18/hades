@@ -8,8 +8,9 @@ impl WalkAst for While {
     fn walk(
         &self,
         ctx: &mut crate::typed_ast::CompilerContext,
+        _span: crate::error::Span,
     ) -> Result<Self::Output, crate::error::SemanticError> {
-        let typed_cond = self.cond.walk(ctx)?;
+        let typed_cond = self.cond.walk(ctx, self.span)?;
         if typed_cond.get_type() != Types::Bool {
             return Err(SemanticError::TypeMismatch {
                 expected: Types::Bool.to_string(),
@@ -18,7 +19,7 @@ impl WalkAst for While {
             });
         }
 
-        let typed_body = self.body.walk(ctx)?;
+        let typed_body = self.body.walk(ctx, self.span)?;
         Ok(TypedWhile {
             cond: typed_cond,
             body: typed_body,

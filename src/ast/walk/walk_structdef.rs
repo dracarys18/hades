@@ -7,6 +7,7 @@ impl WalkAst for StructDef {
     fn walk(
         &self,
         ctx: &mut crate::typed_ast::CompilerContext,
+        _span: crate::error::Span,
     ) -> Result<Self::Output, SemanticError> {
         let name = self.name.clone();
         let fields = self.fields.clone();

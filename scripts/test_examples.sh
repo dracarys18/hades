@@ -18,46 +18,57 @@ FAILED=0
 test_example() {
     local file=$1
     local dir=$(dirname "$file")
-    local name="${dir#examples/}"
-    local expected_file="${dir}/.expected"
-    local abs_file="$PROJECT_ROOT/$file"
-
+    local basename=$(basename "$file" .hd)
+    local name="${file#examples/}"
+    local name="${name%.hd}"
+    
+    local expected_file
+    local command
+    if [ "$basename" = "main" ]; then
+        expected_file="${dir}/.expected"
+        command="run"
+    else
+        expected_file="${file%.hd}.expected"
+        command="check"
+    fi
+    
     echo -n "Testing $name... "
 
-    if OUTPUT=$(hades run "$abs_file" 2>&1); then
-        if [ -f "$expected_file" ]; then
-            local expected=$(cat "$expected_file")
-            if echo "$OUTPUT" | grep -qF "$expected"; then
-                echo -e "${GREEN}✓${NC}"
-                PASSED=$((PASSED + 1))
-                return 0
-            else
-                echo -e "${RED}✗${NC}"
-                echo "  Expected: $expected"
-                echo "  Got: $OUTPUT"
-                FAILED=$((FAILED + 1))
-                return 1
-            fi
-        else
+    set +e
+    OUTPUT=$(cargo run --bin hades --quiet -- $command "$file" 2>&1)
+    EXIT_CODE=$?
+    set -e
+    
+    if [ -f "$expected_file" ]; then
+        local expected=$(cat "$expected_file")
+        if [ "$OUTPUT" = "$expected" ]; then
             echo -e "${GREEN}✓${NC}"
             PASSED=$((PASSED + 1))
             return 0
+        else
+            echo -e "${RED}✗${NC}"
+            echo "  Expected output differs"
+            echo "  Expected file: $expected_file"
+            FAILED=$((FAILED + 1))
+            return 1
         fi
     else
-        local exit_code=$?
-        echo -e "${RED}✗${NC}"
-        echo "  File: $abs_file"
-        echo "  Exit code: $exit_code"
-        echo "  Output: $OUTPUT"
-        echo "  PWD: $(pwd)"
-        echo "  Which hades: $(which hades)"
-        FAILED=$((FAILED + 1))
-        return 1
+        if [ $EXIT_CODE -eq 0 ]; then
+            echo -e "${GREEN}✓${NC}"
+            PASSED=$((PASSED + 1))
+            return 0
+        else
+            echo -e "${RED}✗${NC}"
+            echo "  File: $file"
+            echo "  Output: $OUTPUT"
+            FAILED=$((FAILED + 1))
+            return 1
+        fi
     fi
 }
 
-echo "Installing hades..."
-cargo install --path . --force
+echo "Building hades..."
+cargo build --bin hades --quiet
 
 echo ""
 echo "Running example tests..."
@@ -77,8 +88,8 @@ while IFS= read -r file; do
         current_category="$category"
     fi
     
-    test_example "$file"
-done < <(find examples -name "main.hd" -type f | sort)
+    test_example "$file" || true
+done < <(find examples -name "*.hd" -type f | sort)
 
 echo ""
 echo "================================"

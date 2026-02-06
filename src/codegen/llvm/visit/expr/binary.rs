@@ -2,6 +2,7 @@ use crate::ast::Types;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
+use crate::error::Span;
 use crate::tokens::Op;
 use crate::typed_ast::TypedExpr;
 use inkwell::FloatPredicate;
@@ -29,7 +30,12 @@ impl<'a> Visit for BinaryOp<'a> {
 
         let result_type = context
             .symbols()
-            .infer_binary_type(&left_val.type_info, self.op, &right_val.type_info)
+            .infer_binary_type(
+                &left_val.type_info,
+                self.op,
+                &right_val.type_info,
+                Span::default(),
+            )
             .map_err(|_| CodegenError::TypeMismatch {
                 expected: format!(
                     "{:?} {:?} {:?}",

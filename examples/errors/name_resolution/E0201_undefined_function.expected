@@ -1,0 +1,7 @@
+[31mError:[0m Undefined function: foo
+   [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m/Users/karthihegde/Projects/hades/examples/errors/name_resolution/E0201_undefined_function.hd:2:5[38;5;246m][0m
+   [38;5;246m│[0m
+ [38;5;246m2 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[31mf[0m[31mo[0m[31mo[0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m;[0m
+ [38;5;240m  │[0m     [31m─[0m[31m┬[0m[31m─[0m  
+ [38;5;240m  │[0m      [31m╰[0m[31m─[0m[31m─[0m[31m─[0m Undefined function: foo
+[38;5;246m───╯[0m

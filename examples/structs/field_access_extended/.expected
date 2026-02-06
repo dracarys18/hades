@@ -1,1 +1,4 @@
+Basic field access: 10, 20
+Struct init field access: 84
+Nested field access: 0, 200
 Array struct field access: 10

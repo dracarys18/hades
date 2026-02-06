@@ -1,0 +1,5 @@
+fn main(): void {
+    let x = 42;
+    let y = !x;
+    return;
+}

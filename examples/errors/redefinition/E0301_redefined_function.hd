@@ -1,0 +1,11 @@
+fn foo(): void {
+    return;
+}
+
+fn foo(): int {
+    return 42;
+}
+
+fn main(): void {
+    return;
+}

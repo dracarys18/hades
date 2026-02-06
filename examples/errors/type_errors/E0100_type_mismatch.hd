@@ -1,0 +1,4 @@
+fn main(): void {
+    let x: int = "hello";
+    return;
+}

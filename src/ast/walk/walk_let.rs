@@ -4,8 +4,12 @@ use crate::typed_ast::{CompilerContext, TypedLet};
 
 impl WalkAst for Let {
     type Output = TypedLet;
-    fn walk(&self, ctx: &mut CompilerContext) -> Result<Self::Output, SemanticError> {
-        let typed_value = self.value.walk(ctx)?;
+    fn walk(
+        &self,
+        ctx: &mut CompilerContext,
+        _span: crate::error::Span,
+    ) -> Result<Self::Output, SemanticError> {
+        let typed_value = self.value.walk(ctx, self.span)?;
 
         let declared_type = self.declared_type.as_ref();
         let inferred_type = typed_value.get_type();

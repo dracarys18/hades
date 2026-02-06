@@ -6,6 +6,7 @@ impl WalkAst for Import {
     fn walk(
         &self,
         _ctx: &mut CompilerContext,
+        _span: crate::error::Span,
     ) -> Result<Self::Output, crate::error::SemanticError> {
         Ok(TypedImport {
             module: self.module.clone(),

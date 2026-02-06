@@ -6,6 +6,7 @@ impl WalkAst for Continue {
     fn walk(
         &self,
         _ctx: &mut CompilerContext,
+        _span: crate::error::Span,
     ) -> Result<Self::Output, crate::error::SemanticError> {
         Ok(TypedContinue {
             span: self.span.clone(),

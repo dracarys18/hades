@@ -69,7 +69,7 @@ impl TypedAstMeta {
 
     pub fn prepare(self, program: &Program) -> Result<Self, SemanticError> {
         let mut ctx = CompilerContext::new();
-        let ast = program.walk(&mut ctx);
+        let ast = program.walk(&mut ctx, crate::error::Span::new(0, 0));
         match ast {
             Err(e) => Err(e),
             Ok(ast) => Ok(Self { ast, ctx }),

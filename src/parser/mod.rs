@@ -12,10 +12,7 @@ use std::ops::Range;
 pub struct Parser {
     tokens: Vec<Token>,
     pos: usize,
-    line: usize,
-    col: usize,
     source_id: String,
-    char_pos: usize,
 }
 
 impl Parser {
@@ -23,10 +20,7 @@ impl Parser {
         Self {
             tokens,
             pos: 0,
-            line: 1,
-            col: 1,
             source_id,
-            char_pos: 0,
         }
     }
 
@@ -87,16 +81,6 @@ impl Parser {
 
     fn next(&mut self) -> Option<Token> {
         if let Some(tok) = self.tokens.get(self.pos).cloned() {
-            self.advance_char_pos(&tok);
-            match tok.kind() {
-                TokenKind::Newline | TokenKind::Semicolon => {
-                    self.line += 1;
-                    self.col = 1;
-                }
-                _ => {
-                    self.col += 1;
-                }
-            }
             self.pos += 1;
             Some(tok)
         } else {
@@ -108,83 +92,47 @@ impl Parser {
         self.pos >= self.tokens.len()
     }
 
-    fn current_span(&self) -> Range<usize> {
-        self.char_pos..self.char_pos + 1
+    fn current_span(&self) -> Span {
+        *self
+            .peek()
+            .expect("current_span called but no current token exists")
+            .span()
     }
 
-    fn estimate_token_length(&self, token: &Token) -> usize {
-        match token.kind() {
-            TokenKind::LeftParen => 1,
-            TokenKind::RightParen => 1,
-            TokenKind::LeftBrace => 1,
-            TokenKind::RightBrace => 1,
-            TokenKind::LeftBracket => 1,
-            TokenKind::RightBracket => 1,
-            TokenKind::Comma => 1,
-            TokenKind::Assign => 1,
-            TokenKind::Dot => 1,
-            TokenKind::Range => 2,
-            TokenKind::Minus => 1,
-            TokenKind::Plus => 1,
-            TokenKind::Multiply => 1,
-            TokenKind::Divide => 1,
-            TokenKind::MinusEqual => 2,
-            TokenKind::PlusEqual => 2,
-            TokenKind::Colon => 1,
-            TokenKind::Semicolon => 1,
-            TokenKind::Bang => 1,
-            TokenKind::BangEqual => 2,
-            TokenKind::EqualEqual => 2,
-            TokenKind::Greater => 1,
-            TokenKind::GreaterEqual => 2,
-            TokenKind::Less => 1,
-            TokenKind::LessEqual => 2,
-            TokenKind::Ident(ident) => ident.inner().len(),
-            TokenKind::String(s) => s.len() + 2, // +2 for quotes
-            TokenKind::Number(n) => n.to_string().len(),
-            TokenKind::Float(f) => f.to_string().len(),
-            TokenKind::And => 3,
-            TokenKind::BoleanAnd => 2,
-            TokenKind::Struct => 6,
-            TokenKind::Else => 4,
-            TokenKind::False => 5,
-            TokenKind::For => 3,
-            TokenKind::If => 2,
-            TokenKind::Return => 6,
-            TokenKind::Break => 5,
-            TokenKind::Continue => 8,
-            TokenKind::Or => 2,
-            TokenKind::BooleanOr => 2,
-            TokenKind::True => 4,
-            TokenKind::While => 5,
-            TokenKind::Fn => 2,
-            TokenKind::Let => 3,
-            TokenKind::Newline => 1,
-            TokenKind::Module => 6,
-            TokenKind::Import => 6,
-            TokenKind::Std => 3,
-            TokenKind::Self_ => 4,
-            TokenKind::DoubleColon => 2,
-        }
+    fn eof_span(&self) -> Span {
+        self.tokens
+            .last()
+            .expect("eof_span called but no tokens exist")
+            .span()
+            .shrink_to_hi()
     }
 
-    fn advance_char_pos(&mut self, token: &Token) {
-        self.char_pos += self.estimate_token_length(token);
+    fn prev_span(&self) -> Span {
+        assert!(
+            self.pos > 0,
+            "prev_span called but no previous token exists"
+        );
+        *self.tokens[self.pos - 1].span()
     }
 
     fn expect(&mut self, expected: &TokenKind) -> ParseResult<()> {
-        let start_pos = self.char_pos;
         let source_id = self.source_id.clone();
         let token = self.next();
         match token {
             Some(ref t) if t.kind() == expected => Ok(()),
-            other => {
-                let span = other
-                    .as_ref()
-                    .map(|t| t.span().into_range())
-                    .unwrap_or_else(|| start_pos..self.char_pos);
+            Some(t) => {
+                let span = t.span().into_range();
                 Err(ParseError::unexpected_token(
-                    other,
+                    Some(t),
+                    &format!("{expected:?}"),
+                    span,
+                    source_id,
+                ))
+            }
+            None => {
+                let span = self.eof_span().into_range();
+                Err(ParseError::unexpected_token(
+                    None,
                     &format!("{expected:?}"),
                     span,
                     source_id,
@@ -194,63 +142,59 @@ impl Parser {
     }
 
     fn expect_identifier(&mut self) -> ParseResult<Ident> {
-        let start_pos = self.char_pos;
         let source_id = self.source_id.clone();
         let token = self.next();
-        let result = match token {
+        match token {
             Some(tok) => match tok.kind() {
-                TokenKind::Ident(name) => name.clone(),
+                TokenKind::Ident(name) => Ok(name.clone()),
                 _ => {
                     let span = tok.span().into_range();
-                    return Err(ParseError::unexpected_token(
+                    Err(ParseError::unexpected_token(
                         Some(tok),
                         "identifier",
                         span,
                         source_id,
-                    ));
+                    ))
                 }
             },
             None => {
-                let span = start_pos..self.char_pos;
-                return Err(ParseError::unexpected_token(
+                let span = self.eof_span().into_range();
+                Err(ParseError::unexpected_token(
                     None,
                     "identifier",
                     span,
                     source_id,
-                ));
+                ))
             }
-        };
-        Ok(result)
+        }
     }
 
     fn expect_type(&mut self) -> ParseResult<Types> {
-        let start_pos = self.char_pos;
         let source_id = self.source_id.clone();
         let token = self.next();
-        let result = match token {
+        match token {
             Some(tok) => match tok.kind() {
-                TokenKind::Ident(name) => Types::from_str(name),
+                TokenKind::Ident(name) => Ok(Types::from_str(name)),
                 _ => {
                     let span = tok.span().into_range();
-                    return Err(ParseError::unexpected_token(
+                    Err(ParseError::unexpected_token(
                         Some(tok),
                         "type name",
                         span,
                         source_id,
-                    ));
+                    ))
                 }
             },
             None => {
-                let span = start_pos..self.char_pos;
-                return Err(ParseError::unexpected_token(
+                let span = self.eof_span().into_range();
+                Err(ParseError::unexpected_token(
                     None,
                     "type name",
                     span,
                     source_id,
-                ));
+                ))
             }
-        };
-        Ok(result)
+        }
     }
 
     fn consume_if(&mut self, expected: &TokenKind) -> bool {
@@ -279,51 +223,54 @@ impl Parser {
     }
 
     fn parse_struct_def(&mut self) -> ParseResult<Stmt> {
-        let start = self.char_pos;
+        let start_tok = self.current_span();
         self.expect(&TokenKind::Struct)?;
         let name = self.expect_identifier()?;
         let fields = self.parse_field_list()?;
-        let end = self.char_pos;
+        let end = self.prev_span();
 
         Ok(Stmt::StructDef(StructDef {
             name,
             fields,
-            span: Span::new(start, end),
+            span: start_tok.to(end),
         }))
     }
 
     fn parse_function_def(&mut self) -> ParseResult<Stmt> {
-        let start = self.char_pos;
+        let start_tok = self.current_span();
         self.expect(&TokenKind::Fn)?;
         let name = self.expect_identifier()?;
         let params = self.parse_parameter_list()?;
         let return_type = self.parse_optional_return_type()?;
         let body = self.parse_block()?;
-        let end = self.char_pos;
+        let end = self.prev_span();
+        let span = start_tok.to(end);
 
         Ok(Stmt::FuncDef(FuncDef {
             name,
             params,
             return_type,
-            body: Block::new(body.into(), Span::new(start, end)),
-            span: Span::new(start, end),
+            body: Block::new(body.into(), span),
+            span,
         }))
     }
 
     fn parse_module(&mut self) -> ParseResult<Stmt> {
+        let start_tok = self.current_span();
         self.expect(&TokenKind::Module)?;
         let name = self.expect_identifier()?;
+        let end = self.prev_span();
 
         Ok(Stmt::ModuleDecl(ModuleDecl {
             name,
-            span: Span::new(self.char_pos, self.char_pos),
+            span: start_tok.to(end),
         }))
     }
 
     fn parse_import(&mut self) -> ParseResult<Stmt> {
         use crate::ast::{Import, ImportPrefix};
 
-        let start = self.char_pos;
+        let start_tok = self.current_span();
         self.expect(&TokenKind::Import)?;
 
         let prefix = match self.peek() {
@@ -339,7 +286,7 @@ impl Parser {
                 return Err(ParseError::unexpected_token(
                     self.peek().cloned(),
                     "std or self",
-                    self.char_pos..self.char_pos + 1,
+                    self.current_span().into_range(),
                     self.source_id.clone(),
                 ));
             }
@@ -347,17 +294,17 @@ impl Parser {
 
         self.expect(&TokenKind::DoubleColon)?;
         let module_name = self.expect_identifier()?;
-        let end = self.char_pos;
+        let end = self.prev_span();
 
         Ok(Stmt::Import(Import {
             prefix,
             module: module_name.inner().to_string(),
-            span: Span::new(start, end),
+            span: start_tok.to(end),
         }))
     }
 
     fn parse_let_stmt(&mut self) -> ParseResult<Stmt> {
-        let start = self.char_pos;
+        let start_tok = self.current_span();
         self.expect(&TokenKind::Let)?;
         let name = self.expect_identifier()?;
 
@@ -373,21 +320,19 @@ impl Parser {
         self.expect(&TokenKind::Assign)?;
         let value = self.parse_let_expr()?;
         self.expect(&TokenKind::Semicolon)?;
-        let end = self.char_pos;
+        let end = self.prev_span();
+        let span = start_tok.to(end);
 
         Ok(Stmt::Let(Let {
             name,
             declared_type: var_type,
-            value: ExprAst {
-                expr: value,
-                span: Span::new(start, end),
-            },
-            span: Span::new(start, end),
+            value: ExprAst { expr: value, span },
+            span,
         }))
     }
 
     fn parse_if_stmt(&mut self) -> ParseResult<Stmt> {
-        let start = self.char_pos;
+        let start_tok = self.current_span();
         self.expect(&TokenKind::If)?;
         let cond = self.parse_if_expr()?;
         let then_branch = self.parse_stmt_or_block()?;
@@ -396,52 +341,54 @@ impl Parser {
         } else {
             None
         };
-        let end = self.char_pos;
-        let span = Span::new(start, end);
+        let end = self.prev_span();
+        let span = start_tok.to(end);
 
         Ok(Stmt::If(If {
             cond: ExprAst { expr: cond, span },
             then_branch: Block::new(then_branch.into(), span),
             else_branch: else_branch.map(|p| Block::new(p.into(), span)),
-            span: Span::new(start, end),
+            span,
         }))
     }
 
     fn parse_while_stmt(&mut self) -> ParseResult<Stmt> {
-        let start = self.char_pos;
+        let start_tok = self.current_span();
         self.expect(&TokenKind::While)?;
         let cond = self.parse_while_expr()?;
         let body = self.parse_stmt_or_block()?;
-        let end = self.char_pos;
+        let end = self.prev_span();
+        let span = start_tok.to(end);
 
         Ok(Stmt::While(While {
             cond,
-            body: Block::new(body.into(), Span::new(start, end)),
-            span: Span::new(start, end),
+            body: Block::new(body.into(), span),
+            span,
         }))
     }
 
     fn parse_for_stmt(&mut self) -> ParseResult<Stmt> {
-        let start = self.char_pos;
+        let start_tok = self.current_span();
         self.expect(&TokenKind::For)?;
         let init = self.parse_let_stmt()?;
         let cond = self.parse_while_expr()?.unwrap_binary();
         self.expect(&TokenKind::Semicolon)?;
         let update = self.parse_assignment()?.unwrap_assign();
         let body = self.parse_stmt_or_block()?;
-        let end = self.char_pos;
+        let end = self.prev_span();
+        let span = start_tok.to(end);
 
         Ok(Stmt::For(For {
             init: init.unwrap_let(),
             cond: cond.clone(),
             update: update.clone(),
-            body: Block::new(body.into(), Span::new(start, end)),
-            span: Span::new(start, end),
+            body: Block::new(body.into(), span),
+            span,
         }))
     }
 
     fn parse_return_stmt(&mut self) -> ParseResult<Stmt> {
-        let start = self.char_pos;
+        let start_tok = self.current_span();
         self.expect(&TokenKind::Return)?;
         let expr = if !self
             .peek()
@@ -452,31 +399,31 @@ impl Parser {
             None
         };
         self.expect(&TokenKind::Semicolon)?;
-        let end = self.char_pos;
-        let span = Span::new(start, end);
+        let end = self.prev_span();
+        let span = start_tok.to(end);
         let expr = expr.map(|e| ExprAst { expr: e, span });
 
         Ok(Stmt::Return(Return { expr, span }))
     }
 
     fn parse_continue_stmt(&mut self) -> ParseResult<Stmt> {
-        let start = self.char_pos;
+        let start_tok = self.current_span();
         self.expect(&TokenKind::Continue)?;
         self.expect(&TokenKind::Semicolon)?;
-        let end = self.char_pos;
+        let end = self.prev_span();
         Ok(Stmt::Continue(Continue {
-            span: Span::new(start, end),
+            span: start_tok.to(end),
         }))
     }
 
     fn parse_expr_stmt(&mut self) -> ParseResult<Stmt> {
-        let start = self.char_pos;
+        let start_tok = self.current_span();
         let expr = self.parse_stmt_expr()?;
         self.expect(&TokenKind::Semicolon)?;
-        let end = self.char_pos;
+        let end = self.prev_span();
         Ok(Stmt::Expr(ExprAst {
             expr,
-            span: Span::new(start, end),
+            span: start_tok.to(end),
         }))
     }
 
@@ -676,7 +623,6 @@ impl Parser {
     }
 
     fn parse_primary_with_flags(&mut self, allow_struct_literals: bool) -> ParseResult<Expr> {
-        let start_pos = self.char_pos;
         let source_id = self.source_id.clone();
 
         let token = self.next();
@@ -715,7 +661,7 @@ impl Parser {
                 }
             },
             None => {
-                let span = start_pos..self.char_pos;
+                let span = self.current_span().into_range();
                 Err(ParseError::unexpected_token(
                     None,
                     "expression",
@@ -750,7 +696,7 @@ impl Parser {
                     }));
                 }
                 _ => {
-                    let span = self.current_span();
+                    let span = self.current_span().into_range();
                     let source_id = self.source_id.clone();
                     return Err(ParseError::invalid_assignment_target(span, source_id));
                 }

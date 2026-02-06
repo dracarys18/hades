@@ -157,3 +157,116 @@ impl std::fmt::Display for SemanticError {
 }
 
 impl std::error::Error for SemanticError {}
+
+impl SemanticError {
+    pub fn eprint(&self, source: &str, filename: &str) {
+        let err: crate::error::Error = self.clone().into_error(filename.to_string());
+        err.eprint(source);
+    }
+
+    pub fn into_error(self, filename: String) -> crate::error::Error {
+        let (message, span) = match &self {
+            SemanticError::TypeMismatch {
+                expected,
+                found,
+                span,
+            } => (
+                format!("Type mismatch: expected {}, found {}", expected, found),
+                span.clone(),
+            ),
+            SemanticError::UndefinedVariable { name, span } => (
+                format!("Undefined variable: {}", name.inner()),
+                span.clone(),
+            ),
+            SemanticError::UndefinedFunction { name, span } => (
+                format!("Undefined function: {}", name.inner()),
+                span.clone(),
+            ),
+            SemanticError::UndefinedStruct { name, span } => {
+                (format!("Undefined struct: {}", name.inner()), span.clone())
+            }
+            SemanticError::NotAStruct { name } => {
+                (format!("{} is not a struct", name.inner()), Span::new(0, 0))
+            }
+            SemanticError::UnknownField {
+                struct_name,
+                field_name,
+            } => (
+                format!(
+                    "Unknown field {} in struct {}",
+                    field_name.inner(),
+                    struct_name.inner()
+                ),
+                Span::new(0, 0),
+            ),
+            SemanticError::ArgumentCountMismatch {
+                expected,
+                found,
+                function,
+            } => (
+                format!(
+                    "Function {} expects {} arguments, found {}",
+                    function.inner(),
+                    expected,
+                    found
+                ),
+                Span::new(0, 0),
+            ),
+            SemanticError::ReturnTypeMismatch {
+                expected,
+                found,
+                span,
+            } => (
+                format!(
+                    "Return type mismatch: expected {}, found {}",
+                    expected, found
+                ),
+                span.clone(),
+            ),
+            SemanticError::InvalidBinaryOperation {
+                left,
+                op,
+                right,
+                span,
+            } => (
+                format!("Invalid binary operation: {} {} {}", left, op, right),
+                span.clone(),
+            ),
+            SemanticError::InvalidUnaryOperation { op, operand, span } => (
+                format!("Invalid unary operation: {} {}", op, operand),
+                span.clone(),
+            ),
+            SemanticError::RedefinedVariable { name, span } => (
+                format!("Variable {} is already defined", name.inner()),
+                span.clone(),
+            ),
+            SemanticError::RedefinedFunction { name, span } => (
+                format!("Function {} is already defined", name.inner()),
+                span.clone(),
+            ),
+            SemanticError::RedefinedStruct { name, span } => (
+                format!("Struct {} is already defined", name.inner()),
+                span.clone(),
+            ),
+            SemanticError::InvalidType { name, span } => {
+                (format!("Invalid type: {}", name.inner()), span.clone())
+            }
+            SemanticError::InvalidModuleName { name, span } => (
+                format!("Invalid module name: {}", name.inner()),
+                span.clone(),
+            ),
+            SemanticError::InvalidImport { name, span } => {
+                (format!("Invalid import: {}", name.inner()), span.clone())
+            }
+        };
+
+        crate::error::Error {
+            message,
+            span,
+            context: filename,
+            severity: crate::error::ErrorSeverity::Error,
+            help: None,
+            note: None,
+        }
+    }
+}

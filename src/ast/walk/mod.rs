@@ -14,10 +14,10 @@ mod walk_structdef;
 mod walk_value;
 mod walk_while;
 
-use crate::error::SemanticError;
+use crate::error::{SemanticError, Span};
 use crate::typed_ast::*;
 
 pub trait WalkAst {
     type Output;
-    fn walk(&self, ctx: &mut CompilerContext) -> Result<Self::Output, SemanticError>;
+    fn walk(&self, ctx: &mut CompilerContext, span: Span) -> Result<Self::Output, SemanticError>;
 }

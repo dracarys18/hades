@@ -9,11 +9,12 @@ impl WalkAst for For {
     fn walk(
         &self,
         ctx: &mut crate::typed_ast::CompilerContext,
+        _span: crate::error::Span,
     ) -> Result<Self::Output, crate::error::SemanticError> {
         ctx.enter_scope();
-        let typed_init = self.init.walk(ctx)?;
-        let typed_cond = self.cond.walk(ctx)?;
-        let typed_update = self.update.walk(ctx)?;
+        let typed_init = self.init.walk(ctx, self.span)?;
+        let typed_cond = self.cond.walk(ctx, self.span)?;
+        let typed_update = self.update.walk(ctx, self.span)?;
 
         if !ALLOWED_FOR_TYPES.contains(&typed_init.typ) {
             return Err(crate::error::SemanticError::InvalidType {
@@ -22,7 +23,7 @@ impl WalkAst for For {
             });
         }
 
-        let typed_body = self.body.walk(ctx)?;
+        let typed_body = self.body.walk(ctx, self.span)?;
         ctx.exit_scope();
         Ok(TypedFor {
             init: typed_init,

@@ -32,12 +32,10 @@ test_example() {
         command="check"
     fi
     
-    local abs_file="$PROJECT_ROOT/$file"
-
     echo -n "Testing $name... "
 
     set +e
-    OUTPUT=$(hades $command "$abs_file" 2>&1)
+    OUTPUT=$(cargo run --bin hades --quiet -- $command "$file" 2>&1)
     EXIT_CODE=$?
     set -e
     
@@ -61,7 +59,7 @@ test_example() {
             return 0
         else
             echo -e "${RED}✗${NC}"
-            echo "  File: $abs_file"
+            echo "  File: $file"
             echo "  Output: $OUTPUT"
             FAILED=$((FAILED + 1))
             return 1
@@ -69,8 +67,8 @@ test_example() {
     fi
 }
 
-echo "Installing hades..."
-cargo install --path . --force
+echo "Building hades..."
+cargo build --bin hades --quiet
 
 echo ""
 echo "Running example tests..."

@@ -25,8 +25,5 @@ jobs:
           sudo ./llvm.sh 18 all
           echo "LLVM_SYS_180_PREFIX=/usr/lib/llvm-18" >> $GITHUB_ENV
 
-      - name: Build
-        run: cargo build --release
-
-      - name: Test
+      - name: Test Examples
         run: bash scripts/test_examples.sh

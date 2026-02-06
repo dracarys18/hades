@@ -18,7 +18,7 @@ pub use value::{TypedArrayLiteral, TypedValue};
 
 use crate::{
     ast::{Program, WalkAst},
-    error::SemanticError,
+    error::{SemanticError, Span},
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -69,7 +69,7 @@ impl TypedAstMeta {
 
     pub fn prepare(self, program: &Program) -> Result<Self, SemanticError> {
         let mut ctx = CompilerContext::new();
-        let ast = program.walk(&mut ctx, crate::error::Span::new(0, 0));
+        let ast = program.walk(&mut ctx, Span::default());
         match ast {
             Err(e) => Err(e),
             Ok(ast) => Ok(Self { ast, ctx }),

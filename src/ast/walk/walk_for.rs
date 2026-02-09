@@ -17,10 +17,10 @@ impl WalkAst for For {
         let typed_update = self.update.walk(ctx, self.span)?;
 
         if !ALLOWED_FOR_TYPES.contains(&typed_init.typ) {
-            return Err(crate::error::SemanticError::InvalidType {
-                name: typed_init.name.clone(),
-                span: self.span,
-            });
+            return Err(crate::error::SemanticError::invalid_type(
+                typed_init.name.clone(),
+                self.span,
+            ));
         }
 
         let typed_body = self.body.walk(ctx, self.span)?;

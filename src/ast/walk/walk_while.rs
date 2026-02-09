@@ -12,11 +12,11 @@ impl WalkAst for While {
     ) -> Result<Self::Output, crate::error::SemanticError> {
         let typed_cond = self.cond.walk(ctx, self.span)?;
         if typed_cond.get_type() != Types::Bool {
-            return Err(SemanticError::TypeMismatch {
-                expected: Types::Bool.to_string(),
-                found: typed_cond.get_type().to_string(),
-                span: self.span,
-            });
+            return Err(SemanticError::type_mismatch(
+                Types::Bool.to_string(),
+                typed_cond.get_type().to_string(),
+                self.span,
+            ));
         }
 
         let typed_body = self.body.walk(ctx, self.span)?;

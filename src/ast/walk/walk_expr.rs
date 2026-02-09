@@ -33,21 +33,17 @@ impl WalkAst for Expr {
                 let mut typed_fields = indexmap::IndexMap::new();
 
                 for (field_name, field_expr) in fields {
-                    let expected_type =
-                        struct_type
-                            .get(field_name)
-                            .ok_or_else(|| SemanticError::UnknownField {
-                                struct_name: name.clone(),
-                                field_name: field_name.clone(),
-                            })?;
+                    let expected_type = struct_type.get(field_name).ok_or_else(|| {
+                        SemanticError::unknown_field(name.clone(), field_name.clone(), span)
+                    })?;
 
                     let typed_expr = field_expr.walk(ctx, span)?;
                     if typed_expr.get_type() != *expected_type {
-                        return Err(SemanticError::TypeMismatch {
-                            expected: expected_type.clone().to_string(),
-                            found: typed_expr.get_type().to_string(),
+                        return Err(SemanticError::type_mismatch(
+                            expected_type.clone().to_string(),
+                            typed_expr.get_type().to_string(),
                             span,
-                        });
+                        ));
                     }
                     typed_fields.insert(field_name.clone(), typed_expr);
                 }
@@ -80,20 +76,22 @@ impl WalkAst for Expr {
                 match &params {
                     Params::Variadic => {
                         if args.len() > param_count {
-                            return Err(SemanticError::ArgumentCountMismatch {
-                                expected: param_count,
-                                found: args.len(),
-                                function: func.clone(),
-                            });
+                            return Err(SemanticError::argument_count_mismatch(
+                                param_count,
+                                args.len(),
+                                func.clone(),
+                                span,
+                            ));
                         }
                     }
                     Params::Fixed(_) => {
                         if args.len() != param_count {
-                            return Err(SemanticError::ArgumentCountMismatch {
-                                expected: param_count,
-                                found: args.len(),
-                                function: func.clone(),
-                            });
+                            return Err(SemanticError::argument_count_mismatch(
+                                param_count,
+                                args.len(),
+                                func.clone(),
+                                span,
+                            ));
                         }
                     }
                 }
@@ -106,11 +104,11 @@ impl WalkAst for Expr {
 
                     let cond = params.type_match(i, &expected_type);
                     if !cond {
-                        return Err(SemanticError::TypeMismatch {
-                            expected: expected_type.clone().to_string(),
-                            found: typed_arg.get_type().to_string(),
+                        return Err(SemanticError::type_mismatch(
+                            expected_type.clone().to_string(),
+                            typed_arg.get_type().to_string(),
                             span,
-                        });
+                        ));
                     }
 
                     typed_args.push(typed_arg);
@@ -195,11 +193,11 @@ impl WalkAst for ArrayIndexExpr {
         let index = self.index.walk(ctx, span)?;
 
         if Types::Int != index.get_type() {
-            return Err(SemanticError::TypeMismatch {
-                expected: "Int".to_string(),
-                found: index.get_type().to_string(),
+            return Err(SemanticError::type_mismatch(
+                "Int".to_string(),
+                index.get_type().to_string(),
                 span,
-            });
+            ));
         }
 
         Ok(TypedArrayIndex {
@@ -248,9 +246,8 @@ impl WalkAst for FieldAccessExpr {
             Types::Struct(ref struct_name)
             | Types::Array(ArrayType::StructArray(_, ref struct_name)) => {
                 let field = ctx.get_struct_type(struct_name, span)?;
-                let field_type = field.get(&self.field).ok_or(SemanticError::UnknownField {
-                    struct_name: struct_name.clone(),
-                    field_name: self.field.clone(),
+                let field_type = field.get(&self.field).ok_or_else(|| {
+                    SemanticError::unknown_field(struct_name.clone(), self.field.clone(), span)
                 })?;
 
                 Ok(TypedFieldAccess {
@@ -260,11 +257,11 @@ impl WalkAst for FieldAccessExpr {
                     field_type: field_type.clone(),
                 })
             }
-            _ => Err(SemanticError::TypeMismatch {
-                expected: "Struct".to_string(),
-                found: strc.to_string(),
+            _ => Err(SemanticError::type_mismatch(
+                "Struct".to_string(),
+                strc.to_string(),
                 span,
-            }),
+            )),
         }
     }
 }

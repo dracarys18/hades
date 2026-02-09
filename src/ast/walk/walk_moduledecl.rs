@@ -11,10 +11,10 @@ impl WalkAst for ModuleDecl {
 
     fn walk(&self, ctx: &mut CompilerContext, _span: Span) -> Result<Self::Output, SemanticError> {
         if DISALLOWED_MODULE_NAMES.contains(&self.name.to_string().as_str()) {
-            return Err(SemanticError::InvalidModuleName {
-                name: self.name.clone(),
-                span: self.span,
-            });
+            return Err(SemanticError::invalid_module_name(
+                self.name.clone(),
+                self.span,
+            ));
         }
 
         Ok(TypedModuleDecl {

@@ -73,6 +73,7 @@ impl Error {
 
         let span = &self.span;
         let span_range = span.into_range();
+
         let mut report = Report::build(report_kind, self.context.as_str(), span_range.start)
             .with_message(&self.message)
             .with_label(

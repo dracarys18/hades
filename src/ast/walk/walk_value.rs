@@ -36,11 +36,11 @@ impl WalkAst for ArrayLiteral {
 
         for expr in &typed_expr {
             if !expr.get_type().eq(&expected_type) {
-                return Err(SemanticError::TypeMismatch {
-                    expected: expected_type.to_string(),
-                    found: expr.get_type().to_string(),
+                return Err(SemanticError::type_mismatch(
+                    expected_type.to_string(),
+                    expr.get_type().to_string(),
                     span,
-                });
+                ));
             }
         }
 

@@ -20,11 +20,11 @@ impl WalkAst for Let {
         let final_type = match declared_type {
             Some(declared) => {
                 if declared != &inferred_type {
-                    return Err(SemanticError::TypeMismatch {
-                        expected: declared.to_string(),
-                        found: inferred_type.to_string(),
-                        span: span.clone(),
-                    });
+                    return Err(SemanticError::type_mismatch(
+                        declared.to_string(),
+                        inferred_type.to_string(),
+                        span.clone(),
+                    ));
                 }
                 declared.clone()
             }
@@ -32,10 +32,7 @@ impl WalkAst for Let {
         };
 
         if final_type.eq(&Types::Void) {
-            return Err(SemanticError::InvalidType {
-                name: name.clone(),
-                span: span.clone(),
-            });
+            return Err(SemanticError::invalid_type(name.clone(), span.clone()));
         }
 
         ctx.insert_variable(name.clone(), final_type.clone());

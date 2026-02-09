@@ -60,10 +60,7 @@ impl CompilerContext {
     pub fn get_variable_type(&self, name: &Ident, span: Span) -> Result<Types, SemanticError> {
         self.idents
             .lookup(name)
-            .ok_or(SemanticError::UndefinedVariable {
-                name: name.clone(),
-                span,
-            })
+            .ok_or_else(|| SemanticError::undefined_variable(name.clone(), span))
             .cloned()
     }
 
@@ -75,10 +72,7 @@ impl CompilerContext {
         if let Some(fields) = self.structs.fields(name) {
             Ok(fields.clone())
         } else {
-            Err(SemanticError::UndefinedStruct {
-                name: name.clone(),
-                span,
-            })
+            Err(SemanticError::undefined_struct(name.clone(), span))
         }
     }
 
@@ -92,11 +86,11 @@ impl CompilerContext {
     pub fn check_return_type(&self, return_type: Types, span: Span) -> Result<(), SemanticError> {
         if let Some((_, expected_return_type)) = &self.current_function {
             if *expected_return_type != return_type {
-                return Err(SemanticError::ReturnTypeMismatch {
-                    expected: expected_return_type.clone().to_string(),
-                    found: return_type.to_string(),
+                return Err(SemanticError::return_type_mismatch(
+                    expected_return_type.clone().to_string(),
+                    return_type.to_string(),
                     span,
-                });
+                ));
             }
         }
         Ok(())
@@ -127,12 +121,12 @@ impl CompilerContext {
                 (Types::String, Types::String) if matches!(op, Op::Add | Op::Plus) => {
                     Ok(Types::String)
                 }
-                _ => Err(SemanticError::InvalidBinaryOperation {
-                    left: left.to_string().to_string(),
-                    op: format!("{op:?}"),
-                    right: right.to_string().to_string(),
+                _ => Err(SemanticError::invalid_binary_operation(
+                    left.to_string().to_string(),
+                    format!("{op:?}"),
+                    right.to_string().to_string(),
                     span,
-                }),
+                )),
             },
             Op::Eq
             | Op::Ne
@@ -151,49 +145,49 @@ impl CompilerContext {
                 | (Types::String, Types::String)
                 | (Types::Bool, Types::Bool) => Ok(Types::Bool),
                 (Types::Int, Types::Float) | (Types::Float, Types::Int) => Ok(Types::Bool),
-                _ => Err(SemanticError::InvalidBinaryOperation {
-                    left: left.to_string().to_string(),
-                    op: format!("{op:?}"),
-                    right: right.to_string().to_string(),
+                _ => Err(SemanticError::invalid_binary_operation(
+                    left.to_string().to_string(),
+                    format!("{op:?}"),
+                    right.to_string().to_string(),
                     span,
-                }),
+                )),
             },
             Op::Assign => {
                 if left == right {
                     Ok(left.clone())
                 } else {
-                    Err(SemanticError::InvalidBinaryOperation {
-                        left: left.to_string(),
-                        op: format!("{op:?}"),
-                        right: right.to_string(),
+                    Err(SemanticError::invalid_binary_operation(
+                        left.to_string(),
+                        format!("{op:?}"),
+                        right.to_string(),
                         span,
-                    })
+                    ))
                 }
             }
             Op::And | Op::Or | Op::BoleanAnd | Op::BooleanOr => match (left, right) {
                 (Types::Bool, Types::Bool) => Ok(Types::Bool),
-                _ => Err(SemanticError::InvalidBinaryOperation {
-                    left: left.to_string(),
-                    op: format!("{op:?}"),
-                    right: right.to_string(),
+                _ => Err(SemanticError::invalid_binary_operation(
+                    left.to_string(),
+                    format!("{op:?}"),
+                    right.to_string(),
                     span,
-                }),
+                )),
             },
             Op::BitAnd | Op::BitOr | Op::BitXor | Op::Shl | Op::Shr => match (left, right) {
                 (Types::Int, Types::Int) => Ok(Types::Int),
-                _ => Err(SemanticError::InvalidBinaryOperation {
-                    left: left.to_string(),
-                    op: format!("{op:?}"),
-                    right: right.to_string(),
+                _ => Err(SemanticError::invalid_binary_operation(
+                    left.to_string(),
+                    format!("{op:?}"),
+                    right.to_string(),
                     span,
-                }),
+                )),
             },
-            _ => Err(SemanticError::InvalidBinaryOperation {
-                left: left.to_string(),
-                op: format!("{op:?}"),
-                right: right.to_string(),
+            _ => Err(SemanticError::invalid_binary_operation(
+                left.to_string(),
+                format!("{op:?}"),
+                right.to_string(),
                 span,
-            }),
+            )),
         }
     }
 
@@ -207,33 +201,33 @@ impl CompilerContext {
             Op::Sub | Op::Minus => match operand {
                 Types::Int => Ok(Types::Int),
                 Types::Float => Ok(Types::Float),
-                _ => Err(SemanticError::InvalidUnaryOperation {
-                    op: format!("{op:?}"),
-                    operand: operand.to_string(),
+                _ => Err(SemanticError::invalid_unary_operation(
+                    format!("{op:?}"),
+                    operand.to_string(),
                     span,
-                }),
+                )),
             },
             Op::Not => match operand {
                 Types::Bool => Ok(Types::Bool),
-                _ => Err(SemanticError::InvalidUnaryOperation {
-                    op: format!("{op:?}"),
-                    operand: operand.to_string(),
+                _ => Err(SemanticError::invalid_unary_operation(
+                    format!("{op:?}"),
+                    operand.to_string(),
                     span,
-                }),
+                )),
             },
             Op::BitNot => match operand {
                 Types::Int => Ok(Types::Int),
-                _ => Err(SemanticError::InvalidUnaryOperation {
-                    op: format!("{op:?}"),
-                    operand: operand.to_string(),
+                _ => Err(SemanticError::invalid_unary_operation(
+                    format!("{op:?}"),
+                    operand.to_string(),
                     span,
-                }),
+                )),
             },
-            _ => Err(SemanticError::InvalidUnaryOperation {
-                op: format!("{op:?}"),
-                operand: operand.to_string(),
+            _ => Err(SemanticError::invalid_unary_operation(
+                format!("{op:?}"),
+                operand.to_string(),
                 span,
-            }),
+            )),
         }
     }
 }

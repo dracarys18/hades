@@ -86,10 +86,10 @@ impl Functions {
 
     pub fn insert(&mut self, name: Ident, sig: FunctionSignature) -> Result<(), SemanticError> {
         if self.inner.contains_key(&name) {
-            return Err(SemanticError::RedefinedFunction {
-                name: name.clone(),
-                span: *name.span(),
-            });
+            return Err(SemanticError::redefined_function(
+                name.clone(),
+                *name.span(),
+            ));
         }
         self.inner.insert(name, sig);
         Ok(())
@@ -102,10 +102,6 @@ impl Functions {
     pub fn get(&self, name: &Ident) -> Result<&FunctionSignature, SemanticError> {
         self.inner
             .get(name)
-            .ok_or(SemanticError::UndefinedFunction {
-                // TODO: Dont clone
-                name: name.clone(),
-                span: name.span().clone(),
-            })
+            .ok_or_else(|| SemanticError::undefined_function(name.clone(), name.span().clone()))
     }
 }

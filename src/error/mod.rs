@@ -64,10 +64,8 @@ impl Error {
         };
 
         let span = self.span.clone();
-        let span_range = span.into_range();
-        let file_str = self.span.file().to_str().unwrap_or("unknown").to_string();
 
-        let mut report = Report::build(report_kind, span)
+        let mut report = Report::build(report_kind, span.clone())
             .with_message(&self.message)
             .with_label(Label::new(span).with_message(&self.message).with_color(
                 match self.severity {

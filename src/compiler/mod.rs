@@ -6,7 +6,7 @@ use ariadne::{Cache, Source};
 use inkwell::context::Context;
 use std::path::PathBuf;
 use std::{
-    collections::{HashMap, hash_map::Entry},
+    collections::{hash_map::Entry, HashMap},
     fmt, fs,
     path::Path,
 };
@@ -23,6 +23,53 @@ impl FileSourceCache {
     }
 }
 
+struct FileCache {
+    sources: HashMap<PathBuf, Source<String>>,
+}
+
+impl FileCache {
+    fn new() -> Self {
+        Self {
+            sources: HashMap::new(),
+        }
+    }
+}
+
+impl From<Vec<(PathBuf, &str)>> for FileCache {
+    fn from(files: Vec<(PathBuf, &str)>) -> Self {
+        let mut cache = Self::new();
+        for (path, source) in files {
+            cache.sources.insert(path, Source::from(source.to_string()));
+        }
+        cache
+    }
+}
+
+impl Cache<Path> for FileSourceCache {
+    type Storage = String;
+
+    fn fetch(&mut self, path: &Path) -> Result<&Source, impl fmt::Debug> {
+        Ok::<_, std::io::Error>(match self.sources.entry(path.to_path_buf()) {
+            Entry::Occupied(entry) => entry.into_mut(),
+            Entry::Vacant(entry) => entry.insert(Source::from(fs::read_to_string(path)?)),
+        })
+    }
+    fn display<'a>(&self, path: &'a Path) -> Option<impl fmt::Display + 'a> {
+        Some(path.display())
+    }
+}
+
+impl Cache<&Path> for FileSourceCache {
+    type Storage = String;
+
+    fn fetch(&mut self, path: &&Path) -> Result<&Source, impl fmt::Debug> {
+        Cache::<Path>::fetch(self, *path)
+    }
+    fn display<'a>(&self, path: &'a &Path) -> Option<impl fmt::Display + 'a> {
+        Cache::<Path>::display(self, *path)
+    }
+}
+
 impl Cache<PathBuf> for FileSourceCache {
     type Storage = String;
 
@@ -32,8 +79,21 @@ impl Cache<PathBuf> for FileSourceCache {
             Entry::Vacant(entry) => entry.insert(Source::from(fs::read_to_string(path)?)),
         })
     }
-    fn display<'a>(&self, id: &'a PathBuf) -> Option<Box<dyn std::fmt::Display + 'a>> {
-        Some(Box::new(id.display()))
+    fn display<'a>(&self, path: &'a PathBuf) -> Option<impl fmt::Display + 'a> {
+        Some(path.display())
+    }
+}
+
+impl Cache<PathBuf> for FileCache {
+    type Storage = String;
+
+    fn fetch(&mut self, path: &PathBuf) -> Result<&Source, impl fmt::Debug> {
+        self.sources
+            .get(path)
+            .ok_or_else(|| format!("Source not found: {}", path.display()))
+    }
+    fn display<'a>(&self, path: &'a PathBuf) -> Option<impl fmt::Display + 'a> {
+        Some(path.display())
     }
 }
 
@@ -48,12 +108,9 @@ impl<'a> Compiler {
         std::fs::create_dir_all(consts::BUILD_PATH).expect("Failed to create build directory");
     }
 
-    fn parse_single_file(
-        source: &str,
-        filename: &str,
-        cache: impl Cache<PathBuf>,
-    ) -> Option<Program> {
+    pub fn check(&self, source: &'a str, filename: &'a str) {
         let source_trimmed = source.trim();
+        let mut cache = FileCache::from(vec![(PathBuf::from(filename), source_trimmed)]);
 
         let mut lexer = lexer::Lexer::new(source_trimmed.as_bytes(), filename.to_string());
         lexer
@@ -62,91 +119,71 @@ impl<'a> Compiler {
             .expect("Tokenizing failed");
 
         let mut parser = parser::Parser::new(lexer.into_tokens(), filename.to_string());
-        match parser.parse() {
-            Ok(prog) => Some(prog),
+        let program = match parser.parse() {
+            Ok(prog) => prog,
             Err(err) => {
                 let err = err.into_errors();
                 for e in err {
-                    e.eprint(cache);
+                    e.eprint(&mut cache);
                 }
-                None
+                return;
             }
-        }
-    }
+        };
 
-    fn load_program(
-        entry_path: impl AsRef<Path>,
-        cache: &mut impl Cache<String>,
-    ) -> Option<Program> {
-        match Registry::load(entry_path) {
-            Ok(p) => Some(p),
-            Err(err) => {
-                eprintln!("Failed to load modules: {err}");
-                None
-            }
-        }
-    }
-
-    fn analyze_program(
-        program: &Program,
-        cache: &mut impl Cache<String>,
-    ) -> Option<Analyzer<crate::semantic::analyzer::Prepared>> {
         let analyzer = Analyzer::<Unprepared>::new();
-        let analyzer = match analyzer.prepare(program) {
+        let analyzer = match analyzer.prepare(&program) {
             Ok(a) => a,
             Err(err) => {
-                err.into_error().eprint(cache);
-                return None;
+                err.into_error().eprint(&mut cache);
+                return;
             }
         };
 
         if let Err(err) = analyzer.analyze() {
             eprintln!("Error during semantic analysis: {err}");
-            return None;
+            return;
         }
-
-        Some(analyzer)
-    }
-
-    pub fn check(&self, source: &'a str, filename: &'a str) {
-        let source_trimmed = source.trim();
-        let mut cache = ariadne::sources(vec![(PathBuf::from(filename), source_trimmed)]);
-
-        let program = match Self::parse_single_file(source, filename, cache) {
-            Some(p) => p,
-            None => return,
-        };
-
-        Self::analyze_program(&program, cache);
     }
 
     pub fn compile(&self, entry_path: impl AsRef<Path>, output_path: impl AsRef<Path>) -> bool {
         let output_path = output_path.as_ref();
         let mut cache = FileSourceCache::new();
 
-        let program = match Self::load_program(entry_path, &mut cache) {
-            Some(p) => p,
-            None => return false,
-        };
-
-        let analyzer = match Self::analyze_program(&program, &mut cache) {
-            Some(a) => a,
-            None => return false,
+        let program = match Registry::load(entry_path) {
+            Ok(p) => p,
+            Err(err) => {
+                eprintln!("Failed to load modules: {err}");
+                return false;
+            }
         };
 
         let context = Context::create();
+        let analyzer = Analyzer::<Unprepared>::new();
 
-        if let Err(err) = analyzer.verify_module(&context, consts::MAIN_MODULE_NAME) {
+        let prepared = match analyzer.prepare(&program) {
+            Ok(p) => p,
+            Err(err) => {
+                err.into_error().eprint(&mut cache);
+                return false;
+            }
+        };
+
+        if let Err(err) = prepared.analyze() {
+            eprintln!("Error during semantic analysis: {err}");
+            return false;
+        }
+
+        if let Err(err) = prepared.verify_module(&context, consts::MAIN_MODULE_NAME) {
             eprintln!("Module verification failed: {err}");
             return false;
         }
 
-        if let Err(err) = analyzer.compile(&context, consts::MAIN_MODULE_NAME, output_path) {
+        if let Err(err) = prepared.compile(&context, consts::MAIN_MODULE_NAME, output_path) {
             eprintln!("Compilation failed: {err}");
             return false;
         }
 
-        if let Err(err) = analyzer.cleanup(output_path) {
+        if let Err(err) = prepared.cleanup(output_path) {
             eprintln!("Cleanup failed: {err}");
             return false;
         }
@@ -159,15 +196,15 @@ impl<'a> Compiler {
         entry_path: impl AsRef<Path>,
         context: &inkwell::context::Context,
     ) -> Result<(), String> {
-        let mut cache = FileSourceCache::new();
+        let program = Registry::load(entry_path).map_err(|e| e.to_string())?;
 
-        let program = Self::load_program(entry_path, &mut cache)
-            .ok_or_else(|| "Failed to load program".to_string())?;
+        let analyzer = Analyzer::<Unprepared>::new();
+        let prepared = analyzer
+            .prepare(&program)
+            .map_err(|e| e.into_error().to_string())?;
+        prepared.analyze().map_err(|e| e.to_string())?;
 
-        let analyzer = Self::analyze_program(&program, &mut cache)
-            .ok_or_else(|| "Semantic analysis failed".to_string())?;
-
-        let ir = analyzer
+        let ir = prepared
             .generate_ir(context, consts::MAIN_MODULE_NAME)
             .map_err(|e| e.to_string())?;
 
@@ -177,13 +214,24 @@ impl<'a> Compiler {
 
     pub fn print_ast(&self, source: &'a str, filename: &'a str) {
         let source_trimmed = source.trim();
-        let mut cache = ariadne::sources(vec![(filename.to_string(), source_trimmed)]);
+        let mut cache = FileCache::from(vec![(PathBuf::from(filename), source_trimmed)]);
 
-        let program = match Self::parse_single_file(source, filename, &mut cache) {
-            Some(p) => p,
-            None => return,
+        let mut lexer = lexer::Lexer::new(source_trimmed.as_bytes(), filename.to_string());
+        lexer
+            .tokenize()
+            .map_err(|err| eprintln!("{err}"))
+            .expect("Tokenizing failed");
+        let mut parser = parser::Parser::new(lexer.into_tokens(), filename.to_string());
+        let program = match parser.parse() {
+            Ok(prog) => prog,
+            Err(err) => {
+                let err = err.into_errors();
+                for e in err {
+                    e.eprint(&mut cache);
+                }
+                return;
+            }
         };
-
         println!("{:#?}", program);
     }
 }

@@ -1,6 +1,8 @@
 mod error;
 mod simd;
 
+use std::path::PathBuf;
+
 use crate::error::Span;
 use crate::tok;
 use crate::tokens::{Ident, Token, TokenKind};
@@ -56,7 +58,12 @@ impl Lexer {
 
     fn next(&mut self) -> Option<Byte> {
         if self.peek_and_check(b'\n') {
-            self.push_token(tok!(TokenKind::Newline, self.pos, self.pos + 1));
+            self.push_token(tok!(
+                &self.source_id,
+                TokenKind::Newline,
+                self.pos,
+                self.pos + 1
+            ));
         }
         self.pos += 1;
         self.peek()
@@ -86,9 +93,14 @@ impl Lexer {
             self.next();
             if self.peek_and_check(b'=') {
                 self.next();
-                self.push_token(tok!(TokenKind::PlusEqual, start_pos, self.pos));
+                self.push_token(tok!(
+                    &self.source_id,
+                    TokenKind::PlusEqual,
+                    start_pos,
+                    self.pos
+                ));
             } else {
-                self.push_token(tok!(TokenKind::Plus, start_pos, self.pos));
+                self.push_token(tok!(&self.source_id, TokenKind::Plus, start_pos, self.pos));
             }
         }
     }
@@ -99,9 +111,14 @@ impl Lexer {
             self.next();
             if self.peek_and_check(b'=') {
                 self.next();
-                self.push_token(tok!(TokenKind::MinusEqual, start_pos, self.pos));
+                self.push_token(tok!(
+                    &self.source_id,
+                    TokenKind::MinusEqual,
+                    start_pos,
+                    self.pos
+                ));
             } else {
-                self.push_token(tok!(TokenKind::Minus, start_pos, self.pos));
+                self.push_token(tok!(&self.source_id, TokenKind::Minus, start_pos, self.pos));
             }
         }
     }
@@ -162,7 +179,12 @@ impl Lexer {
                 }
             }
 
-            self.push_token(tok!(TokenKind::String(s), start_pos, self.pos));
+            self.push_token(tok!(
+                &self.source_id,
+                TokenKind::String(s),
+                start_pos,
+                self.pos
+            ));
         }
         Ok(())
     }
@@ -175,10 +197,16 @@ impl Lexer {
                 let ident = self.consume_while(|ch| ch.is_alphanumeric() || ch.eq(&b'_'));
                 let ident_str = ident.to_string();
                 if let Some(keyword_token) = KEYWORDS.get(&ident_str) {
-                    self.push_token(tok!(keyword_token.clone(), start_pos, self.pos));
-                } else {
-                    let span = Span::new(start_pos, self.pos);
                     self.push_token(tok!(
+                        &self.source_id,
+                        keyword_token.clone(),
+                        start_pos,
+                        self.pos
+                    ));
+                } else {
+                    let span = Span::new(PathBuf::from(&self.source_id), start_pos, self.pos);
+                    self.push_token(tok!(
+                        &self.source_id,
                         TokenKind::Ident(Ident::new(ident_str, span)),
                         start_pos,
                         self.pos
@@ -206,7 +234,12 @@ impl Lexer {
         if num_slice.contains_byte(b'.') {
             match num_str.parse::<f64>() {
                 Ok(num) => {
-                    self.push_token(tok!(TokenKind::Float(num), start_pos, self.pos));
+                    self.push_token(tok!(
+                        &self.source_id,
+                        TokenKind::Float(num),
+                        start_pos,
+                        self.pos
+                    ));
                     Ok(())
                 }
                 Err(err) => Err(LexError::invalid_number(
@@ -219,7 +252,12 @@ impl Lexer {
         } else {
             match num_str.parse::<i64>() {
                 Ok(n) => {
-                    self.push_token(tok!(TokenKind::Number(n), start_pos, self.pos));
+                    self.push_token(tok!(
+                        &self.source_id,
+                        TokenKind::Number(n),
+                        start_pos,
+                        self.pos
+                    ));
                     Ok(())
                 }
                 Err(err) => Err(LexError::invalid_number(
@@ -240,65 +278,125 @@ impl Lexer {
                 ch if ch.eq(&b'-') => self.parse_minus_equal(),
                 ch if ch.eq(&b'*') => {
                     self.next();
-                    self.push_token(tok!(TokenKind::Multiply, start_pos, self.pos));
+                    self.push_token(tok!(
+                        &self.source_id,
+                        TokenKind::Multiply,
+                        start_pos,
+                        self.pos
+                    ));
                 }
                 ch if ch.eq(&b'/') => {
                     self.next();
-                    self.push_token(tok!(TokenKind::Divide, start_pos, self.pos));
+                    self.push_token(tok!(
+                        &self.source_id,
+                        TokenKind::Divide,
+                        start_pos,
+                        self.pos
+                    ));
                 }
                 ch if ch.eq(&b'=') => {
                     self.next();
                     if self.peek_and_check(b'=') {
                         self.next();
 
-                        self.push_token(tok!(TokenKind::EqualEqual, start_pos, self.pos));
+                        self.push_token(tok!(
+                            &self.source_id,
+                            TokenKind::EqualEqual,
+                            start_pos,
+                            self.pos
+                        ));
                     } else {
-                        self.push_token(tok!(TokenKind::Assign, start_pos, self.pos));
+                        self.push_token(tok!(
+                            &self.source_id,
+                            TokenKind::Assign,
+                            start_pos,
+                            self.pos
+                        ));
                     }
                 }
                 ch if ch.eq(&b'!') => {
                     self.move_next();
                     if self.peek_and_check(b'=') {
                         self.next();
-                        self.push_token(tok!(TokenKind::BangEqual, start_pos, self.pos));
+                        self.push_token(tok!(
+                            &self.source_id,
+                            TokenKind::BangEqual,
+                            start_pos,
+                            self.pos
+                        ));
                     } else {
-                        self.push_token(tok!(TokenKind::Bang, start_pos, self.pos));
+                        self.push_token(tok!(
+                            &self.source_id,
+                            TokenKind::Bang,
+                            start_pos,
+                            self.pos
+                        ));
                     }
                 }
                 ch if ch.eq(&b'|') => {
                     self.move_next();
                     if self.peek_and_check(b'|') {
                         self.next();
-                        self.push_token(tok!(TokenKind::Or, start_pos, self.pos));
+                        self.push_token(tok!(&self.source_id, TokenKind::Or, start_pos, self.pos));
                     } else {
-                        self.push_token(tok!(TokenKind::BooleanOr, start_pos, self.pos));
+                        self.push_token(tok!(
+                            &self.source_id,
+                            TokenKind::BooleanOr,
+                            start_pos,
+                            self.pos
+                        ));
                     }
                 }
                 ch if ch.eq(&b'&') => {
                     self.move_next();
                     if self.peek_and_check(b'&') {
                         self.next();
-                        self.push_token(tok!(TokenKind::And, start_pos, self.pos));
+                        self.push_token(tok!(&self.source_id, TokenKind::And, start_pos, self.pos));
                     } else {
-                        self.push_token(tok!(TokenKind::BoleanAnd, start_pos, self.pos));
+                        self.push_token(tok!(
+                            &self.source_id,
+                            TokenKind::BoleanAnd,
+                            start_pos,
+                            self.pos
+                        ));
                     }
                 }
                 ch if ch.eq(&b'>') => {
                     self.move_next();
                     if self.peek_and_check(b'=') {
                         self.next();
-                        self.push_token(tok!(TokenKind::GreaterEqual, start_pos, self.pos));
+                        self.push_token(tok!(
+                            &self.source_id,
+                            TokenKind::GreaterEqual,
+                            start_pos,
+                            self.pos
+                        ));
                     } else {
-                        self.push_token(tok!(TokenKind::Greater, start_pos, self.pos));
+                        self.push_token(tok!(
+                            &self.source_id,
+                            TokenKind::Greater,
+                            start_pos,
+                            self.pos
+                        ));
                     }
                 }
                 ch if ch.eq(&b'<') => {
                     self.move_next();
                     if self.peek_and_check(b'=') {
                         self.next();
-                        self.push_token(tok!(TokenKind::LessEqual, start_pos, self.pos));
+                        self.push_token(tok!(
+                            &self.source_id,
+                            TokenKind::LessEqual,
+                            start_pos,
+                            self.pos
+                        ));
                     } else {
-                        self.push_token(tok!(TokenKind::Less, start_pos, self.pos));
+                        self.push_token(tok!(
+                            &self.source_id,
+                            TokenKind::Less,
+                            start_pos,
+                            self.pos
+                        ));
                     }
                 }
                 _ => {}
@@ -312,52 +410,102 @@ impl Lexer {
             match c {
                 c if c.eq(&b'(') => {
                     self.next();
-                    self.push_token(tok!(TokenKind::LeftParen, start_pos, self.pos));
+                    self.push_token(tok!(
+                        &self.source_id,
+                        TokenKind::LeftParen,
+                        start_pos,
+                        self.pos
+                    ));
                 }
                 c if c.eq(&b')') => {
                     self.next();
-                    self.push_token(tok!(TokenKind::RightParen, start_pos, self.pos));
+                    self.push_token(tok!(
+                        &self.source_id,
+                        TokenKind::RightParen,
+                        start_pos,
+                        self.pos
+                    ));
                 }
                 c if c.eq(&b'{') => {
                     self.next();
-                    self.push_token(tok!(TokenKind::LeftBrace, start_pos, self.pos));
+                    self.push_token(tok!(
+                        &self.source_id,
+                        TokenKind::LeftBrace,
+                        start_pos,
+                        self.pos
+                    ));
                 }
                 c if c.eq(&b'}') => {
                     self.next();
-                    self.push_token(tok!(TokenKind::RightBrace, start_pos, self.pos));
+                    self.push_token(tok!(
+                        &self.source_id,
+                        TokenKind::RightBrace,
+                        start_pos,
+                        self.pos
+                    ));
                 }
                 c if c.eq(&b'[') => {
                     self.next();
-                    self.push_token(tok!(TokenKind::LeftBracket, start_pos, self.pos));
+                    self.push_token(tok!(
+                        &self.source_id,
+                        TokenKind::LeftBracket,
+                        start_pos,
+                        self.pos
+                    ));
                 }
                 c if c.eq(&b']') => {
                     self.next();
-                    self.push_token(tok!(TokenKind::RightBracket, start_pos, self.pos));
+                    self.push_token(tok!(
+                        &self.source_id,
+                        TokenKind::RightBracket,
+                        start_pos,
+                        self.pos
+                    ));
                 }
                 c if c.eq(&b',') => {
                     self.next();
-                    self.push_token(tok!(TokenKind::Comma, start_pos, self.pos));
+                    self.push_token(tok!(&self.source_id, TokenKind::Comma, start_pos, self.pos));
                 }
                 c if c.eq(&b'.') => {
                     self.next();
                     if self.peek_and_check(b'.') {
                         self.next();
-                        self.push_token(tok!(TokenKind::Range, start_pos, self.pos));
+                        self.push_token(tok!(
+                            &self.source_id,
+                            TokenKind::Range,
+                            start_pos,
+                            self.pos
+                        ));
                     } else {
-                        self.push_token(tok!(TokenKind::Dot, start_pos, self.pos));
+                        self.push_token(tok!(&self.source_id, TokenKind::Dot, start_pos, self.pos));
                     }
                 }
                 c if c.eq(&b';') => {
                     self.next();
-                    self.push_token(tok!(TokenKind::Semicolon, start_pos, self.pos));
+                    self.push_token(tok!(
+                        &self.source_id,
+                        TokenKind::Semicolon,
+                        start_pos,
+                        self.pos
+                    ));
                 }
                 c if c.eq(&b':') => {
                     self.next();
                     if self.peek_and_check(b':') {
                         self.next();
-                        self.push_token(tok!(TokenKind::DoubleColon, start_pos, self.pos));
+                        self.push_token(tok!(
+                            &self.source_id,
+                            TokenKind::DoubleColon,
+                            start_pos,
+                            self.pos
+                        ));
                     } else {
-                        self.push_token(tok!(TokenKind::Colon, start_pos, self.pos));
+                        self.push_token(tok!(
+                            &self.source_id,
+                            TokenKind::Colon,
+                            start_pos,
+                            self.pos
+                        ));
                     }
                 }
                 _ => {}

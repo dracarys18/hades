@@ -1,64 +1,65 @@
-use std::ops::Range;
+use std::{ops::Range, path::PathBuf};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Span {
-    start: usize,
-    end: usize,
+    range: std::ops::Range<usize>,
+    file: PathBuf,
 }
 
 impl Span {
-    pub fn new(start: usize, end: usize) -> Self {
-        Self { start, end }
+    pub fn new(filename: PathBuf, start: usize, end: usize) -> Self {
+        let path = PathBuf::from(filename);
+        let range = start..end;
+        Self { range, file: path }
     }
 
     pub fn start(&self) -> usize {
-        self.start
+        self.range.start
     }
 
     pub fn end(&self) -> usize {
-        self.end
+        self.range.end
     }
 
     pub fn into_range(&self) -> Range<usize> {
-        Range {
-            start: self.start,
-            end: self.end,
-        }
+        self.range.clone()
     }
 
     pub fn to(&self, other: Span) -> Span {
-        Span::new(self.start.min(other.start), self.end.max(other.end))
+        Span::new(
+            self.file.clone(),
+            self.start().min(other.start()),
+            self.end().max(other.end()),
+        )
     }
 
     pub fn shrink_to_lo(&self) -> Span {
-        Span::new(self.start, self.start)
+        Span::new(self.file.clone(), self.start(), self.start())
     }
 
     pub fn shrink_to_hi(&self) -> Span {
-        Span::new(self.end, self.end)
+        Span::new(self.file.clone(), self.end(), self.end())
     }
 
     pub fn contains(&self, pos: usize) -> bool {
-        self.start <= pos && pos < self.end
+        self.start() <= pos && pos < self.end()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.start == self.end
+        self.start() == self.end()
     }
 
     pub fn len(&self) -> usize {
-        self.end.saturating_sub(self.start)
+        self.end().saturating_sub(self.start())
+    }
+
+    pub fn file(&self) -> &PathBuf {
+        &self.file
     }
 }
 
 impl Default for Span {
     fn default() -> Self {
-        Self::new(0, 0)
-    }
-}
-
-impl From<Range<usize>> for Span {
-    fn from(range: Range<usize>) -> Self {
-        Span::new(range.start, range.end)
+        Self::new(PathBuf::from("dummyfile"), 0, 0)
     }
 }

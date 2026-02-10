@@ -93,10 +93,10 @@ impl Parser {
     }
 
     fn current_span(&self) -> Span {
-        *self
-            .peek()
+        self.peek()
             .expect("current_span called but no current token exists")
             .span()
+            .clone()
     }
 
     fn eof_span(&self) -> Span {
@@ -112,7 +112,7 @@ impl Parser {
             self.pos > 0,
             "prev_span called but no previous token exists"
         );
-        *self.tokens[self.pos - 1].span()
+        self.tokens[self.pos - 1].span().clone()
     }
 
     fn expect(&mut self, expected: &TokenKind) -> ParseResult<()> {
@@ -250,8 +250,8 @@ impl Parser {
             name,
             params,
             return_type,
-            body: Block::new(body.into(), span),
-            span,
+            body: Block::new(body.into(), span.clone()),
+            span: span,
         }))
     }
 
@@ -326,7 +326,10 @@ impl Parser {
         Ok(Stmt::Let(Let {
             name,
             declared_type: var_type,
-            value: ExprAst { expr: value, span },
+            value: ExprAst {
+                expr: value,
+                span: span.clone(),
+            },
             span,
         }))
     }
@@ -345,9 +348,12 @@ impl Parser {
         let span = start_tok.to(end);
 
         Ok(Stmt::If(If {
-            cond: ExprAst { expr: cond, span },
-            then_branch: Block::new(then_branch.into(), span),
-            else_branch: else_branch.map(|p| Block::new(p.into(), span)),
+            cond: ExprAst {
+                expr: cond,
+                span: span.clone(),
+            },
+            then_branch: Block::new(then_branch.into(), span.clone()),
+            else_branch: else_branch.map(|p| Block::new(p.into(), span.clone())),
             span,
         }))
     }
@@ -362,7 +368,7 @@ impl Parser {
 
         Ok(Stmt::While(While {
             cond,
-            body: Block::new(body.into(), span),
+            body: Block::new(body.into(), span.clone()),
             span,
         }))
     }
@@ -382,7 +388,7 @@ impl Parser {
             init: init.unwrap_let(),
             cond: cond.clone(),
             update: update.clone(),
-            body: Block::new(body.into(), span),
+            body: Block::new(body.into(), span.clone()),
             span,
         }))
     }
@@ -401,7 +407,10 @@ impl Parser {
         self.expect(&TokenKind::Semicolon)?;
         let end = self.prev_span();
         let span = start_tok.to(end);
-        let expr = expr.map(|e| ExprAst { expr: e, span });
+        let expr = expr.map(|e| ExprAst {
+            expr: e,
+            span: span.clone(),
+        });
 
         Ok(Stmt::Return(Return { expr, span }))
     }

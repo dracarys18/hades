@@ -13,13 +13,13 @@ impl WalkAst for ModuleDecl {
         if DISALLOWED_MODULE_NAMES.contains(&self.name.to_string().as_str()) {
             return Err(SemanticError::invalid_module_name(
                 self.name.clone(),
-                self.span,
+                self.span.clone(),
             ));
         }
 
         Ok(TypedModuleDecl {
             name: self.name.clone(),
-            span: self.span,
+            span: self.span.clone(),
         })
     }
 }

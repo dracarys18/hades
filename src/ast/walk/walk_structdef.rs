@@ -16,7 +16,7 @@ impl WalkAst for StructDef {
         Ok(TypedStructDef {
             name: name.clone(),
             fields: fields.clone(),
-            span: self.span,
+            span: self.span.clone(),
         })
     }
 }

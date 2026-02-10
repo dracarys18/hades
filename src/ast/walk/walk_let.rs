@@ -9,7 +9,7 @@ impl WalkAst for Let {
         ctx: &mut CompilerContext,
         _span: crate::error::Span,
     ) -> Result<Self::Output, SemanticError> {
-        let typed_value = self.value.walk(ctx, self.span)?;
+        let typed_value = self.value.walk(ctx, self.span.clone())?;
 
         let declared_type = self.declared_type.as_ref();
         let inferred_type = typed_value.get_type();

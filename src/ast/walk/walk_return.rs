@@ -11,7 +11,7 @@ impl WalkAst for Return {
         let expr = self.expr.as_ref();
         let span = self.span.clone();
         let typed_expr = match expr {
-            Some(e) => Some(e.walk(ctx, span)?),
+            Some(e) => Some(e.walk(ctx, span.clone())?),
             None => None,
         };
 

@@ -22,13 +22,13 @@ impl WalkAst for FuncDef {
             ctx.insert_variable(param_name.clone(), param_type.clone());
         }
 
-        let typed_body = self.body.walk(ctx, self.span)?;
+        let typed_body = self.body.walk(ctx, self.span.clone())?;
         ctx.exit_function();
         Ok(TypedFuncDef {
             name: self.name.clone(),
             signature: function_signature,
             body: typed_body,
-            span: self.span,
+            span: self.span.clone(),
         })
     }
 }

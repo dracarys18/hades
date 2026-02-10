@@ -26,7 +26,7 @@ impl WalkAst for ArrayLiteral {
         let typed_expr = self
             .elem
             .iter()
-            .map(|e| e.walk(ctx, span))
+            .map(|e| e.walk(ctx, span.clone()))
             .collect::<Result<Vec<_>, _>>()?;
 
         let expected_type = typed_expr

@@ -88,7 +88,7 @@ impl Functions {
         if self.inner.contains_key(&name) {
             return Err(SemanticError::redefined_function(
                 name.clone(),
-                *name.span(),
+                name.span().clone(),
             ));
         }
         self.inner.insert(name, sig);

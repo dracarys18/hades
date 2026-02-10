@@ -83,7 +83,7 @@ while IFS= read -r file; do
         if [ -n "$current_category" ]; then
             echo ""
         fi
-        category_display=$(echo "$category" | sed 's/.*/\u&/')
+        category_display=$(echo "$category" | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')
         echo -e "${YELLOW}${category_display}:${NC}"
         current_category="$category"
     fi

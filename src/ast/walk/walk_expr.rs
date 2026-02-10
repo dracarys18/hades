@@ -29,15 +29,15 @@ impl WalkAst for Expr {
                 })
             }
             Expr::StructInit { name, fields } => {
-                let struct_type = ctx.get_struct_type(name, span)?;
+                let struct_type = ctx.get_struct_type(name, span.clone())?;
                 let mut typed_fields = indexmap::IndexMap::new();
 
                 for (field_name, field_expr) in fields {
                     let expected_type = struct_type.get(field_name).ok_or_else(|| {
-                        SemanticError::unknown_field(name.clone(), field_name.clone(), span)
+                        SemanticError::unknown_field(name.clone(), field_name.clone(), span.clone())
                     })?;
 
-                    let typed_expr = field_expr.walk(ctx, span)?;
+                    let typed_expr = field_expr.walk(ctx, span.clone())?;
                     if typed_expr.get_type() != *expected_type {
                         return Err(SemanticError::type_mismatch(
                             expected_type.clone().to_string(),
@@ -56,8 +56,8 @@ impl WalkAst for Expr {
             }
             Expr::Binary(binary) => Ok(TypedExpr::Binary(binary.walk(ctx, span)?)),
             Expr::Unary { op, expr } => {
-                let typed_expr = expr.walk(ctx, span)?;
-                let result_type = ctx.infer_unary_type(op, &typed_expr.get_type(), span)?;
+                let typed_expr = expr.walk(ctx, span.clone())?;
+                let result_type = ctx.infer_unary_type(op, &typed_expr.get_type(), span.clone())?;
 
                 Ok(TypedExpr::Unary {
                     op: op.clone(),
@@ -99,7 +99,7 @@ impl WalkAst for Expr {
                 let mut typed_args = Vec::new();
 
                 for (i, arg) in args.iter().enumerate() {
-                    let typed_arg = arg.walk(ctx, span)?;
+                    let typed_arg = arg.walk(ctx, span.clone())?;
                     let expected_type = typed_arg.get_type();
 
                     let cond = params.type_match(i, &expected_type);
@@ -133,11 +133,11 @@ impl WalkAst for crate::ast::ExprAst {
         ctx: &mut CompilerContext,
         _span: crate::error::Span,
     ) -> Result<Self::Output, crate::error::SemanticError> {
-        let typed_expr = self.expr.walk(ctx, self.span)?;
+        let typed_expr = self.expr.walk(ctx, self.span.clone())?;
 
         Ok(TypedExprAst {
             expr: typed_expr,
-            span: self.span,
+            span: self.span.clone(),
         })
     }
 }
@@ -151,8 +151,8 @@ impl WalkAst for AssignExpr {
     ) -> Result<Self::Output, crate::error::SemanticError> {
         match self.target {
             AssignTarget::Ident(ref ident) => {
-                let var_type = ctx.get_variable_type(ident, span)?;
-                let typed_value = self.value.walk(ctx, span)?;
+                let var_type = ctx.get_variable_type(ident, span.clone())?;
+                let typed_value = self.value.walk(ctx, span.clone())?;
                 let result_type =
                     ctx.infer_binary_type(&var_type, &self.op, &typed_value.get_type(), span)?;
 
@@ -164,8 +164,8 @@ impl WalkAst for AssignExpr {
                 })
             }
             AssignTarget::FieldAccess(ref field) => {
-                let field = field.walk(ctx, span)?;
-                let value = self.value.walk(ctx, span)?;
+                let field = field.walk(ctx, span.clone())?;
+                let value = self.value.walk(ctx, span.clone())?;
                 let result_type =
                     ctx.infer_binary_type(&field.field_type, &self.op, &value.get_type(), span)?;
 
@@ -188,9 +188,9 @@ impl WalkAst for ArrayIndexExpr {
         ctx: &mut CompilerContext,
         span: crate::error::Span,
     ) -> Result<Self::Output, SemanticError> {
-        let typed_expr = self.expr.walk(ctx, span)?;
+        let typed_expr = self.expr.walk(ctx, span.clone())?;
         let expr_type = typed_expr.get_type();
-        let index = self.index.walk(ctx, span)?;
+        let index = self.index.walk(ctx, span.clone())?;
 
         if Types::Int != index.get_type() {
             return Err(SemanticError::type_mismatch(
@@ -215,8 +215,8 @@ impl WalkAst for BinaryExpr {
         ctx: &mut CompilerContext,
         span: crate::error::Span,
     ) -> Result<Self::Output, crate::error::SemanticError> {
-        let typed_left = self.left.walk(ctx, span)?;
-        let typed_right = self.right.walk(ctx, span)?;
+        let typed_left = self.left.walk(ctx, span.clone())?;
+        let typed_right = self.right.walk(ctx, span.clone())?;
         let result_type = ctx.infer_binary_type(
             &typed_left.get_type(),
             &self.op,
@@ -239,15 +239,19 @@ impl WalkAst for FieldAccessExpr {
         ctx: &mut CompilerContext,
         span: crate::error::Span,
     ) -> Result<Self::Output, SemanticError> {
-        let typed_expr = self.expr.walk(ctx, span)?;
+        let typed_expr = self.expr.walk(ctx, span.clone())?;
         let strc = typed_expr.get_type();
 
         match strc {
             Types::Struct(ref struct_name)
             | Types::Array(ArrayType::StructArray(_, ref struct_name)) => {
-                let field = ctx.get_struct_type(struct_name, span)?;
+                let field = ctx.get_struct_type(struct_name, span.clone())?;
                 let field_type = field.get(&self.field).ok_or_else(|| {
-                    SemanticError::unknown_field(struct_name.clone(), self.field.clone(), span)
+                    SemanticError::unknown_field(
+                        struct_name.clone(),
+                        self.field.clone(),
+                        span.clone(),
+                    )
                 })?;
 
                 Ok(TypedFieldAccess {

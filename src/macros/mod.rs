@@ -1,7 +1,7 @@
 #[macro_export]
 macro_rules! tok {
-    ($kind:expr, $start:expr, $end:expr) => {
-        Token::new($kind, Span::new($start, $end))
+    ($source:expr,$kind:expr, $start:expr, $end:expr) => {
+        Token::new($kind, Span::new(PathBuf::from($source), $start, $end))
     };
 
     ($kind:path, $arg:expr, $start:expr, $end:expr) => {

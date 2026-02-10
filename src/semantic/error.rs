@@ -139,13 +139,8 @@ impl SemanticError {
         }
     }
 
-    pub fn eprint(&self, source: &str, filename: &str) {
-        let err = Error::new_with_span(
-            self.message.clone(),
-            self.span.into_range(),
-            filename.to_string(),
-        );
-        err.eprint(source);
+    pub fn into_error(self) -> Error {
+        Error::new_with_span(self.message, self.span)
     }
 }
 

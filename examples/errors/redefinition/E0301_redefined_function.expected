@@ -1,5 +1,5 @@
 [31mError:[0m Function foo is already defined
-   [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0mexamples/errors/redefinition/E0301_redefined_function.hd:5:4[38;5;246m][0m
+   [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m examples/errors/redefinition/E0301_redefined_function.hd:5:4 [38;5;246m][0m
    [38;5;246m│[0m
  [38;5;246m5 │[0m [38;5;249mf[0m[38;5;249mn[0m[38;5;249m [0m[31mf[0m[31mo[0m[31mo[0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249mi[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249m{[0m
  [38;5;240m  │[0m    [31m─[0m[31m┬[0m[31m─[0m  

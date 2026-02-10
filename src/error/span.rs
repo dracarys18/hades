@@ -1,3 +1,4 @@
+use ariadne::Span as AriadneSpan;
 use std::{ops::Range, path::PathBuf};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -61,5 +62,20 @@ impl Span {
 impl Default for Span {
     fn default() -> Self {
         Self::new(PathBuf::from("dummyfile"), 0, 0)
+    }
+}
+
+impl AriadneSpan for Span {
+    type SourceId = PathBuf;
+    fn source(&self) -> &Self::SourceId {
+        self.file()
+    }
+
+    fn start(&self) -> usize {
+        self.start()
+    }
+
+    fn end(&self) -> usize {
+        self.end()
     }
 }

@@ -4,12 +4,15 @@ use crate::semantic::analyzer::{Analyzer, Unprepared};
 use crate::{consts, lexer, parser};
 use ariadne::{Cache, Source};
 use inkwell::context::Context;
-use std::collections::HashMap;
-use std::path::Path;
+use std::path::PathBuf;
+use std::{
+    collections::{HashMap, hash_map::Entry},
+    fmt, fs,
+    path::Path,
+};
 
-/// A simple cache that loads files from disk on-demand
 struct FileSourceCache {
-    sources: HashMap<String, Source<String>>,
+    sources: HashMap<PathBuf, Source<String>>,
 }
 
 impl FileSourceCache {
@@ -20,21 +23,17 @@ impl FileSourceCache {
     }
 }
 
-impl Cache<String> for FileSourceCache {
+impl Cache<PathBuf> for FileSourceCache {
     type Storage = String;
 
-    fn fetch(&mut self, id: &String) -> Result<&Source<String>, Box<dyn std::fmt::Debug + '_>> {
-        if !self.sources.contains_key(id) {
-            // Try to load the file from disk
-            let content =
-                std::fs::read_to_string(id).map_err(|e| Box::new(e) as Box<dyn std::fmt::Debug>)?;
-            self.sources.insert(id.clone(), Source::from(content));
-        }
-        Ok(self.sources.get(id).unwrap())
+    fn fetch(&mut self, path: &PathBuf) -> Result<&Source, impl fmt::Debug> {
+        Ok::<_, std::io::Error>(match self.sources.entry(path.clone()) {
+            Entry::Occupied(entry) => entry.into_mut(),
+            Entry::Vacant(entry) => entry.insert(Source::from(fs::read_to_string(path)?)),
+        })
     }
-
-    fn display<'a>(&self, id: &'a String) -> Option<Box<dyn std::fmt::Display + 'a>> {
-        Some(Box::new(id.as_str()))
+    fn display<'a>(&self, id: &'a PathBuf) -> Option<Box<dyn std::fmt::Display + 'a>> {
+        Some(Box::new(id.display()))
     }
 }
 
@@ -49,11 +48,10 @@ impl<'a> Compiler {
         std::fs::create_dir_all(consts::BUILD_PATH).expect("Failed to create build directory");
     }
 
-    /// Parse a single source file and return the AST
     fn parse_single_file(
         source: &str,
         filename: &str,
-        cache: &mut impl Cache<String>,
+        cache: impl Cache<PathBuf>,
     ) -> Option<Program> {
         let source_trimmed = source.trim();
 
@@ -76,7 +74,6 @@ impl<'a> Compiler {
         }
     }
 
-    /// Load a program from a directory/file path
     fn load_program(
         entry_path: impl AsRef<Path>,
         cache: &mut impl Cache<String>,
@@ -90,7 +87,6 @@ impl<'a> Compiler {
         }
     }
 
-    /// Perform semantic analysis on a program
     fn analyze_program(
         program: &Program,
         cache: &mut impl Cache<String>,
@@ -114,14 +110,14 @@ impl<'a> Compiler {
 
     pub fn check(&self, source: &'a str, filename: &'a str) {
         let source_trimmed = source.trim();
-        let mut cache = ariadne::sources(vec![(filename.to_string(), source_trimmed)]);
+        let mut cache = ariadne::sources(vec![(PathBuf::from(filename), source_trimmed)]);
 
-        let program = match Self::parse_single_file(source, filename, &mut cache) {
+        let program = match Self::parse_single_file(source, filename, cache) {
             Some(p) => p,
             None => return,
         };
 
-        Self::analyze_program(&program, &mut cache);
+        Self::analyze_program(&program, cache);
     }
 
     pub fn compile(&self, entry_path: impl AsRef<Path>, output_path: impl AsRef<Path>) -> bool {

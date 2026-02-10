@@ -4,7 +4,7 @@ pub use crate::semantic::error::SemanticError;
 pub use span::*;
 
 use ariadne::{Cache, Label, Report, ReportKind};
-use std::ops::Range;
+use std::{ops::Range, path::PathBuf};
 
 #[derive(Debug, Clone)]
 pub struct Error {
@@ -52,31 +52,29 @@ impl Error {
         self
     }
 
-    pub fn eprint(&self, cache: &mut impl Cache<String>) {
+    pub fn eprint(&self, cache: impl Cache<PathBuf>) {
         let report = self.to_report();
         report.eprint(cache).expect("Failed to print error report");
     }
 
-    pub fn to_report(&self) -> Report<'static, (String, Range<usize>)> {
+    pub fn to_report(&self) -> Report<'static, Span> {
         let report_kind = match self.severity {
             ErrorSeverity::Error => ReportKind::Error,
             ErrorSeverity::Warning => ReportKind::Warning,
         };
 
-        let span = &self.span;
+        let span = self.span.clone();
         let span_range = span.into_range();
         let file_str = self.span.file().to_str().unwrap_or("unknown").to_string();
 
-        let mut report = Report::build(report_kind, file_str.clone(), span_range.start)
+        let mut report = Report::build(report_kind, span)
             .with_message(&self.message)
-            .with_label(
-                Label::new((file_str, span_range.clone()))
-                    .with_message(&self.message)
-                    .with_color(match self.severity {
-                        ErrorSeverity::Error => ariadne::Color::Red,
-                        ErrorSeverity::Warning => ariadne::Color::Yellow,
-                    }),
-            );
+            .with_label(Label::new(span).with_message(&self.message).with_color(
+                match self.severity {
+                    ErrorSeverity::Error => ariadne::Color::Red,
+                    ErrorSeverity::Warning => ariadne::Color::Yellow,
+                },
+            ));
 
         if let Some(help) = &self.help {
             report = report.with_help(help);

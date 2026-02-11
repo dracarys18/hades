@@ -1,0 +1,11 @@
+fn early_return():int {
+    while(true) {
+        return 7;
+    }
+    return 0;
+}
+
+fn main(): int {
+    let f = early_return();
+    printf("%d", f);
+}

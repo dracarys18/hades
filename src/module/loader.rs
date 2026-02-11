@@ -4,7 +4,7 @@ use crate::module::error::ModuleError;
 use crate::module::path::ModulePath;
 use crate::module::resolver::Resolver;
 use crate::parser::Parser;
-use crate::stdlib::BundledStdlib;
+use crate::stdlib::Library;
 use std::path::PathBuf;
 
 pub struct Module {
@@ -14,14 +14,14 @@ pub struct Module {
 
 pub struct Loader {
     resolver: Resolver,
-    stdlib: BundledStdlib,
+    lib: Library,
 }
 
 impl Loader {
     pub fn new(resolver: Resolver) -> Self {
         Self {
             resolver,
-            stdlib: BundledStdlib::new(),
+            lib: Library::new(),
         }
     }
 
@@ -47,7 +47,7 @@ impl Loader {
         name: &String,
         module_path: &ModulePath,
     ) -> Result<Module, ModuleError> {
-        if let Some(source) = self.stdlib.get_module(name) {
+        if let Some(source) = self.lib.get_module(name) {
             return self.parse_source(source, module_path, format!("std::{}", name));
         } else {
             return Err(ModuleError::NotFound(format!(

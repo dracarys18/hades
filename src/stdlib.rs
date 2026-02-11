@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-pub struct BundledStdlib {
+pub struct Library {
     modules: HashMap<String, &'static str>,
 }
 
-impl BundledStdlib {
+impl Library {
     pub fn new() -> Self {
         let mut modules = HashMap::new();
         modules.insert("math".to_string(), include_str!("../std/math.hd"));
@@ -20,7 +20,7 @@ impl BundledStdlib {
     }
 }
 
-impl Default for BundledStdlib {
+impl Default for Library {
     fn default() -> Self {
         Self::new()
     }

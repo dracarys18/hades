@@ -110,14 +110,16 @@ jobs:
 
   build-macos:
     name: Build macOS
-    runs-on: macos-latest
     strategy:
       matrix:
         include:
           - target: x86_64-apple-darwin
             arch: x86_64
+            runner: macos-13  # Intel runner
           - target: aarch64-apple-darwin
             arch: aarch64
+            runner: macos-latest  # Apple Silicon runner
+    runs-on: ${{ matrix.runner }}
     
     steps:
       - name: Checkout code
@@ -130,25 +132,24 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
-          target: ${{ matrix.target }}
 
       - name: Build
         env:
           LLVM_SYS_180_PREFIX: ${{ matrix.arch == 'x86_64' && '/usr/local/opt/llvm@18' || '/opt/homebrew/opt/llvm@18' }}
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.arch == 'x86_64' && '10.12' || '11.0' }}
-        run: cargo build --release --target ${{ matrix.target }} --verbose
+        run: cargo build --release --verbose
         
       - name: Verify binary
         run: |
-          otool -L target/${{ matrix.target }}/release/hades || true
-          file target/${{ matrix.target }}/release/hades
-          ./target/${{ matrix.target }}/release/hades --version
+          otool -L target/release/hades || true
+          file target/release/hades
+          ./target/release/hades --version
 
       - name: Package
         run: |
-          cd target/${{ matrix.target }}/release
-          tar czf ../../../hades-${{ matrix.arch }}-macos.tar.gz hades
-          cd ../../..
+          cd target/release
+          tar czf ../../hades-${{ matrix.arch }}-macos.tar.gz hades
+          cd ../..
           shasum -a 256 hades-${{ matrix.arch }}-macos.tar.gz > hades-${{ matrix.arch }}-macos.tar.gz.sha256
 
       - name: Upload artifacts

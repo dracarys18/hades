@@ -84,13 +84,14 @@ jobs:
         run: |
           choco install llvm --allow-downgrade --force -y
           
-      - name: Find and set LLVM path
+      - name: Verify LLVM installation
         shell: pwsh
         run: |
           $llvmPath = "C:\Program Files\LLVM"
           if (Test-Path $llvmPath) {
             echo "LLVM found at $llvmPath"
             echo "LLVM_SYS_180_PREFIX=$llvmPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            Get-ChildItem $llvmPath
           } else {
             echo "ERROR: LLVM not found at $llvmPath"
             exit 1
@@ -102,6 +103,8 @@ jobs:
           toolchain: stable
 
       - name: Build
+        env:
+          LLVM_SYS_180_PREFIX: C:\Program Files\LLVM
         run: cargo build --release --verbose
         
       - name: Verify binary

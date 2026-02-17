@@ -179,8 +179,9 @@ jobs:
           echo "LLVM extracted to: $($llvmDir.FullName)"
           echo "LLVM_ROOT=$($llvmDir.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           
-          echo "Installing libxml2 dependency..."
-          choco install libxml2 -y
+          # Check for libxml2 in LLVM lib directory
+          echo "Checking for libxml2 in LLVM lib directory..."
+          Get-ChildItem "$($llvmDir.FullName)\lib" -Filter "*xml*" | Select-Object Name
           
       - name: Verify and configure LLVM
         shell: pwsh
@@ -194,6 +195,8 @@ jobs:
             if (Test-Path $llvmConfig) {
               echo "Found llvm-config at: $llvmConfig"
               & $llvmConfig --version
+              echo "System libs required:"
+              & $llvmConfig --system-libs
             } else {
               echo "ERROR: llvm-config not found at $llvmConfig"
               echo "Contents of bin directory:"
@@ -204,6 +207,10 @@ jobs:
             # Add LLVM bin to PATH
             $env:PATH = "$llvmPath\bin;$env:PATH"
             echo "PATH=$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            
+            # Add LLVM lib to LIB path for linker
+            $env:LIB = "$llvmPath\lib;$env:LIB"
+            echo "LIB=$env:LIB" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
             
             # Set LLVM_SYS_180_PREFIX
             echo "LLVM_SYS_180_PREFIX=$llvmPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append

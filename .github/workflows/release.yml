@@ -205,17 +205,8 @@ jobs:
             hades-x86_64-windows.zip.sha256
 
   build-macos:
-    name: Build macOS
-    strategy:
-      matrix:
-        include:
-          - target: x86_64-apple-darwin
-            arch: x86_64
-            runner: macos-12  # Intel runner
-          - target: aarch64-apple-darwin
-            arch: aarch64
-            runner: macos-latest  # Apple Silicon runner
-    runs-on: ${{ matrix.runner }}
+    name: Build macOS (Apple Silicon)
+    runs-on: macos-latest
     
     steps:
       - name: Checkout code
@@ -232,10 +223,10 @@ jobs:
 
       - name: Build
         env:
-          LLVM_CONFIG: ${{ matrix.arch == 'x86_64' && '/usr/local/opt/llvm@18/bin/llvm-config' || '/opt/homebrew/opt/llvm@18/bin/llvm-config' }}
-          LLVM_SYS_180_PREFIX: ${{ matrix.arch == 'x86_64' && '/usr/local/opt/llvm@18' || '/opt/homebrew/opt/llvm@18' }}
-          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.arch == 'x86_64' && '10.12' || '11.0' }}
-          RUSTFLAGS: -C link-arg=-L${{ matrix.arch == 'x86_64' && '/usr/local/lib' || '/opt/homebrew/lib' }} -C link-arg=-lc++ -C link-arg=/opt/homebrew/lib/libzstd.a
+          LLVM_CONFIG: /opt/homebrew/opt/llvm@18/bin/llvm-config
+          LLVM_SYS_180_PREFIX: /opt/homebrew/opt/llvm@18
+          MACOSX_DEPLOYMENT_TARGET: '11.0'
+          RUSTFLAGS: -C link-arg=-L/opt/homebrew/lib -C link-arg=-lc++ -C link-arg=/opt/homebrew/lib/libzstd.a
         run: cargo build --release --verbose
         
       - name: Verify binary
@@ -302,14 +293,14 @@ jobs:
           
           # Create README
           cat > hades-bundle/README.md << 'EOF'
-          # Hades Compiler (macOS ${{ matrix.arch }})
+          # Hades Compiler (macOS Apple Silicon)
           
           ## Installation
           
           Extract and run the install script:
           
           ```bash
-          tar xzf hades-${{ matrix.arch }}-macos.tar.gz
+          tar xzf hades-aarch64-macos.tar.gz
           cd hades-bundle
           ./install.sh
           ```
@@ -342,16 +333,16 @@ jobs:
 
       - name: Package
         run: |
-          tar czf hades-${{ matrix.arch }}-macos.tar.gz hades-bundle/
-          shasum -a 256 hades-${{ matrix.arch }}-macos.tar.gz > hades-${{ matrix.arch }}-macos.tar.gz.sha256
+          tar czf hades-aarch64-macos.tar.gz hades-bundle/
+          shasum -a 256 hades-aarch64-macos.tar.gz > hades-aarch64-macos.tar.gz.sha256
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: macos-${{ matrix.arch }}-binary
+          name: macos-binary
           path: |
-            hades-${{ matrix.arch }}-macos.tar.gz
-            hades-${{ matrix.arch }}-macos.tar.gz.sha256
+            hades-aarch64-macos.tar.gz
+            hades-aarch64-macos.tar.gz.sha256
 
   create-release:
     name: Create GitHub Release
@@ -373,8 +364,7 @@ jobs:
           files: |
             artifacts/linux-binary/*
             artifacts/windows-binary/*
-            artifacts/macos-x86_64-binary/*
-            artifacts/macos-aarch64-binary/*
+            artifacts/macos-binary/*
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}

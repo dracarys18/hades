@@ -34,11 +34,6 @@ rustflags = [
     "-C", "link-arg=-static-libstdc++",
 ]
 
-[target.x86_64-apple-darwin]
-rustflags = [
-    "-C", "link-arg=-mmacosx-version-min=10.12",
-]
-
 [target.aarch64-apple-darwin]
 rustflags = [
     "-C", "link-arg=-mmacosx-version-min=11.0",

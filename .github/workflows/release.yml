@@ -161,16 +161,31 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install LLVM
+        shell: pwsh
         run: |
-          choco install llvm --version=18.1.8 --allow-downgrade --force -y
+          $llvmUrl = "https://github.com/llvm/llvm-project/releases/download/llvmorg-18.1.8/LLVM-18.1.8-win64.exe"
+          $llvmArchive = "https://github.com/llvm/llvm-project/releases/download/llvmorg-18.1.8/clang+llvm-18.1.8-x86_64-pc-windows-msvc.tar.xz"
+          
+          echo "Downloading LLVM development archive..."
+          Invoke-WebRequest -Uri $llvmArchive -OutFile llvm.tar.xz
+          
+          echo "Installing 7-Zip to extract archive..."
+          choco install 7zip -y
+          
+          echo "Extracting LLVM..."
+          & "C:\Program Files\7-Zip\7z.exe" x llvm.tar.xz -so | & "C:\Program Files\7-Zip\7z.exe" x -si -ttar -o"C:\"
+          
+          # Find the extracted directory
+          $llvmDir = Get-ChildItem -Path "C:\" -Directory | Where-Object { $_.Name -like "clang+llvm-18*" } | Select-Object -First 1
+          echo "LLVM extracted to: $($llvmDir.FullName)"
+          echo "LLVM_ROOT=$($llvmDir.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           
       - name: Verify and configure LLVM
         shell: pwsh
         run: |
-          $llvmPath = "C:\Program Files\LLVM"
+          $llvmPath = $env:LLVM_ROOT
           if (Test-Path $llvmPath) {
-            echo "LLVM installation contents:"
-            Get-ChildItem -Path $llvmPath -Recurse -Depth 1
+            echo "LLVM installation at: $llvmPath"
             
             # Check for llvm-config
             $llvmConfig = "$llvmPath\bin\llvm-config.exe"
@@ -178,7 +193,10 @@ jobs:
               echo "Found llvm-config at: $llvmConfig"
               & $llvmConfig --version
             } else {
-              echo "WARNING: llvm-config not found at $llvmConfig"
+              echo "ERROR: llvm-config not found at $llvmConfig"
+              echo "Contents of bin directory:"
+              Get-ChildItem "$llvmPath\bin" | Select-Object -First 20
+              exit 1
             }
             
             # Add LLVM bin to PATH
@@ -188,8 +206,7 @@ jobs:
             # Set LLVM_SYS_180_PREFIX
             echo "LLVM_SYS_180_PREFIX=$llvmPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           } else {
-            echo "ERROR: LLVM not found at $llvmPath"
-            Get-ChildItem "C:\Program Files" | Where-Object { $_.Name -like "*llvm*" }
+            echo "ERROR: LLVM directory not found"
             exit 1
           }
         

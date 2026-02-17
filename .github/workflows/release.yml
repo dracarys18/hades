@@ -123,7 +123,7 @@ jobs:
         include:
           - target: x86_64-apple-darwin
             arch: x86_64
-            runner: macos-13  # Intel runner
+            runner: macos-12  # Intel runner
           - target: aarch64-apple-darwin
             arch: aarch64
             runner: macos-latest  # Apple Silicon runner

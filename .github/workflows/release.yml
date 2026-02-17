@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*.*.*'  # Triggers on version tags like v0.1.0, v1.2.3
+  workflow_dispatch:  # Manual trigger from GitHub Actions UI
 
 permissions:
   contents: write
@@ -73,7 +74,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install LLVM
-        run: choco install llvm --version=18.1.8 -y
+        run: |
+          choco install llvm --allow-downgrade --force -y
+          refreshenv
         
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1

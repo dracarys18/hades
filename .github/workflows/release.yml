@@ -243,11 +243,106 @@ jobs:
           otool -L target/release/hades || true
           file target/release/hades
 
+      - name: Bundle libraries
+        run: |
+          mkdir -p hades-bundle/lib
+          cp target/release/hades hades-bundle/
+          
+          # Copy Homebrew libraries (LLVM, zstd, etc.)
+          otool -L target/release/hades | grep -E '(homebrew|local)' | awk '{print $1}' | while read lib; do
+            if [ -f "$lib" ]; then
+              cp "$lib" hades-bundle/lib/
+            fi
+          done
+          
+          # Create install script
+          cat > hades-bundle/install.sh << 'EOF'
+          #!/bin/bash
+          set -e
+          
+          INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
+          LIB_DIR="${LIB_DIR:-$HOME/.local/lib/hades}"
+          
+          echo "Installing Hades compiler..."
+          echo "Binary will be installed to: $INSTALL_DIR"
+          echo "Libraries will be installed to: $LIB_DIR"
+          
+          # Create directories
+          mkdir -p "$INSTALL_DIR"
+          mkdir -p "$LIB_DIR"
+          
+          # Get script directory
+          SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+          
+          # Copy binary and libraries
+          cp "$SCRIPT_DIR/hades" "$INSTALL_DIR/hades-bin"
+          if [ -d "$SCRIPT_DIR/lib" ] && [ "$(ls -A $SCRIPT_DIR/lib)" ]; then
+            cp "$SCRIPT_DIR"/lib/* "$LIB_DIR/" 2>/dev/null || true
+          fi
+          
+          # Create wrapper script
+          cat > "$INSTALL_DIR/hades" << 'WRAPPER'
+          #!/bin/bash
+          export DYLD_LIBRARY_PATH="$HOME/.local/lib/hades:$DYLD_LIBRARY_PATH"
+          exec "$HOME/.local/bin/hades-bin" "$@"
+          WRAPPER
+          chmod +x "$INSTALL_DIR/hades"
+          
+          echo ""
+          echo "Installation complete!"
+          echo ""
+          echo "Add to your PATH by adding this line to ~/.zshrc or ~/.bash_profile:"
+          echo '  export PATH="$HOME/.local/bin:$PATH"'
+          echo ""
+          echo "Then run: source ~/.zshrc (or source ~/.bash_profile)"
+          echo ""
+          echo "Verify installation with: hades --version"
+          EOF
+          chmod +x hades-bundle/install.sh
+          
+          # Create README
+          cat > hades-bundle/README.md << 'EOF'
+          # Hades Compiler (macOS ${{ matrix.arch }})
+          
+          ## Installation
+          
+          Extract and run the install script:
+          
+          ```bash
+          tar xzf hades-${{ matrix.arch }}-macos.tar.gz
+          cd hades-bundle
+          ./install.sh
+          ```
+          
+          This will install hades to `~/.local/bin` by default.
+          
+          ### Custom installation directory
+          
+          ```bash
+          INSTALL_DIR=/usr/local/bin LIB_DIR=/usr/local/lib/hades sudo -E ./install.sh
+          ```
+          
+          ### Manual installation
+          
+          If you prefer not to use the install script, you can run the binary directly with:
+          
+          ```bash
+          export DYLD_LIBRARY_PATH="$(pwd)/lib:$DYLD_LIBRARY_PATH"
+          ./hades --version
+          ```
+          
+          ### Requirements
+          
+          This build may require Homebrew libraries. If you encounter issues, install:
+          
+          ```bash
+          brew install llvm@18 zstd
+          ```
+          EOF
+
       - name: Package
         run: |
-          cd target/release
-          tar czf ../../hades-${{ matrix.arch }}-macos.tar.gz hades
-          cd ../..
+          tar czf hades-${{ matrix.arch }}-macos.tar.gz hades-bundle/
           shasum -a 256 hades-${{ matrix.arch }}-macos.tar.gz > hades-${{ matrix.arch }}-macos.tar.gz.sha256
 
       - name: Upload artifacts

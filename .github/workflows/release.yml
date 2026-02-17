@@ -64,14 +64,48 @@ jobs:
             fi
           done
           
-          # Create wrapper script
-          cat > hades-bundle/hades-wrapper.sh << 'EOF'
+          # Create install script
+          cat > hades-bundle/install.sh << 'EOF'
           #!/bin/bash
+          set -e
+          
+          INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
+          LIB_DIR="${LIB_DIR:-$HOME/.local/lib/hades}"
+          
+          echo "Installing Hades compiler..."
+          echo "Binary will be installed to: $INSTALL_DIR"
+          echo "Libraries will be installed to: $LIB_DIR"
+          
+          # Create directories
+          mkdir -p "$INSTALL_DIR"
+          mkdir -p "$LIB_DIR"
+          
+          # Get script directory
           SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-          export LD_LIBRARY_PATH="$SCRIPT_DIR/lib:$LD_LIBRARY_PATH"
-          exec "$SCRIPT_DIR/hades" "$@"
+          
+          # Copy binary and libraries
+          cp "$SCRIPT_DIR/hades" "$INSTALL_DIR/hades-bin"
+          cp "$SCRIPT_DIR"/lib/* "$LIB_DIR/"
+          
+          # Create wrapper script
+          cat > "$INSTALL_DIR/hades" << 'WRAPPER'
+          #!/bin/bash
+          export LD_LIBRARY_PATH="$HOME/.local/lib/hades:$LD_LIBRARY_PATH"
+          exec "$HOME/.local/bin/hades-bin" "$@"
+          WRAPPER
+          chmod +x "$INSTALL_DIR/hades"
+          
+          echo ""
+          echo "Installation complete!"
+          echo ""
+          echo "Add to your PATH by adding this line to ~/.bashrc or ~/.zshrc:"
+          echo '  export PATH="$HOME/.local/bin:$PATH"'
+          echo ""
+          echo "Then run: source ~/.bashrc (or source ~/.zshrc)"
+          echo ""
+          echo "Verify installation with: hades --version"
           EOF
-          chmod +x hades-bundle/hades-wrapper.sh
+          chmod +x hades-bundle/install.sh
           
           # Create README
           cat > hades-bundle/README.md << 'EOF'
@@ -79,20 +113,30 @@ jobs:
           
           ## Installation
           
-          Extract this archive and use the `hades-wrapper.sh` script to run the compiler:
+          Extract and run the install script:
           
           ```bash
-          ./hades-wrapper.sh --version
+          tar xzf hades-x86_64-linux.tar.gz
+          cd hades-bundle
+          ./install.sh
           ```
           
-          Or add to PATH:
+          This will install hades to `~/.local/bin` by default.
+          
+          ### Custom installation directory
           
           ```bash
-          export PATH="/path/to/hades-bundle:$PATH"
-          alias hades="/path/to/hades-bundle/hades-wrapper.sh"
+          INSTALL_DIR=/usr/local/bin LIB_DIR=/usr/local/lib/hades sudo -E ./install.sh
           ```
           
-          The wrapper script sets up the required LLVM library paths automatically.
+          ### Manual installation
+          
+          If you prefer not to use the install script, you can run the binary directly with:
+          
+          ```bash
+          export LD_LIBRARY_PATH="$(pwd)/lib:$LD_LIBRARY_PATH"
+          ./hades --version
+          ```
           EOF
 
       - name: Package

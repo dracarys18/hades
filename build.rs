@@ -1,8 +1,18 @@
 use std::env;
+use std::env;
 use std::process::Command;
 
 fn main() {
-    // Allow disabling static linking for development
+    // Only do static linking for release builds or when explicitly requested
+    let profile = env::var("PROFILE").unwrap_or_default();
+    let force_static = env::var("HADES_STATIC_LLVM").is_ok();
+
+    if profile != "release" && !force_static {
+        // Skip static linking for dev/test builds
+        return;
+    }
+
+    // Allow disabling static linking even in release mode
     if env::var("HADES_DYNAMIC_LLVM").is_ok() {
         println!("cargo:warning=Using dynamic LLVM linking (development mode)");
         return;

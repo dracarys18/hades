@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand};
 
 #[derive(Debug, Parser)]
 #[command(name = "hades")]
+#[command(version = env!("CARGO_PKG_VERSION"))]
 #[command(
     about = "A toy systems programming language",
     long_about = "Hades aims to be a fast systems programming language which gives you freedom to do whatever you want with enough checks to keep you safe."

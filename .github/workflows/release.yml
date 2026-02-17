@@ -162,18 +162,30 @@ jobs:
 
       - name: Install LLVM
         run: |
-          choco install llvm --allow-downgrade --force -y
+          choco install llvm --version=18.1.8 --allow-downgrade --force -y
           
       - name: Verify LLVM installation
         shell: pwsh
         run: |
           $llvmPath = "C:\Program Files\LLVM"
           if (Test-Path $llvmPath) {
-            echo "LLVM found at $llvmPath"
+            echo "LLVM installation contents:"
+            Get-ChildItem -Path $llvmPath -Recurse -Depth 1
+            
+            # Check for llvm-config
+            $llvmConfig = "$llvmPath\bin\llvm-config.exe"
+            if (Test-Path $llvmConfig) {
+              echo "Found llvm-config at: $llvmConfig"
+              & $llvmConfig --version
+            } else {
+              echo "WARNING: llvm-config not found at $llvmConfig"
+            }
+            
+            # Set environment variable for next steps
             echo "LLVM_SYS_180_PREFIX=$llvmPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-            Get-ChildItem $llvmPath
           } else {
             echo "ERROR: LLVM not found at $llvmPath"
+            Get-ChildItem "C:\Program Files" | Where-Object { $_.Name -like "*llvm*" }
             exit 1
           }
         
@@ -183,9 +195,11 @@ jobs:
           toolchain: stable
 
       - name: Build
-        env:
-          LLVM_SYS_180_PREFIX: C:\Program Files\LLVM
-        run: cargo build --release --verbose
+        shell: pwsh
+        run: |
+          $env:LLVM_SYS_180_PREFIX = "C:\Program Files\LLVM"
+          echo "LLVM_SYS_180_PREFIX is set to: $env:LLVM_SYS_180_PREFIX"
+          cargo build --release --verbose
         
       - name: Verify binary
         run: |

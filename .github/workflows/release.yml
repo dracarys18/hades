@@ -1,0 +1,246 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Triggers on version tags like v0.1.0, v1.2.3
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - name: Get version from tag
+        id: get_version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Hades ${{ steps.get_version.outputs.version }}
+          draft: false
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+          body: |
+            ## Hades ${{ steps.get_version.outputs.version }}
+            
+            ### Installation
+            
+            Download the appropriate binary for your platform:
+            
+            - **Linux (x86_64)**: `hades-v${{ steps.get_version.outputs.version }}-x86_64-linux.tar.gz`
+            - **macOS (Intel)**: `hades-v${{ steps.get_version.outputs.version }}-x86_64-macos.tar.gz`
+            - **macOS (Apple Silicon)**: `hades-v${{ steps.get_version.outputs.version }}-aarch64-macos.tar.gz`
+            - **Windows (x86_64)**: `hades-v${{ steps.get_version.outputs.version }}-x86_64-windows.zip`
+            
+            Extract and add to your PATH:
+            
+            ```bash
+            # Linux/macOS
+            tar xzf hades-v${{ steps.get_version.outputs.version }}-*.tar.gz
+            sudo mv hades /usr/local/bin/
+            
+            # Windows (PowerShell)
+            Expand-Archive hades-v${{ steps.get_version.outputs.version }}-x86_64-windows.zip
+            # Move hades.exe to a directory in your PATH
+            ```
+            
+            Verify installation:
+            ```bash
+            hades --version
+            ```
+            
+            ### Changes
+            
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
+
+  build-linux:
+    name: Build Linux (x86_64)
+    needs: create-release
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:18.04  # Old glibc for maximum compatibility
+    
+    steps:
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y curl build-essential git wget lsb-release software-properties-common gnupg ca-certificates
+          
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install LLVM 18
+        run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          ./llvm.sh 18
+          apt-get install -y llvm-18-dev libpolly-18-dev
+          ln -s /usr/bin/llvm-config-18 /usr/local/bin/llvm-config
+
+      - name: Install Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          
+      - name: Build
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          export LLVM_CONFIG=llvm-config-18
+          cargo build --release --verbose
+          
+      - name: Verify binary
+        run: |
+          ldd target/release/hades
+          ./target/release/hades --version
+
+      - name: Package
+        run: |
+          cd target/release
+          tar czf ../../hades-v${{ needs.create-release.outputs.version }}-x86_64-linux.tar.gz hades
+          cd ../..
+          sha256sum hades-v${{ needs.create-release.outputs.version }}-x86_64-linux.tar.gz > hades-v${{ needs.create-release.outputs.version }}-x86_64-linux.tar.gz.sha256
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./hades-v${{ needs.create-release.outputs.version }}-x86_64-linux.tar.gz
+          asset_name: hades-v${{ needs.create-release.outputs.version }}-x86_64-linux.tar.gz
+          asset_content_type: application/gzip
+
+      - name: Upload Checksum
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./hades-v${{ needs.create-release.outputs.version }}-x86_64-linux.tar.gz.sha256
+          asset_name: hades-v${{ needs.create-release.outputs.version }}-x86_64-linux.tar.gz.sha256
+          asset_content_type: text/plain
+
+  build-windows:
+    name: Build Windows (x86_64)
+    needs: create-release
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install LLVM
+        run: choco install llvm --version=18.1.8 -y
+        
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Build
+        env:
+          LLVM_SYS_180_PREFIX: C:\Program Files\LLVM
+        run: cargo build --release --verbose
+        
+      - name: Verify binary
+        run: |
+          .\target\release\hades.exe --version
+
+      - name: Package
+        run: |
+          Compress-Archive -Path target/release/hades.exe -DestinationPath hades-v${{ needs.create-release.outputs.version }}-x86_64-windows.zip
+          (Get-FileHash -Algorithm SHA256 hades-v${{ needs.create-release.outputs.version }}-x86_64-windows.zip).Hash | Out-File -Encoding ASCII hades-v${{ needs.create-release.outputs.version }}-x86_64-windows.zip.sha256
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./hades-v${{ needs.create-release.outputs.version }}-x86_64-windows.zip
+          asset_name: hades-v${{ needs.create-release.outputs.version }}-x86_64-windows.zip
+          asset_content_type: application/zip
+
+      - name: Upload Checksum
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./hades-v${{ needs.create-release.outputs.version }}-x86_64-windows.zip.sha256
+          asset_name: hades-v${{ needs.create-release.outputs.version }}-x86_64-windows.zip.sha256
+          asset_content_type: text/plain
+
+  build-macos:
+    name: Build macOS
+    needs: create-release
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-apple-darwin
+            arch: x86_64
+          - target: aarch64-apple-darwin
+            arch: aarch64
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install LLVM
+        run: brew install llvm@18
+        
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+
+      - name: Build
+        env:
+          LLVM_CONFIG: /usr/local/opt/llvm@18/bin/llvm-config
+          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.arch == 'x86_64' && '10.12' || '11.0' }}
+        run: cargo build --release --target ${{ matrix.target }} --verbose
+        
+      - name: Verify binary
+        run: |
+          otool -L target/${{ matrix.target }}/release/hades
+          file target/${{ matrix.target }}/release/hades
+          ./target/${{ matrix.target }}/release/hades --version
+
+      - name: Package
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar czf ../../../hades-v${{ needs.create-release.outputs.version }}-${{ matrix.arch }}-macos.tar.gz hades
+          cd ../../..
+          shasum -a 256 hades-v${{ needs.create-release.outputs.version }}-${{ matrix.arch }}-macos.tar.gz > hades-v${{ needs.create-release.outputs.version }}-${{ matrix.arch }}-macos.tar.gz.sha256
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./hades-v${{ needs.create-release.outputs.version }}-${{ matrix.arch }}-macos.tar.gz
+          asset_name: hades-v${{ needs.create-release.outputs.version }}-${{ matrix.arch }}-macos.tar.gz
+          asset_content_type: application/gzip
+
+      - name: Upload Checksum
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./hades-v${{ needs.create-release.outputs.version }}-${{ matrix.arch }}-macos.tar.gz.sha256
+          asset_name: hades-v${{ needs.create-release.outputs.version }}-${{ matrix.arch }}-macos.tar.gz.sha256
+          asset_content_type: text/plain

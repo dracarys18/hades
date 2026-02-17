@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           apt-get update
-          apt-get install -y curl build-essential g++ git wget lsb-release software-properties-common gnupg ca-certificates musl-tools musl-dev
+          apt-get install -y curl build-essential g++ git wget lsb-release software-properties-common gnupg ca-certificates patchelf
           
       - name: Checkout code
         uses: actions/checkout@v4
@@ -33,7 +33,7 @@ jobs:
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
           ./llvm.sh 18
-          apt-get install -y llvm-18-dev libpolly-18-dev
+          apt-get install -y llvm-18-dev libpolly-18-dev zlib1g-dev libzstd-dev
           ln -s /usr/bin/llvm-config-18 /usr/local/bin/llvm-config
 
       - name: Install Rust
@@ -41,27 +41,63 @@ jobs:
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           
-      - name: Add musl target
-        run: |
-          export PATH="$HOME/.cargo/bin:$PATH"
-          rustup target add x86_64-unknown-linux-musl
-          
       - name: Build
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
           export LLVM_CONFIG=llvm-config-18
-          cargo build --release --target x86_64-unknown-linux-musl --verbose
+          cargo build --release --verbose
           
       - name: Verify binary
         run: |
-          ldd target/x86_64-unknown-linux-musl/release/hades || echo "Static binary - not dynamically linked"
-          file target/x86_64-unknown-linux-musl/release/hades
+          ldd target/release/hades
+          file target/release/hades
+
+      - name: Bundle LLVM libraries
+        run: |
+          mkdir -p hades-bundle/lib
+          cp target/release/hades hades-bundle/
+          
+          # Copy LLVM shared libraries
+          ldd target/release/hades | grep "=> /" | awk '{print $3}' | while read lib; do
+            if [[ "$lib" == /usr/lib/llvm-18* ]] || [[ "$lib" == *libzstd* ]] || [[ "$lib" == *libz.so* ]]; then
+              cp "$lib" hades-bundle/lib/
+            fi
+          done
+          
+          # Create wrapper script
+          cat > hades-bundle/hades-wrapper.sh << 'EOF'
+          #!/bin/bash
+          SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+          export LD_LIBRARY_PATH="$SCRIPT_DIR/lib:$LD_LIBRARY_PATH"
+          exec "$SCRIPT_DIR/hades" "$@"
+          EOF
+          chmod +x hades-bundle/hades-wrapper.sh
+          
+          # Create README
+          cat > hades-bundle/README.md << 'EOF'
+          # Hades Compiler
+          
+          ## Installation
+          
+          Extract this archive and use the `hades-wrapper.sh` script to run the compiler:
+          
+          ```bash
+          ./hades-wrapper.sh --version
+          ```
+          
+          Or add to PATH:
+          
+          ```bash
+          export PATH="/path/to/hades-bundle:$PATH"
+          alias hades="/path/to/hades-bundle/hades-wrapper.sh"
+          ```
+          
+          The wrapper script sets up the required LLVM library paths automatically.
+          EOF
 
       - name: Package
         run: |
-          cd target/x86_64-unknown-linux-musl/release
-          tar czf ../../../hades-x86_64-linux.tar.gz hades
-          cd ../../..
+          tar czf hades-x86_64-linux.tar.gz hades-bundle/
           sha256sum hades-x86_64-linux.tar.gz > hades-x86_64-linux.tar.gz.sha256
 
       - name: Upload artifacts

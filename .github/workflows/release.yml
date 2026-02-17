@@ -79,7 +79,17 @@ jobs:
       - name: Install LLVM
         run: |
           choco install llvm --allow-downgrade --force -y
-          refreshenv
+          
+      - name: Find LLVM installation
+        run: |
+          echo "Checking LLVM installation..."
+          if (Test-Path "C:\Program Files\LLVM") {
+            echo "LLVM found at C:\Program Files\LLVM"
+            echo "LLVM_SYS_180_PREFIX=C:\Program Files\LLVM" >> $env:GITHUB_ENV
+          } else {
+            echo "LLVM not found at default location, searching..."
+            Get-ChildItem -Path "C:\Program Files" -Filter "LLVM" -Recurse -ErrorAction SilentlyContinue
+          }
         
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -87,8 +97,6 @@ jobs:
           toolchain: stable
 
       - name: Build
-        env:
-          LLVM_SYS_180_PREFIX: C:\Program Files\LLVM
         run: cargo build --release --verbose
         
       - name: Verify binary

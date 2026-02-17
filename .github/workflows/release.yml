@@ -160,12 +160,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install LLVM
+      - name: Install LLVM and dependencies
         shell: pwsh
         run: |
+          # Install vcpkg for libxml2
+          echo "Setting up vcpkg..."
+          git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
+          cd C:\vcpkg
+          .\bootstrap-vcpkg.bat
+          
+          echo "Installing libxml2 via vcpkg..."
+          .\vcpkg install libxml2:x64-windows-static
+          
+          # Copy libxml2 lib to a location the linker can find
+          $vcpkgLibPath = "C:\vcpkg\installed\x64-windows-static\lib"
+          if (Test-Path "$vcpkgLibPath\libxml2.lib") {
+            # LLVM wants libxml2s.lib (static), vcpkg provides libxml2.lib
+            Copy-Item "$vcpkgLibPath\libxml2.lib" "$vcpkgLibPath\libxml2s.lib"
+            echo "Copied libxml2.lib to libxml2s.lib"
+          }
+          
+          # Set LIB path for vcpkg libraries
+          $env:LIB = "$vcpkgLibPath;$env:LIB"
+          echo "LIB=$env:LIB" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          
+          # Download and extract LLVM
           $llvmArchive = "https://github.com/llvm/llvm-project/releases/download/llvmorg-18.1.8/clang+llvm-18.1.8-x86_64-pc-windows-msvc.tar.xz"
           
           echo "Downloading LLVM development archive..."
+          cd C:\
           Invoke-WebRequest -Uri $llvmArchive -OutFile llvm.tar.xz
           
           echo "Installing 7-Zip to extract archive..."
@@ -179,10 +202,6 @@ jobs:
           echo "LLVM extracted to: $($llvmDir.FullName)"
           echo "LLVM_ROOT=$($llvmDir.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           
-          # Check for libxml2 in LLVM lib directory
-          echo "Checking for libxml2 in LLVM lib directory..."
-          Get-ChildItem "$($llvmDir.FullName)\lib" -Filter "*xml*" | Select-Object Name
-          
       - name: Verify and configure LLVM
         shell: pwsh
         run: |
@@ -195,8 +214,6 @@ jobs:
             if (Test-Path $llvmConfig) {
               echo "Found llvm-config at: $llvmConfig"
               & $llvmConfig --version
-              echo "System libs required:"
-              & $llvmConfig --system-libs
             } else {
               echo "ERROR: llvm-config not found at $llvmConfig"
               echo "Contents of bin directory:"
@@ -208,7 +225,7 @@ jobs:
             $env:PATH = "$llvmPath\bin;$env:PATH"
             echo "PATH=$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
             
-            # Add LLVM lib to LIB path for linker
+            # Update LIB path to include LLVM libs (append to existing from vcpkg)
             $env:LIB = "$llvmPath\lib;$env:LIB"
             echo "LIB=$env:LIB" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
             

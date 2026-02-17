@@ -49,9 +49,8 @@ jobs:
           
       - name: Verify binary
         run: |
-          export PATH="$HOME/.cargo/bin:$PATH"
           ldd target/release/hades || true
-          ./target/release/hades --version
+          file target/release/hades
 
       - name: Package
         run: |
@@ -80,15 +79,16 @@ jobs:
         run: |
           choco install llvm --allow-downgrade --force -y
           
-      - name: Find LLVM installation
+      - name: Find and set LLVM path
+        shell: pwsh
         run: |
-          echo "Checking LLVM installation..."
-          if (Test-Path "C:\Program Files\LLVM") {
-            echo "LLVM found at C:\Program Files\LLVM"
-            echo "LLVM_SYS_180_PREFIX=C:\Program Files\LLVM" >> $env:GITHUB_ENV
+          $llvmPath = "C:\Program Files\LLVM"
+          if (Test-Path $llvmPath) {
+            echo "LLVM found at $llvmPath"
+            echo "LLVM_SYS_180_PREFIX=$llvmPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           } else {
-            echo "LLVM not found at default location, searching..."
-            Get-ChildItem -Path "C:\Program Files" -Filter "LLVM" -Recurse -ErrorAction SilentlyContinue
+            echo "ERROR: LLVM not found at $llvmPath"
+            exit 1
           }
         
       - name: Setup Rust
@@ -101,7 +101,7 @@ jobs:
         
       - name: Verify binary
         run: |
-          .\target\release\hades.exe --version
+          file target/release/hades.exe
 
       - name: Package
         run: |
@@ -147,14 +147,13 @@ jobs:
           LLVM_CONFIG: ${{ matrix.arch == 'x86_64' && '/usr/local/opt/llvm@18/bin/llvm-config' || '/opt/homebrew/opt/llvm@18/bin/llvm-config' }}
           LLVM_SYS_180_PREFIX: ${{ matrix.arch == 'x86_64' && '/usr/local/opt/llvm@18' || '/opt/homebrew/opt/llvm@18' }}
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.arch == 'x86_64' && '10.12' || '11.0' }}
-          RUSTFLAGS: ${{ matrix.arch == 'x86_64' && '-L /usr/local/lib' || '-L /opt/homebrew/lib' }}
+          RUSTFLAGS: -C link-arg=-L${{ matrix.arch == 'x86_64' && '/usr/local/lib' || '/opt/homebrew/lib' }} -C link-arg=-lc++ -C link-arg=/opt/homebrew/lib/libzstd.a
         run: cargo build --release --verbose
         
       - name: Verify binary
         run: |
           otool -L target/release/hades || true
           file target/release/hades
-          ./target/release/hades --version
 
       - name: Package
         run: |

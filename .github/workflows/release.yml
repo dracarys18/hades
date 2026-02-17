@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           apt-get update
-          apt-get install -y curl build-essential git wget lsb-release software-properties-common gnupg ca-certificates
+          apt-get install -y curl build-essential g++ git wget lsb-release software-properties-common gnupg ca-certificates
           
       - name: Checkout code
         uses: actions/checkout@v4
@@ -133,8 +133,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install LLVM
-        run: brew install llvm@18
+      - name: Install LLVM and dependencies
+        run: |
+          brew install llvm@18 zstd
         
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1

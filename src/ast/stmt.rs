@@ -71,8 +71,14 @@ pub struct For {
 #[derive(Clone, PartialEq, Debug)]
 pub struct StructDef {
     pub name: Ident,
-    pub fields: IndexMap<Ident, Types>,
+    pub fields: IndexMap<Ident, FieldKind>,
     pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum FieldKind {
+    Var(Types),
+    Func(FuncDef),
 }
 
 #[derive(Clone, PartialEq, Debug)]

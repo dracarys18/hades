@@ -86,7 +86,7 @@ impl<'ctx> TypeConverter<'ctx> {
             })?;
         let mut field_types = Vec::new();
         for (_, field_type) in struct_def.iter() {
-            let llvm_field_type = self.to_llvm_type(field_type, compiler_ctx)?;
+            let llvm_field_type = self.to_llvm_type(&field_type.get_type(), compiler_ctx)?;
             field_types.push(llvm_field_type);
         }
 

@@ -71,8 +71,14 @@ pub struct For {
 #[derive(Clone, PartialEq, Debug)]
 pub struct StructDef {
     pub name: Ident,
-    pub fields: IndexMap<Ident, Types>,
+    pub fields: IndexMap<Ident, FieldKind>,
     pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum FieldKind {
+    Var(Types),
+    Func(FuncDef),
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -146,6 +152,15 @@ impl Stmt {
             panic!("Stmt is not a Let");
         }
     }
+
+    pub fn unwrap_func_def(self) -> FuncDef {
+        if let Stmt::FuncDef(fd) = self {
+            fd
+        } else {
+            panic!("Stmt is not a FuncDef");
+        }
+    }
+
     pub fn span(&self) -> &Span {
         match self {
             Stmt::Let(le) => le.span(),

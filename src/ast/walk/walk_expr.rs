@@ -38,9 +38,9 @@ impl WalkAst for Expr {
                     })?;
 
                     let typed_expr = field_expr.walk(ctx, span.clone())?;
-                    if typed_expr.get_type() != *expected_type {
+                    if typed_expr.get_type() != expected_type.get_type() {
                         return Err(SemanticError::type_mismatch(
-                            expected_type.clone().to_string(),
+                            expected_type.get_type().clone().to_string(),
                             typed_expr.get_type().to_string(),
                             span,
                         ));
@@ -258,7 +258,7 @@ impl WalkAst for FieldAccessExpr {
                     expr: Box::new(typed_expr),
                     field: self.field.clone(),
                     struct_type: strc,
-                    field_type: field_type.clone(),
+                    field_type: field_type.get_type().clone(),
                 })
             }
             _ => Err(SemanticError::type_mismatch(

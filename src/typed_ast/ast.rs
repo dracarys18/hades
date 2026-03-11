@@ -85,8 +85,14 @@ pub struct TypedFor {
 #[derive(Clone, PartialEq, Debug)]
 pub struct TypedStructDef {
     pub name: Ident,
-    pub fields: IndexMap<Ident, Types>,
+    pub fields: IndexMap<Ident, TypedFieldKind>,
     pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum TypedFieldKind {
+    Var(Types),
+    Func(TypedFuncDef),
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -123,4 +129,13 @@ pub enum TypedStmt {
     Return(TypedReturn),
     ModuleDecl(TypedModuleDecl),
     Import(TypedImport),
+}
+
+impl TypedFieldKind {
+    pub fn get_type(&self) -> Types {
+        match self {
+            TypedFieldKind::Var(typ) => typ.clone(),
+            TypedFieldKind::Func(func_def) => func_def.signature.return_type().clone(),
+        }
+    }
 }

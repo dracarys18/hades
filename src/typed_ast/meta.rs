@@ -1,5 +1,6 @@
 use super::SemanticError;
 use crate::typed_ast::{
+    TypedFieldKind,
     function::{FunctionSignature, Functions},
     ident::IdentMap,
     struc::{Field, Structs},
@@ -64,7 +65,7 @@ impl CompilerContext {
             .cloned()
     }
 
-    pub fn insert_struct(&mut self, name: Ident, fields: IndexMap<Ident, Types>) {
+    pub fn insert_struct(&mut self, name: Ident, fields: IndexMap<Ident, TypedFieldKind>) {
         self.structs.insert(name.clone(), fields);
     }
 

@@ -477,25 +477,49 @@ impl Parser {
         Ok(params)
     }
 
-    fn parse_field_list(&mut self) -> ParseResult<IndexMap<Ident, Types>> {
+    fn parse_field_list(&mut self) -> ParseResult<IndexMap<Ident, FieldKind>> {
         self.expect(&TokenKind::LeftBrace)?;
         let mut fields = IndexMap::new();
-
         while !self
             .peek()
             .is_some_and(|tok| token_matches!(tok, TokenKind::RightBrace))
         {
-            let field_name = self.expect_identifier()?;
-            self.expect(&TokenKind::Colon)?;
-            let field_type = self.expect_type()?;
-            fields.insert(field_name, field_type);
+            let field = self.peek().ok_or_else(|| {
+                let span = self.eof_span().into_range();
+                ParseError::unexpected_token(
+                    None,
+                    "field declaration",
+                    span,
+                    self.source_id.clone(),
+                )
+            })?;
 
-            if !self.consume_if(&TokenKind::Comma)
-                && !self
-                    .peek()
-                    .is_some_and(|tok| token_matches!(tok, TokenKind::RightBrace))
-            {
-                break;
+            match field.kind() {
+                TokenKind::Fn => {
+                    let func = self.parse_function_def()?.unwrap_func_def();
+                    fields.insert(func.name.clone(), FieldKind::Func(func));
+                }
+                TokenKind::Ident(field_name) => {
+                    let field_name = field_name.clone();
+                    self.next();
+                    self.expect(&TokenKind::Colon)?;
+                    let field_type = self.expect_type()?;
+                    fields.insert(field_name, FieldKind::Var(field_type));
+
+                    if !self.consume_if(&TokenKind::Comma)
+                        && !self
+                            .peek()
+                            .is_some_and(|tok| token_matches!(tok, TokenKind::RightBrace))
+                    {
+                        break;
+                    }
+                }
+                _ => Err(ParseError::unexpected_token(
+                    Some(field.clone()),
+                    "field declaration",
+                    field.span().into_range(),
+                    self.source_id.clone(),
+                ))?,
             }
         }
 

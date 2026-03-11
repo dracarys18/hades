@@ -501,6 +501,7 @@ impl Parser {
                 }
                 TokenKind::Ident(field_name) => {
                     let field_name = field_name.clone();
+                    self.next();
                     self.expect(&TokenKind::Colon)?;
                     let field_type = self.expect_type()?;
                     fields.insert(field_name, FieldKind::Var(field_type));

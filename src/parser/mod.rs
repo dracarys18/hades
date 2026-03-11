@@ -496,17 +496,14 @@ impl Parser {
 
             match field.kind() {
                 TokenKind::Fn => {
-                    let func_def = self.parse_function_def()?;
-                    if let Stmt::FuncDef(func) = func_def {
-                        fields.insert(func.name.clone(), FieldKind::Func(func));
-                    } else {
-                        unreachable!();
-                    }
+                    let func = self.parse_function_def()?.unwrap_func_def();
+                    fields.insert(func.name.clone(), FieldKind::Func(func));
                 }
                 TokenKind::Ident(field_name) => {
+                    let field_name = field_name.clone();
                     self.expect(&TokenKind::Colon)?;
                     let field_type = self.expect_type()?;
-                    fields.insert(field_name.clone(), FieldKind::Var(field_type));
+                    fields.insert(field_name, FieldKind::Var(field_type));
 
                     if !self.consume_if(&TokenKind::Comma)
                         && !self

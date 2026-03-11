@@ -152,6 +152,15 @@ impl Stmt {
             panic!("Stmt is not a Let");
         }
     }
+
+    pub fn unwrap_func_def(self) -> FuncDef {
+        if let Stmt::FuncDef(fd) = self {
+            fd
+        } else {
+            panic!("Stmt is not a FuncDef");
+        }
+    }
+
     pub fn span(&self) -> &Span {
         match self {
             Stmt::Let(le) => le.span(),

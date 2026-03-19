@@ -84,6 +84,7 @@ pub enum FieldKind {
 #[derive(Clone, PartialEq, Debug)]
 pub struct FuncDef {
     pub name: Ident,
+    pub parent_struct: Option<Ident>,
     pub params: Vec<(Ident, Types)>,
     pub return_type: Types,
     pub body: Block,

@@ -27,6 +27,11 @@ pub enum Expr {
         func: Ident,
         args: Vec<Expr>,
     },
+    MethodCall {
+        receiver: Box<Expr>,
+        method: Ident,
+        args: Vec<Expr>,
+    },
 }
 
 impl Expr {

@@ -226,7 +226,7 @@ impl Parser {
         let start_tok = self.current_span();
         self.expect(&TokenKind::Struct)?;
         let name = self.expect_identifier()?;
-        let fields = self.parse_field_list()?;
+        let fields = self.parse_field_list(name.clone())?;
         let end = self.prev_span();
 
         Ok(Stmt::StructDef(StructDef {
@@ -248,6 +248,7 @@ impl Parser {
 
         Ok(Stmt::FuncDef(FuncDef {
             name,
+            parent_struct: None,
             params,
             return_type,
             body: Block::new(body.into(), span.clone()),
@@ -477,7 +478,7 @@ impl Parser {
         Ok(params)
     }
 
-    fn parse_field_list(&mut self) -> ParseResult<IndexMap<Ident, FieldKind>> {
+    fn parse_field_list(&mut self, struct_name: Ident) -> ParseResult<IndexMap<Ident, FieldKind>> {
         self.expect(&TokenKind::LeftBrace)?;
         let mut fields = IndexMap::new();
         while !self
@@ -496,7 +497,8 @@ impl Parser {
 
             match field.kind() {
                 TokenKind::Fn => {
-                    let func = self.parse_function_def()?.unwrap_func_def();
+                    let mut func = self.parse_function_def()?.unwrap_func_def();
+                    func.parent_struct = Some(struct_name.clone());
                     fields.insert(func.name.clone(), FieldKind::Func(func));
                 }
                 TokenKind::Ident(field_name) => {
@@ -683,6 +685,11 @@ impl Parser {
                     Ok(expr)
                 }
                 TokenKind::LeftBracket => self.parse_array_literal(),
+                TokenKind::Self_ => {
+                    let self_ident =
+                        crate::tokens::Ident::new("self".to_string(), tok.span().clone());
+                    self.parse_postfix_chain(Expr::Ident(self_ident))
+                }
                 _ => {
                     let span = tok.span().into_range();
                     Err(ParseError::unexpected_token(
@@ -784,10 +791,28 @@ impl Parser {
                 Some(tok) if token_matches!(tok, TokenKind::Dot) => {
                     self.next();
                     let field_name = self.expect_identifier()?;
-                    expr = Expr::FieldAccess(FieldAccessExpr {
-                        expr: Box::new(expr),
-                        field: field_name,
-                    });
+                    // Check if this is a method call: instance.method(args)
+                    if self
+                        .peek()
+                        .is_some_and(|tok| token_matches!(tok, TokenKind::LeftParen))
+                    {
+                        self.next(); // consume '('
+                        let args = self.parse_comma_separated(
+                            |parser| parser.parse_assignment(),
+                            &TokenKind::RightParen,
+                        )?;
+                        self.expect(&TokenKind::RightParen)?;
+                        expr = Expr::MethodCall {
+                            receiver: Box::new(expr),
+                            method: field_name,
+                            args,
+                        };
+                    } else {
+                        expr = Expr::FieldAccess(FieldAccessExpr {
+                            expr: Box::new(expr),
+                            field: field_name,
+                        });
+                    }
                 }
                 Some(tok) if token_matches!(tok, TokenKind::LeftBracket) => {
                     self.next();

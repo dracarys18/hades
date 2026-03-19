@@ -4,7 +4,8 @@ use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::codegen::traits::Visit;
 use crate::typed_ast::{
-    TypedBlock, TypedContinue, TypedFor, TypedFuncDef, TypedIf, TypedReturn, TypedStmt, TypedWhile,
+    TypedBlock, TypedContinue, TypedFieldKind, TypedFor, TypedFuncDef, TypedIf, TypedReturn,
+    TypedStmt, TypedStructDef, TypedWhile,
 };
 
 impl Visit for TypedStmt {
@@ -24,7 +25,7 @@ impl Visit for TypedStmt {
                 func_def.visit(context)?;
                 Ok(())
             }
-            Self::StructDef(_) => Ok(()),
+            Self::StructDef(struct_def) => struct_def.visit(context),
             Self::ModuleDecl(_) => Ok(()),
             Self::Import(_) => Ok(()),
         }
@@ -191,6 +192,13 @@ impl Visit for TypedFuncDef {
         let symbols = context.symbols();
         let sigature = self.signature.clone();
         let params = sigature.to_fixed_params();
+        let is_method = sigature.receiver().is_some();
+
+        // Methods receive `self` as an implicit first parameter (a pointer).
+        if is_method {
+            param_types.push(context.type_converter().ptr_type().into());
+        }
+
         for (_, param_type) in &params {
             let llvm_type = context.type_converter().to_llvm_type(param_type, symbols)?;
             param_types.push(llvm_type.into());
@@ -217,8 +225,26 @@ impl Visit for TypedFuncDef {
         let entry_block = context.create_basic_block("entry");
         context.position_at_end(entry_block);
 
+        // Declare `self` as first param for methods.
+        // Register the received pointer directly as the variable value (no double indirection),
+        // so that field access on `self` works identically to a regular struct variable.
+        let param_offset = if is_method {
+            let self_ptr_val = function.get_nth_param(0).unwrap().into_pointer_value();
+            self_ptr_val.set_name("self");
+            let self_ident = crate::tokens::Ident::new("self".to_string(), Default::default());
+            let struct_name = sigature.receiver().unwrap();
+            context.declare_variable(
+                self_ident,
+                self_ptr_val,
+                crate::ast::Types::Struct(struct_name),
+            )?;
+            1
+        } else {
+            0
+        };
+
         for (i, (param_name, param_type)) in params.iter().enumerate() {
-            let param_val = function.get_nth_param(i as u32).unwrap();
+            let param_val = function.get_nth_param((i + param_offset) as u32).unwrap();
             param_val.set_name(param_name.inner());
 
             let param_llvm_type = context.type_converter().to_llvm_type(param_type, symbols)?;
@@ -254,5 +280,18 @@ impl Visit for TypedFuncDef {
         context.clear_current_function();
 
         Ok(function)
+    }
+}
+
+impl Visit for TypedStructDef {
+    type Output<'ctx> = ();
+
+    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
+        for (_, field) in &self.fields {
+            if let TypedFieldKind::Func(method) = field {
+                method.visit(context)?;
+            }
+        }
+        Ok(())
     }
 }

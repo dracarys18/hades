@@ -25,6 +25,13 @@ impl Structs {
 
     pub fn field_index(&self, name: &Ident, field_name: &Ident) -> usize {
         let field = self.inner.get(name).expect(GOOLAG_MESSAGE);
-        field.get_index_of(field_name).expect(GOOLAG_MESSAGE)
+        // Only Var fields occupy slots in the LLVM struct layout; Func fields are skipped.
+        field
+            .iter()
+            .filter(|(_, kind)| matches!(kind, TypedFieldKind::Var(_)))
+            .enumerate()
+            .find(|(_, (k, _))| *k == field_name)
+            .map(|(idx, _)| idx)
+            .expect(GOOLAG_MESSAGE)
     }
 }

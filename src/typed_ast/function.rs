@@ -31,21 +31,28 @@ impl Params {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionSignature {
+    pub receiver: Option<Ident>,
     pub params: Params,
     pub return_type: Types,
 }
 
 impl FunctionSignature {
-    pub fn new(params: IndexMap<Ident, Types>, return_type: Types) -> Self {
+    pub fn new(
+        params: IndexMap<Ident, Types>,
+        receiver: Option<Ident>,
+        return_type: Types,
+    ) -> Self {
         Self {
             params: Params::Fixed(params),
             return_type,
+            receiver,
         }
     }
 
     pub fn new_variadic(return_type: Types) -> Self {
         Self {
             params: Params::Variadic,
+            receiver: None,
             return_type,
         }
     }
@@ -70,6 +77,10 @@ impl FunctionSignature {
 
     pub fn return_type(&self) -> &Types {
         &self.return_type
+    }
+
+    pub fn receiver(&self) -> Option<Ident> {
+        self.receiver.clone()
     }
 }
 

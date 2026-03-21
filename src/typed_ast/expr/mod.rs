@@ -31,14 +31,7 @@ pub enum TypedExpr {
     Call {
         func: Ident,
         args: Vec<TypedExpr>,
-        typ: Types,
-    },
-    MethodCall {
-        /// The mangled LLVM function name (e.g. `Point__getX`)
-        mangled_name: Ident,
-        /// The receiver expression (the struct instance)
-        receiver: Box<TypedExpr>,
-        args: Vec<TypedExpr>,
+        receiver: Option<Box<TypedExpr>>,
         typ: Types,
     },
 }
@@ -78,7 +71,6 @@ impl TypedExpr {
             TypedExpr::Call { typ, .. } => typ.clone(),
             TypedExpr::FieldAccess(TypedFieldAccess { field_type, .. }) => field_type.clone(),
             TypedExpr::ArrayIndex(TypedArrayIndex { typ, .. }) => typ.clone(),
-            TypedExpr::MethodCall { typ, .. } => typ.clone(),
         }
     }
 }

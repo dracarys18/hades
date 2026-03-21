@@ -791,7 +791,6 @@ impl Parser {
                 Some(tok) if token_matches!(tok, TokenKind::Dot) => {
                     self.next();
                     let field_name = self.expect_identifier()?;
-                    // Check if this is a method call: instance.method(args)
                     if self
                         .peek()
                         .is_some_and(|tok| token_matches!(tok, TokenKind::LeftParen))
@@ -802,9 +801,9 @@ impl Parser {
                             &TokenKind::RightParen,
                         )?;
                         self.expect(&TokenKind::RightParen)?;
-                        expr = Expr::MethodCall {
-                            receiver: Box::new(expr),
-                            method: field_name,
+                        expr = Expr::Call {
+                            func: field_name.clone(),
+                            receiver: Some(Box::new(expr)),
                             args,
                         };
                     } else {
@@ -870,6 +869,7 @@ impl Parser {
 
         Ok(Expr::Call {
             func: func_name,
+            receiver: None,
             args,
         })
     }

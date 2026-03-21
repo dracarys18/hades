@@ -34,8 +34,13 @@ impl Visit for TypedExpr {
                 let unary_op = UnaryOp::new(op, expr);
                 unary_op.visit(context)
             }
-            Self::Call { func, args, .. } => {
-                let function_call = FunctionCall::new(func.inner(), args);
+            Self::Call {
+                func,
+                args,
+                receiver,
+                ..
+            } => {
+                let function_call = FunctionCall::new(func.inner(), args, receiver.as_deref());
                 function_call.visit(context)
             }
             Self::StructInit { name, fields, .. } => {
@@ -45,83 +50,6 @@ impl Visit for TypedExpr {
             Self::Assign(assign) => assign.visit(context),
             Self::FieldAccess(field) => field.visit(context),
             Self::ArrayIndex(index) => index.visit(context),
-            Self::MethodCall {
-                mangled_name,
-                receiver,
-                args,
-                typ,
-            } => {
-                // Get a pointer to the receiver (struct instance).
-                // For an Ident receiver, use the variable pointer directly.
-                // For other expressions, materialise the value and alloca it.
-                let self_ptr = match receiver.as_ref() {
-                    TypedExpr::Ident { ident, .. } => context.get_variable(ident)?.value(),
-                    _ => {
-                        let receiver_val = receiver.visit(context)?;
-                        if receiver_val.value.is_pointer_value() {
-                            receiver_val.value.into_pointer_value()
-                        } else {
-                            let compiler_context = context.symbols();
-                            let struct_llvm_type = context
-                                .type_converter()
-                                .to_llvm_type(&receiver_val.type_info, compiler_context)?;
-                            let temp_ptr = context
-                                .builder()
-                                .build_alloca(struct_llvm_type, "method_self_tmp")
-                                .map_err(|e| CodegenError::LLVMBuild {
-                                    message: format!("Failed to alloca method receiver: {e}"),
-                                })?;
-                            context
-                                .builder()
-                                .build_store(temp_ptr, receiver_val.value)
-                                .map_err(|e| CodegenError::LLVMBuild {
-                                    message: format!("Failed to store method receiver: {e}"),
-                                })?;
-                            temp_ptr
-                        }
-                    }
-                };
-
-                let function = context.get_function(mangled_name.inner())?;
-
-                let mut arg_values: Vec<inkwell::values::BasicMetadataValueEnum> =
-                    vec![self_ptr.into()];
-                for arg in args {
-                    let arg_val = arg.visit(context)?;
-                    arg_values.push(arg_val.value.into());
-                }
-
-                // Look up the return type via the function signature
-                let return_type = {
-                    let name_ident = crate::tokens::Ident::new(
-                        mangled_name.inner().to_string(),
-                        Default::default(),
-                    );
-                    context
-                        .symbols()
-                        .get_function_signature(&name_ident)
-                        .map_err(|_| CodegenError::FunctionNotFound {
-                            name: mangled_name.inner().to_string(),
-                        })?
-                        .return_type()
-                        .clone()
-                };
-
-                let call_result = context
-                    .builder()
-                    .build_call(function, &arg_values, "method_call")
-                    .map_err(|_| CodegenError::LLVMBuild {
-                        message: format!(
-                            "Failed to generate method call to {}",
-                            mangled_name.inner()
-                        ),
-                    })?;
-
-                Ok(CodegenValue::new(
-                    call_result.try_as_basic_value().unwrap_left(),
-                    return_type,
-                ))
-            }
         }
     }
 }

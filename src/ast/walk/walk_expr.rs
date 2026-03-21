@@ -67,117 +67,71 @@ impl WalkAst for Expr {
                 })
             }
             Expr::Assign(assign) => Ok(TypedExpr::Assign(assign.walk(ctx, span)?)),
-            Expr::Call { func, args } => {
-                let sig = ctx.get_function_signature(func)?;
+            Expr::Call {
+                func,
+                args,
+                receiver,
+            } => {
+                if receiver.is_some() {
+                    struct_method_call(receiver.as_ref().unwrap(), func, args, ctx, span.clone())
+                } else {
+                    let sig = ctx.get_function_signature(func)?;
 
-                let return_type = sig.return_type().clone();
-                let params = sig.params();
-                let param_count = sig.param_count();
+                    let return_type = sig.return_type().clone();
+                    let params = sig.params();
+                    let param_count = sig.param_count();
 
-                match &params {
-                    Params::Variadic => {
-                        if args.len() > param_count {
-                            return Err(SemanticError::argument_count_mismatch(
-                                param_count,
-                                args.len(),
-                                func.clone(),
+                    match &params {
+                        Params::Variadic => {
+                            if args.len() > param_count {
+                                return Err(SemanticError::argument_count_mismatch(
+                                    param_count,
+                                    args.len(),
+                                    func.clone(),
+                                    span,
+                                ));
+                            }
+                        }
+                        Params::Fixed(_) => {
+                            if args.len() != param_count {
+                                return Err(SemanticError::argument_count_mismatch(
+                                    param_count,
+                                    args.len(),
+                                    func.clone(),
+                                    span,
+                                ));
+                            }
+                        }
+                    }
+
+                    let mut typed_args = Vec::new();
+
+                    for (i, arg) in args.iter().enumerate() {
+                        let typed_arg = arg.walk(ctx, span.clone())?;
+                        let expected_type = typed_arg.get_type();
+
+                        let cond = params.type_match(i, &expected_type);
+                        if !cond {
+                            return Err(SemanticError::type_mismatch(
+                                expected_type.clone().to_string(),
+                                typed_arg.get_type().to_string(),
                                 span,
                             ));
                         }
+
+                        typed_args.push(typed_arg);
                     }
-                    Params::Fixed(_) => {
-                        if args.len() != param_count {
-                            return Err(SemanticError::argument_count_mismatch(
-                                param_count,
-                                args.len(),
-                                func.clone(),
-                                span,
-                            ));
-                        }
-                    }
+
+                    Ok(TypedExpr::Call {
+                        func: func.clone(),
+                        args: typed_args,
+                        receiver: None,
+                        typ: return_type,
+                    })
                 }
-
-                let mut typed_args = Vec::new();
-
-                for (i, arg) in args.iter().enumerate() {
-                    let typed_arg = arg.walk(ctx, span.clone())?;
-                    let expected_type = typed_arg.get_type();
-
-                    let cond = params.type_match(i, &expected_type);
-                    if !cond {
-                        return Err(SemanticError::type_mismatch(
-                            expected_type.clone().to_string(),
-                            typed_arg.get_type().to_string(),
-                            span,
-                        ));
-                    }
-
-                    typed_args.push(typed_arg);
-                }
-
-                Ok(TypedExpr::Call {
-                    func: func.clone(),
-                    args: typed_args,
-                    typ: return_type,
-                })
             }
             Expr::FieldAccess(field) => Ok(TypedExpr::FieldAccess(field.walk(ctx, span)?)),
             Expr::ArrayIndex(index) => index.walk(ctx, span).map(TypedExpr::ArrayIndex),
-            Expr::MethodCall {
-                receiver,
-                method,
-                args,
-            } => {
-                let typed_receiver = receiver.walk(ctx, span.clone())?;
-                let receiver_type = typed_receiver.get_type();
-
-                let struct_name = match &receiver_type {
-                    Types::Struct(name) => name.clone(),
-                    _ => {
-                        return Err(SemanticError::type_mismatch(
-                            "Struct".to_string(),
-                            receiver_type.to_string(),
-                            span,
-                        ))
-                    }
-                };
-
-                // Look up the method signature using the mangled name
-                let mangled = mangle_method_name(&struct_name, method, span.clone());
-                let sig = ctx.get_function_signature(&mangled)?;
-                let return_type = sig.return_type().clone();
-                let params = sig.params();
-                let param_count = sig.param_count();
-
-                if args.len() != param_count {
-                    return Err(SemanticError::argument_count_mismatch(
-                        param_count,
-                        args.len(),
-                        mangled.clone(),
-                        span,
-                    ));
-                }
-
-                let mut typed_args = Vec::new();
-                for (i, arg) in args.iter().enumerate() {
-                    let typed_arg = arg.walk(ctx, span.clone())?;
-                    if !params.type_match(i, &typed_arg.get_type()) {
-                        return Err(SemanticError::type_mismatch(
-                            format!("parameter {i}"),
-                            typed_arg.get_type().to_string(),
-                            span,
-                        ));
-                    }
-                    typed_args.push(typed_arg);
-                }
-
-                Ok(TypedExpr::MethodCall {
-                    mangled_name: mangled,
-                    receiver: Box::new(typed_receiver),
-                    args: typed_args,
-                    typ: return_type,
-                })
-            }
         }
     }
 }
@@ -324,4 +278,49 @@ impl WalkAst for FieldAccessExpr {
             )),
         }
     }
+}
+
+fn struct_method_call(
+    receiver: &Expr,
+    method: &crate::tokens::Ident,
+    args: &[Expr],
+    ctx: &mut CompilerContext,
+    span: crate::error::Span,
+) -> Result<TypedExpr, SemanticError> {
+    let typed_receiver = receiver.walk(ctx, span.clone())?;
+    let receiver_type = typed_receiver.get_type();
+    let struct_name = receiver_type.unwrap_struct_name();
+    let mangled_name = mangle_method_name(struct_name, method, span.clone());
+    let sig = ctx.get_function_signature(&mangled_name)?;
+    let return_type = sig.return_type().clone();
+    let params = sig.params();
+    let param_count = sig.param_count();
+    if args.len() != param_count {
+        return Err(SemanticError::argument_count_mismatch(
+            param_count,
+            args.len(),
+            mangled_name.clone(),
+            span,
+        ));
+    }
+    let mut typed_args = Vec::new();
+    for (i, arg) in args.iter().enumerate() {
+        let typed_arg = arg.walk(ctx, span.clone())?;
+        let expected_type = typed_arg.get_type();
+        let cond = params.type_match(i, &expected_type);
+        if !cond {
+            return Err(SemanticError::type_mismatch(
+                expected_type.clone().to_string(),
+                typed_arg.get_type().to_string(),
+                span,
+            ));
+        }
+        typed_args.push(typed_arg);
+    }
+    Ok(TypedExpr::Call {
+        func: mangled_name,
+        args: typed_args,
+        receiver: Some(Box::new(typed_receiver)),
+        typ: return_type,
+    })
 }

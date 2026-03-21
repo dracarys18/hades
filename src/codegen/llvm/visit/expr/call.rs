@@ -7,11 +7,16 @@ use crate::typed_ast::TypedExpr;
 pub struct FunctionCall<'a> {
     pub name: &'a str,
     pub args: &'a [TypedExpr],
+    pub receiver: Option<&'a TypedExpr>,
 }
 
 impl<'a> FunctionCall<'a> {
-    pub fn new(name: &'a str, args: &'a [TypedExpr]) -> Self {
-        Self { name, args }
+    pub fn new(name: &'a str, args: &'a [TypedExpr], receiver: Option<&'a TypedExpr>) -> Self {
+        Self {
+            name,
+            args,
+            receiver,
+        }
     }
 }
 
@@ -22,6 +27,39 @@ impl<'a> Visit for FunctionCall<'a> {
         let function = context.get_function(self.name)?;
 
         let mut arg_values = Vec::new();
+
+        // If this is a method call, prepend the self pointer as the first argument.
+        if let Some(receiver_expr) = self.receiver {
+            let self_ptr = match receiver_expr {
+                TypedExpr::Ident { ident, .. } => context.get_variable(ident)?.value(),
+                _ => {
+                    let receiver_val = receiver_expr.visit(context)?;
+                    if receiver_val.value.is_pointer_value() {
+                        receiver_val.value.into_pointer_value()
+                    } else {
+                        let compiler_context = context.symbols();
+                        let struct_llvm_type = context
+                            .type_converter()
+                            .to_llvm_type(&receiver_val.type_info, compiler_context)?;
+                        let temp_ptr = context
+                            .builder()
+                            .build_alloca(struct_llvm_type, "method_self_tmp")
+                            .map_err(|e| CodegenError::LLVMBuild {
+                                message: format!("Failed to alloca method receiver: {e}"),
+                            })?;
+                        context
+                            .builder()
+                            .build_store(temp_ptr, receiver_val.value)
+                            .map_err(|e| CodegenError::LLVMBuild {
+                                message: format!("Failed to store method receiver: {e}"),
+                            })?;
+                        temp_ptr
+                    }
+                }
+            };
+            arg_values.push(self_ptr.into());
+        }
+
         for arg in self.args {
             let arg_val = arg.visit(context)?;
             arg_values.push(arg_val.value.into());

@@ -26,11 +26,7 @@ pub enum Expr {
     Call {
         func: Ident,
         args: Vec<Expr>,
-    },
-    MethodCall {
-        receiver: Box<Expr>,
-        method: Ident,
-        args: Vec<Expr>,
+        receiver: Option<Box<Expr>>,
     },
 }
 

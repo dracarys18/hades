@@ -28,12 +28,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install LLVM 18
+      - name: Install LLVM 21
         run: |
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
-          ./llvm.sh 18
-          apt-get install -y llvm-18-dev libpolly-18-dev zlib1g-dev libzstd-dev
+          ./llvm.sh 21
+          apt-get install -y llvm-21-dev libpolly-21-dev zlib1g-dev libzstd-dev
           ln -s /usr/bin/llvm-config-18 /usr/local/bin/llvm-config
 
       - name: Install Rust

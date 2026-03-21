@@ -816,7 +816,10 @@ impl Parser {
                         )?;
                         self.expect(&TokenKind::RightParen)?;
                         expr = Expr::Call {
-                            func: field_name.clone(),
+                            func: FunctionName::new(
+                                field_name.inner().to_string(),
+                                field_name.span().clone(),
+                            ),
                             receiver: Some(Box::new(expr)),
                             args,
                         };
@@ -882,7 +885,7 @@ impl Parser {
         self.expect(&TokenKind::RightParen)?;
 
         Ok(Expr::Call {
-            func: func_name,
+            func: FunctionName::new(func_name.inner().to_string(), func_name.span().clone()),
             receiver: None,
             args,
         })

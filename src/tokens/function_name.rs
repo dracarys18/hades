@@ -3,7 +3,7 @@ use crate::tokens::Ident;
 use std::fmt::Debug;
 use std::hash::Hash;
 
-/// A function name identifier that knows how to mangle itself into a method name.
+/// A function name that knows how to mangle itself into a method name.
 ///
 /// Method name mangling: `Outer__method` is produced by `outer.mangle(method)`.
 /// This is the canonical place for all name-mangling logic.
@@ -18,6 +18,7 @@ impl FunctionName {
         Self { name, span }
     }
 
+    /// The raw name string.
     pub fn inner(&self) -> &str {
         &self.name
     }
@@ -26,17 +27,16 @@ impl FunctionName {
         &self.span
     }
 
-    /// Produce the mangled name for a method: `self__method`.
+    /// Produce the mangled name: `self__other`.
     ///
-    /// Example: `Point.mangle(get_x)` → `FunctionName("Point__get_x")`.
-    pub fn mangle(&self, method: &FunctionName) -> FunctionName {
+    /// Example: `get_x.mangle(Point)` → `FunctionName("get_x__Point")`.
+    pub fn mangle(&self, other: &Ident) -> FunctionName {
         FunctionName {
-            name: format!("{}__{}", self.name, method.name),
-            span: method.span.clone(),
+            name: format!("{}__{}", self.name, other.inner()),
+            span: self.span.clone(),
         }
     }
 
-    /// Convert to an `Ident` for use in contexts that require one (e.g. map keys).
     pub fn to_ident(&self) -> Ident {
         Ident::new(self.name.clone(), self.span.clone())
     }

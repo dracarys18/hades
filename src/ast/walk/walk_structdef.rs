@@ -1,6 +1,5 @@
 use crate::ast::{FieldKind, StructDef, WalkAst};
 use crate::error::SemanticError;
-use crate::tokens::FunctionName;
 use crate::typed_ast::{TypedFieldKind, TypedStructDef};
 use indexmap::IndexMap;
 
@@ -29,7 +28,6 @@ impl WalkAst for StructDef {
         span: crate::error::Span,
     ) -> Result<Self::Output, SemanticError> {
         let name = self.name.clone();
-        let struct_fn_name = FunctionName::new(name.inner().to_string(), name.span().clone());
 
         // --- Pass 1: register var-only skeleton so method bodies can resolve self's fields ---
         let var_only = self
@@ -50,8 +48,7 @@ impl WalkAst for StructDef {
                     fields.insert(k.clone(), TypedFieldKind::Var(t.clone()));
                 }
                 FieldKind::Func(func_def) => {
-                    // Mangle: StructName__MethodName via FunctionName::mangle()
-                    let mangled = struct_fn_name.mangle(&func_def.name);
+                    let mangled = func_def.name.mangle(&name);
                     let mut mangled_func = func_def.clone();
                     mangled_func.name = mangled;
 

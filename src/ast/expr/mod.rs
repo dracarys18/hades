@@ -5,7 +5,7 @@ pub use assignment::*;
 use indexmap::IndexMap;
 
 use super::value::Value;
-use crate::tokens::{Ident, Op};
+use crate::tokens::{FunctionName, Ident, Op};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
@@ -24,7 +24,7 @@ pub enum Expr {
     Assign(AssignExpr),
     FieldAccess(FieldAccessExpr),
     Call {
-        func: Ident,
+        func: FunctionName,
         args: Vec<Expr>,
         receiver: Option<Box<Expr>>,
     },

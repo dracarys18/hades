@@ -97,7 +97,7 @@ impl<'a> Visit for FunctionCall<'a> {
             })?;
 
         Ok(CodegenValue::new(
-            call_result.try_as_basic_value().unwrap_left(),
+            call_result.try_as_basic_value().unwrap_basic(),
             return_type,
         ))
     }

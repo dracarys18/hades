@@ -319,7 +319,7 @@ dependencies = [
  "petgraph",
  "phf",
  "rayon",
- "thiserror 2.0.17",
+ "thiserror",
 ]
 
 [[package]]
@@ -363,23 +363,22 @@ dependencies = [
 
 [[package]]
 name = "inkwell"
-version = "0.5.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40fb405537710d51f6bdbc8471365ddd4cd6d3a3c3ad6e0c8291691031ba94b2"
+checksum = "1def4112dfb2ce2993db7027f7acdb43c1f4ee1c70a082a2eef306ed5d0df365"
 dependencies = [
- "either",
  "inkwell_internals",
  "libc",
  "llvm-sys",
  "once_cell",
- "thiserror 1.0.69",
+ "thiserror",
 ]
 
 [[package]]
 name = "inkwell_internals"
-version = "0.10.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9dd28cfd4cfba665d47d31c08a6ba637eed16770abca2eccbbc3ca831fef1e44"
+checksum = "63736175c9a30ea123f7018de9f26163e0b39cd6978990ae486b510c4f3bad69"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -442,9 +441,9 @@ checksum = "58f929b4d672ea937a23a1ab494143d968337a5f47e56d0815df1e0890ddf174"
 
 [[package]]
 name = "llvm-sys"
-version = "180.0.0"
+version = "211.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "778fa5fa02e32728e718f11eec147e6f134137399ab02fd2c13d32476337affa"
+checksum = "108b3ad2b2eaf2a561fc74196273b20e3436e4a688b8b44e250d83974dc1b2e2"
 dependencies = [
  "anyhow",
  "cc",
@@ -756,31 +755,11 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.69"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6aaf5339b578ea85b50e080feb250a3e8ae8cfcdff9a461c9ec2904bc923f52"
-dependencies = [
- "thiserror-impl 1.0.69",
-]
-
-[[package]]
-name = "thiserror"
 version = "2.0.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f63587ca0f12b72a0600bcba1d40081f830876000bb46dd2337a3051618f4fc8"
 dependencies = [
- "thiserror-impl 2.0.17",
-]
-
-[[package]]
-name = "thiserror-impl"
-version = "1.0.69"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fee6c4efc90059e10f81e6d42c60a18f76588c3d74cb83a0b242a2b6c7504c1"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
+ "thiserror-impl",
 ]
 
 [[package]]

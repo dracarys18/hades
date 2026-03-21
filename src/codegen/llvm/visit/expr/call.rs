@@ -65,10 +65,10 @@ impl<'a> Visit for FunctionCall<'a> {
             arg_values.push(arg_val.value.into());
         }
 
-        let name_ident = crate::tokens::Ident::new(self.name.to_string(), Default::default());
+        let name_fn = crate::tokens::FunctionName::new(self.name.to_string(), Default::default());
         let return_type = context
             .symbols()
-            .get_function_signature(&name_ident)
+            .get_function_signature(&name_fn)
             .map_err(|_| CodegenError::FunctionNotFound {
                 name: self.name.to_string(),
             })?

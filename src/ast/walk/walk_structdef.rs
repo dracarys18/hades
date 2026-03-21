@@ -1,7 +1,7 @@
-use crate::ast::{FieldKind, StructDef, Types, WalkAst};
-use crate::error::{SemanticError, Span};
-use crate::tokens::Ident;
-use crate::typed_ast::{FunctionSignature, TypedFieldKind, TypedFuncDef, TypedStructDef};
+use crate::ast::{FieldKind, StructDef, WalkAst};
+use crate::error::SemanticError;
+use crate::tokens::FunctionName;
+use crate::typed_ast::{TypedFieldKind, TypedStructDef};
 use indexmap::IndexMap;
 
 impl WalkAst for FieldKind {
@@ -20,6 +20,7 @@ impl WalkAst for FieldKind {
         }
     }
 }
+
 impl WalkAst for StructDef {
     type Output = TypedStructDef;
     fn walk(
@@ -28,9 +29,10 @@ impl WalkAst for StructDef {
         span: crate::error::Span,
     ) -> Result<Self::Output, SemanticError> {
         let name = self.name.clone();
+        let struct_fn_name = FunctionName::new(name.inner().to_string(), name.span().clone());
 
-        // --- Pass 1: register var-only skeleton so that method bodies can resolve self's fields ---
-        let var_only: IndexMap<Ident, TypedFieldKind> = self
+        // --- Pass 1: register var-only skeleton so method bodies can resolve self's fields ---
+        let var_only = self
             .fields
             .iter()
             .filter_map(|(k, v)| match v {
@@ -40,29 +42,25 @@ impl WalkAst for StructDef {
             .collect();
         ctx.insert_struct(name.clone(), var_only);
 
-        // --- Pass 2: walk all fields (var fields trivially, func fields fully) ---
-        let mut fields: IndexMap<Ident, TypedFieldKind> = IndexMap::new();
+        // --- Pass 2: walk all fields ---
+        let mut fields = IndexMap::new();
         for (k, v) in &self.fields {
             match v {
                 FieldKind::Var(t) => {
                     fields.insert(k.clone(), TypedFieldKind::Var(t.clone()));
                 }
                 FieldKind::Func(func_def) => {
-                    // Rename to mangled name: StructName__MethodName
-                    let mangled = mangle_method_name(&name, &func_def.name, span.clone());
+                    // Mangle: StructName__MethodName via FunctionName::mangle()
+                    let mangled = struct_fn_name.mangle(&func_def.name);
                     let mut mangled_func = func_def.clone();
                     mangled_func.name = mangled;
 
                     let typed = mangled_func.walk(ctx, span.clone())?;
-                    // Store in the struct fields map under the original (unmangled) method name
-                    // so that MethodCall can look it up by original name.
+                    // Store under the original (unmangled) method name so call-site lookup works.
                     fields.insert(k.clone(), TypedFieldKind::Func(typed));
                 }
             }
         }
-
-        // --- Update struct registration with complete fields (still only vars matter for layout) ---
-        // (The var-only skeleton is sufficient; re-inserting has no effect on existing var entries.)
 
         Ok(TypedStructDef {
             name: name.clone(),
@@ -70,10 +68,4 @@ impl WalkAst for StructDef {
             span: self.span.clone(),
         })
     }
-}
-
-/// Returns the mangled LLVM function name for a struct method: `StructName__MethodName`.
-pub fn mangle_method_name(struct_name: &Ident, method_name: &Ident, span: Span) -> Ident {
-    let mangled = format!("{}__{}", struct_name.inner(), method_name.inner());
-    Ident::new(mangled, span)
 }

@@ -5,7 +5,7 @@ pub use assign::*;
 use indexmap::IndexMap;
 
 use super::value::TypedValue;
-use crate::tokens::{Ident, Op};
+use crate::tokens::{FunctionName, Ident, Op};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypedExpr {
@@ -29,7 +29,7 @@ pub enum TypedExpr {
     ArrayIndex(TypedArrayIndex),
     Assign(TypedAssignExpr),
     Call {
-        func: Ident,
+        func: FunctionName,
         args: Vec<TypedExpr>,
         receiver: Option<Box<TypedExpr>>,
         typ: Types,

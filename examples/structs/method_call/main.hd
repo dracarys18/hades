@@ -2,15 +2,15 @@ struct Point {
     x: int,
     y: int,
 
-    fn getX(): int {
+    fn getX(self: Self): int {
         return self.x;
     }
 
-    fn getY(): int {
+    fn getY(self: Self): int {
         return self.y;
     }
 
-    fn sum(): int {
+    fn sum(self: Self): int {
         return self.x + self.y;
     }
 }

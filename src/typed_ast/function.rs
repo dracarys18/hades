@@ -1,7 +1,7 @@
 use super::builtins::BUILTIN_FUNCTIONS;
 use crate::ast::Types;
 use crate::consts::MAX_FUNCTION_PARAMS;
-use crate::tokens::Ident;
+use crate::tokens::{FunctionName, Ident};
 use crate::typed_ast::SemanticError;
 
 use indexmap::IndexMap;
@@ -19,11 +19,10 @@ impl Params {
             Params::Fixed(map) => {
                 let expected_type = map.values().nth(num).expect("Parameter not found");
 
-                let cond = match expected_type {
-                    Types::Generic(typs) => typs.contains(&other_type),
+                match expected_type {
+                    Types::Generic(typs) => typs.contains(other_type),
                     _ => other_type == expected_type,
-                };
-                cond
+                }
             }
         }
     }
@@ -86,33 +85,45 @@ impl FunctionSignature {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Functions {
-    inner: IndexMap<Ident, FunctionSignature>,
+    inner: IndexMap<FunctionName, FunctionSignature>,
 }
 
 impl Functions {
     pub fn new() -> Self {
-        let built_ins = BUILTIN_FUNCTIONS.clone();
+        let built_ins = BUILTIN_FUNCTIONS
+            .iter()
+            .map(|(k, v)| {
+                let fn_name = FunctionName::new(k.inner().to_string(), k.span().clone());
+                (fn_name, v.clone())
+            })
+            .collect();
         Self { inner: built_ins }
     }
 
-    pub fn insert(&mut self, name: Ident, sig: FunctionSignature) -> Result<(), SemanticError> {
+    pub fn insert(
+        &mut self,
+        name: FunctionName,
+        sig: FunctionSignature,
+    ) -> Result<(), SemanticError> {
         if self.inner.contains_key(&name) {
+            let ident = name.to_ident();
             return Err(SemanticError::redefined_function(
-                name.clone(),
-                name.span().clone(),
+                ident.clone(),
+                ident.span().clone(),
             ));
         }
         self.inner.insert(name, sig);
         Ok(())
     }
 
-    pub fn get_unchecked(&self, name: &Ident) -> &FunctionSignature {
+    pub fn get_unchecked(&self, name: &FunctionName) -> &FunctionSignature {
         self.inner.get(name).expect("Function not found")
     }
 
-    pub fn get(&self, name: &Ident) -> Result<&FunctionSignature, SemanticError> {
-        self.inner
-            .get(name)
-            .ok_or_else(|| SemanticError::undefined_function(name.clone(), name.span().clone()))
+    pub fn get(&self, name: &FunctionName) -> Result<&FunctionSignature, SemanticError> {
+        self.inner.get(name).ok_or_else(|| {
+            let ident = name.to_ident();
+            SemanticError::undefined_function(ident.clone(), ident.span().clone())
+        })
     }
 }

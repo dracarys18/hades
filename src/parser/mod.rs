@@ -4,7 +4,7 @@ use crate::ast::*;
 use crate::error::Span;
 use crate::parser::error::FinalParseResult;
 use crate::token_matches;
-use crate::tokens::{Assoc, Ident, Op, Token, TokenKind};
+use crate::tokens::{Assoc, FunctionName, Ident, Op, Token, TokenKind};
 use error::{ParseError, ParseResult};
 use indexmap::IndexMap;
 use std::ops::Range;
@@ -239,7 +239,8 @@ impl Parser {
     fn parse_function_def(&mut self) -> ParseResult<Stmt> {
         let start_tok = self.current_span();
         self.expect(&TokenKind::Fn)?;
-        let name = self.expect_identifier()?;
+        let name_ident = self.expect_identifier()?;
+        let name = FunctionName::new(name_ident.inner().to_string(), name_ident.span().clone());
         let params = self.parse_parameter_list()?;
         let return_type = self.parse_optional_return_type()?;
         let body = self.parse_block()?;
@@ -252,7 +253,7 @@ impl Parser {
             params,
             return_type,
             body: Block::new(body.into(), span.clone()),
-            span: span,
+            span,
         }))
     }
 
@@ -467,6 +468,18 @@ impl Parser {
         self.expect(&TokenKind::LeftParen)?;
         let params = self.parse_comma_separated(
             |parser| {
+                // Allow `self: Self` as the first parameter of a method.
+                if parser
+                    .peek()
+                    .is_some_and(|tok| token_matches!(tok, TokenKind::Self_))
+                {
+                    let self_tok = parser.next().unwrap();
+                    let self_ident = Ident::new("self".to_string(), self_tok.span().clone());
+                    parser.expect(&TokenKind::Colon)?;
+                    // Consume the `Self` type keyword (written as an identifier).
+                    parser.expect_identifier()?;
+                    return Ok((self_ident, Types::Void)); // type resolved by walker
+                }
                 let name = parser.expect_identifier()?;
                 parser.expect(&TokenKind::Colon)?;
                 let param_type = parser.expect_type()?;
@@ -499,7 +512,8 @@ impl Parser {
                 TokenKind::Fn => {
                     let mut func = self.parse_function_def()?.unwrap_func_def();
                     func.parent_struct = Some(struct_name.clone());
-                    fields.insert(func.name.clone(), FieldKind::Func(func));
+                    let key = func.name.to_ident();
+                    fields.insert(key, FieldKind::Func(func));
                 }
                 TokenKind::Ident(field_name) => {
                     let field_name = field_name.clone();

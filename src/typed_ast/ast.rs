@@ -1,7 +1,7 @@
 use crate::{
     ast::{ImportPrefix, Types},
     error::Span,
-    tokens::Ident,
+    tokens::{FunctionName, Ident},
     typed_ast::{
         expr::{TypedAssignExpr, TypedBinaryExpr},
         function::FunctionSignature,
@@ -10,7 +10,7 @@ use crate::{
 use derive_more::Debug;
 use indexmap::IndexMap;
 
-use super::{TypedProgram, expr::TypedExpr};
+use super::{expr::TypedExpr, TypedProgram};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypedBlock {
@@ -97,7 +97,7 @@ pub enum TypedFieldKind {
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct TypedFuncDef {
-    pub name: Ident,
+    pub name: FunctionName,
     pub signature: FunctionSignature,
     pub body: TypedBlock,
     pub span: Span,

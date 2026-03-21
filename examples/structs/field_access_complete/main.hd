@@ -2,7 +2,7 @@ struct Point {
     x: int,
     y: int,
 
-    fn Getx(): int {
+    fn Getx(self: Self): int {
         return self.x;
     }
 }

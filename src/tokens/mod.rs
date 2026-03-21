@@ -1,8 +1,10 @@
+mod function_name;
 mod ident;
 mod op;
 
 use std::fmt::Debug;
 
+pub use function_name::*;
 pub use ident::*;
 pub use op::*;
 

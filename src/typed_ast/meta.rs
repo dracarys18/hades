@@ -1,14 +1,14 @@
 use super::SemanticError;
 use crate::typed_ast::{
-    TypedFieldKind,
     function::{FunctionSignature, Functions},
     ident::IdentMap,
     struc::{Field, Structs},
+    TypedFieldKind,
 };
 
 use crate::ast::Types;
 use crate::error::Span;
-use crate::tokens::{Ident, Op};
+use crate::tokens::{FunctionName, Ident, Op};
 use indexmap::IndexMap;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -16,7 +16,7 @@ pub struct CompilerContext {
     idents: IdentMap,
     functions: Functions,
     structs: Structs,
-    current_function: Option<(Ident, Types)>,
+    current_function: Option<(FunctionName, Types)>,
 }
 
 impl CompilerContext {
@@ -35,7 +35,7 @@ impl CompilerContext {
 
     pub fn enter_function(
         &mut self,
-        name: Ident,
+        name: FunctionName,
         signature: FunctionSignature,
     ) -> Result<(), SemanticError> {
         self.current_function = Some((name.clone(), signature.return_type.clone()));
@@ -79,7 +79,7 @@ impl CompilerContext {
 
     pub fn get_function_signature(
         &self,
-        name: &Ident,
+        name: &FunctionName,
     ) -> Result<&FunctionSignature, SemanticError> {
         self.functions.get(name)
     }

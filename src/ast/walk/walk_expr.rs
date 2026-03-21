@@ -1,8 +1,8 @@
-use crate::ast::walk::walk_structdef::mangle_method_name;
 use crate::ast::{
     ArrayIndexExpr, ArrayType, AssignExpr, AssignTarget, BinaryExpr, FieldAccessExpr,
 };
 use crate::error::SemanticError;
+use crate::tokens::FunctionName;
 use crate::typed_ast::TypedArrayIndex;
 use crate::{
     ast::{Expr, Types, WalkAst},
@@ -75,7 +75,9 @@ impl WalkAst for Expr {
                 if receiver.is_some() {
                     struct_method_call(receiver.as_ref().unwrap(), func, args, ctx, span.clone())
                 } else {
-                    let sig = ctx.get_function_signature(func)?;
+                    let func_name =
+                        FunctionName::new(func.inner().to_string(), func.span().clone());
+                    let sig = ctx.get_function_signature(&func_name)?;
 
                     let return_type = sig.return_type().clone();
                     let params = sig.params();
@@ -123,7 +125,7 @@ impl WalkAst for Expr {
                     }
 
                     Ok(TypedExpr::Call {
-                        func: func.clone(),
+                        func: func_name,
                         args: typed_args,
                         receiver: None,
                         typ: return_type,
@@ -290,7 +292,10 @@ fn struct_method_call(
     let typed_receiver = receiver.walk(ctx, span.clone())?;
     let receiver_type = typed_receiver.get_type();
     let struct_name = receiver_type.unwrap_struct_name();
-    let mangled_name = mangle_method_name(struct_name, method, span.clone());
+    let struct_fn_name =
+        FunctionName::new(struct_name.inner().to_string(), struct_name.span().clone());
+    let method_fn_name = FunctionName::new(method.inner().to_string(), method.span().clone());
+    let mangled_name = struct_fn_name.mangle(&method_fn_name);
     let sig = ctx.get_function_signature(&mangled_name)?;
     let return_type = sig.return_type().clone();
     let params = sig.params();
@@ -299,7 +304,7 @@ fn struct_method_call(
         return Err(SemanticError::argument_count_mismatch(
             param_count,
             args.len(),
-            mangled_name.clone(),
+            mangled_name.to_ident(),
             span,
         ));
     }

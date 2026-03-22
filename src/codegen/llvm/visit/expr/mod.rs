@@ -20,37 +20,34 @@ pub use struct_init::StructInit;
 pub use unary::UnaryOp;
 pub use variable::VariableAccess;
 
-pub(super) fn get_ptr<'ctx>(
-    expr: &TypedExpr,
-    context: &mut LLVMContext<'ctx>,
-) -> CodegenResult<PointerValue<'ctx>> {
-    if let TypedExpr::Ident { ident, .. } = expr {
-        return context.get_variable(ident).map(|v| v.value());
-    }
-    expr.visit(context).and_then(|val| {
-        val.value.try_into().or_else(|_| {
-            let symbols = context.symbols();
-            context
-                .type_converter()
-                .to_llvm_type(&val.type_info, symbols)
-                .and_then(|t| {
-                    context.builder().build_alloca(t, "tmp_ptr").map_err(|e| {
-                        CodegenError::LLVMBuild {
-                            message: e.to_string(),
-                        }
-                    })
-                })
-                .and_then(|ptr| {
-                    context
-                        .builder()
-                        .build_store(ptr, val.value)
-                        .map_err(|e| CodegenError::LLVMBuild {
-                            message: e.to_string(),
+impl<'ctx> LLVMContext<'ctx> {
+    pub(super) fn get_ptr(&mut self, expr: &TypedExpr) -> CodegenResult<PointerValue<'ctx>> {
+        if let TypedExpr::Ident { ident, .. } = expr {
+            return self.get_variable(ident).map(|v| v.value());
+        }
+        expr.visit(self).and_then(|val| {
+            val.value.try_into().or_else(|_| {
+                let symbols = self.symbols();
+                self.type_converter()
+                    .to_llvm_type(&val.type_info, symbols)
+                    .and_then(|t| {
+                        self.builder().build_alloca(t, "tmp_ptr").map_err(|e| {
+                            CodegenError::LLVMBuild {
+                                message: e.to_string(),
+                            }
                         })
-                        .map(|_| ptr)
-                })
+                    })
+                    .and_then(|ptr| {
+                        self.builder()
+                            .build_store(ptr, val.value)
+                            .map_err(|e| CodegenError::LLVMBuild {
+                                message: e.to_string(),
+                            })
+                            .map(|_| ptr)
+                    })
+            })
         })
-    })
+    }
 }
 
 impl Visit for TypedExpr {
@@ -95,7 +92,7 @@ impl Visit for TypedArrayIndex {
     type Output<'ctx> = CodegenValue<'ctx>;
 
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
-        let array_ptr = get_ptr(&self.expr, context)?;
+        let array_ptr = context.get_ptr(&self.expr)?;
         let index_value = self.index.visit(context)?;
         let symbols = context.symbols();
         let elem_type = context
@@ -135,7 +132,7 @@ impl Visit for TypedFieldAccess {
     type Output<'ctx> = CodegenValue<'ctx>;
 
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
-        let struct_ptr = get_ptr(self.expr.as_ref(), context)?;
+        let struct_ptr = context.get_ptr(self.expr.as_ref())?;
         let compiler_context = context.symbols();
 
         let struct_type = context

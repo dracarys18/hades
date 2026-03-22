@@ -5,8 +5,6 @@ use crate::codegen::BuiltinRegistar;
 use crate::typed_ast::TypedExpr;
 use inkwell::values::BasicMetadataValueEnum;
 
-use super::get_ptr;
-
 pub fn visit_function_call<'ctx>(
     name: &str,
     args: &[TypedExpr],
@@ -26,7 +24,7 @@ pub fn visit_method_call<'ctx>(
     args: &[TypedExpr],
     context: &mut LLVMContext<'ctx>,
 ) -> CodegenResult<CodegenValue<'ctx>> {
-    let self_ptr = get_ptr(receiver, context)?;
+    let self_ptr = context.get_ptr(receiver)?;
     let arg_values = std::iter::once(Ok(self_ptr.into()))
         .chain(
             args.iter()

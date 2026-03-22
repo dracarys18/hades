@@ -694,11 +694,45 @@ impl Parser {
     }
 
     fn parse_array_literal(&mut self) -> ParseResult<Expr> {
-        let elem =
-            self.parse_comma_separated(|parse| parse.parse_assignment(), &TokenKind::RightBracket)?;
+        if self
+            .peek()
+            .is_some_and(|tok| token_matches!(tok, TokenKind::RightBracket))
+        {
+            self.expect(&TokenKind::RightBracket)?;
+            return Ok(Expr::Value(Value::Array(ArrayLiteral::new(vec![]))));
+        }
 
+        let first = self.parse_assignment()?;
+
+        if self.consume_if(&TokenKind::Semicolon) {
+            let count_token = self.next();
+            let count = match count_token.as_ref().map(|t| t.kind()) {
+                Some(TokenKind::Number(n)) => *n as usize,
+                _ => {
+                    let span = self.current_span().into_range();
+                    let source_id = self.source_id.clone();
+                    return Err(ParseError::unexpected_token(
+                        count_token,
+                        "array repeat count",
+                        span,
+                        source_id,
+                    ));
+                }
+            };
+            self.expect(&TokenKind::RightBracket)?;
+            let elem = std::iter::repeat(first).take(count).collect::<Vec<_>>();
+            return Ok(Expr::Value(Value::Array(ArrayLiteral::new(elem))));
+        }
+
+        let mut elem = vec![first];
+        if self.consume_if(&TokenKind::Comma) {
+            let rest = self.parse_comma_separated(
+                |parse| parse.parse_assignment(),
+                &TokenKind::RightBracket,
+            )?;
+            elem.extend(rest);
+        }
         self.expect(&TokenKind::RightBracket)?;
-
         Ok(Expr::Value(Value::Array(ArrayLiteral::new(elem))))
     }
 
@@ -787,6 +821,15 @@ impl Parser {
                     let value = self.parse_assignment()?;
                     return Ok(Expr::Assign(AssignExpr {
                         target: AssignTarget::FieldAccess(field),
+                        op,
+                        value: Box::new(value),
+                    }));
+                }
+                Expr::ArrayIndex(index) => {
+                    let op = Op::from_token(&self.next().unwrap()).unwrap();
+                    let value = self.parse_assignment()?;
+                    return Ok(Expr::Assign(AssignExpr {
+                        target: AssignTarget::ArrayIndex(index),
                         op,
                         value: Box::new(value),
                     }));

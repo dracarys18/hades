@@ -193,6 +193,18 @@ impl WalkAst for AssignExpr {
                         typ,
                     })
             }
+            AssignTarget::ArrayIndex(ref index) => {
+                let typed_index = index.walk(ctx, span.clone())?;
+                let elem_type = typed_index.typ.get_array_elem_type();
+                let value = self.value.walk(ctx, span.clone())?;
+                ctx.infer_binary_type(&elem_type, &self.op, &value.get_type(), span)
+                    .map(|typ| TypedAssignExpr {
+                        target: TypedAssignTarget::ArrayIndex(typed_index),
+                        op: self.op.clone(),
+                        value: Box::new(value),
+                        typ,
+                    })
+            }
         }
     }
 }

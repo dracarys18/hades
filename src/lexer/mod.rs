@@ -294,6 +294,15 @@ impl Lexer {
                         self.pos
                     ));
                 }
+                ch if ch.eq(&b'%') => {
+                    self.next();
+                    self.push_token(tok!(
+                        &self.source_id,
+                        TokenKind::Percent,
+                        start_pos,
+                        self.pos
+                    ));
+                }
                 ch if ch.eq(&b'=') => {
                     self.next();
                     if self.peek_and_check(b'=') {

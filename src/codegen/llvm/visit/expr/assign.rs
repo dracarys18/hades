@@ -61,6 +61,26 @@ impl<'a> Assignment<'a> {
 
                 Ok(LLVMVariable::new(field_ptr, field.field_type.clone()))
             }
+            TypedAssignTarget::ArrayIndex(index) => {
+                let array_ptr = ctx.get_ptr(&index.expr)?;
+                let index_val = index.index.visit(ctx)?;
+                let elem_type = index.typ.get_array_elem_type();
+                let symbols = ctx.symbols();
+                let array_type = ctx.type_converter().to_llvm_type(&index.typ, symbols)?;
+                let zero = ctx.context().i32_type().const_zero();
+                let elem_ptr = unsafe {
+                    ctx.builder().build_in_bounds_gep(
+                        array_type,
+                        array_ptr,
+                        &[zero, index_val.value.into_int_value()],
+                        "array_assign_ptr",
+                    )
+                }
+                .map_err(|_| CodegenError::LLVMBuild {
+                    message: "Failed to create array element pointer for assignment".to_string(),
+                })?;
+                Ok(LLVMVariable::new(elem_ptr, elem_type))
+            }
         }
     }
 }
@@ -130,6 +150,7 @@ impl Visit for TypedAssignTarget {
                 Ok(current_value)
             }
             Self::FieldAccess(field) => field.visit(context),
+            Self::ArrayIndex(index) => index.visit(context),
         }
     }
 }

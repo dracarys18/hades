@@ -70,7 +70,7 @@ impl TypedExpr {
             TypedExpr::Assign(TypedAssignExpr { typ, .. }) => typ.clone(),
             TypedExpr::Call { typ, .. } => typ.clone(),
             TypedExpr::FieldAccess(TypedFieldAccess { field_type, .. }) => field_type.clone(),
-            TypedExpr::ArrayIndex(TypedArrayIndex { typ, .. }) => typ.clone(),
+            TypedExpr::ArrayIndex(TypedArrayIndex { typ, .. }) => typ.get_array_elem_type(),
         }
     }
 }

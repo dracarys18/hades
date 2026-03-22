@@ -90,6 +90,7 @@ impl Op {
             TokenKind::Minus => Some(Op::Minus),
             TokenKind::Multiply => Some(Op::Multiply),
             TokenKind::Divide => Some(Op::Divide),
+            TokenKind::Percent => Some(Op::Mod),
             TokenKind::PlusEqual => Some(Op::PlusEqual),
             TokenKind::MinusEqual => Some(Op::MinusEqual),
             TokenKind::EqualEqual => Some(Op::EqualEqual),

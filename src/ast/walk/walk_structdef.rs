@@ -12,10 +12,7 @@ impl WalkAst for FieldKind {
     ) -> Result<Self::Output, SemanticError> {
         match self {
             FieldKind::Var(typ) => Ok(TypedFieldKind::Var(typ.clone())),
-            FieldKind::Func(func_def) => {
-                let typed_func_def = func_def.walk(ctx, span.clone())?;
-                Ok(TypedFieldKind::Func(typed_func_def))
-            }
+            FieldKind::Func(func_def) => Ok(TypedFieldKind::Func(func_def.walk(ctx, span)?)),
         }
     }
 }
@@ -28,10 +25,8 @@ impl WalkAst for StructDef {
         span: crate::error::Span,
     ) -> Result<Self::Output, SemanticError> {
         let name = self.name.clone();
-        let mut fields = IndexMap::new();
 
-        // Pre-register var fields so method bodies can resolve self's field types.
-        let var_only = self
+        let var_fields = self
             .fields
             .iter()
             .filter_map(|(k, v)| match v {
@@ -39,25 +34,24 @@ impl WalkAst for StructDef {
                 FieldKind::Func(_) => None,
             })
             .collect();
-        ctx.insert_struct(name.clone(), var_only);
+        ctx.insert_struct(name.clone(), var_fields);
 
-        for (k, v) in &self.fields {
-            match v {
-                FieldKind::Var(t) => {
-                    fields.insert(k.clone(), TypedFieldKind::Var(t.clone()));
-                }
-                FieldKind::Func(func_def) => {
-                    let mut mangled_func = func_def.clone();
-                    mangled_func.name = func_def.name.mangle(&name);
-                    let typed = mangled_func.walk(ctx, span.clone())?;
-                    fields.insert(k.clone(), TypedFieldKind::Func(typed));
-                }
+        for (_, v) in &self.fields {
+            if let FieldKind::Func(func_def) = v {
+                func_def.register(ctx)?;
             }
         }
+
+        let fields = self
+            .fields
+            .iter()
+            .map(|(k, v)| Ok((k.clone(), v.walk(ctx, span.clone())?)))
+            .collect::<Result<IndexMap<_, _>, _>>()?;
+
         ctx.insert_struct(name.clone(), fields.clone());
 
         Ok(TypedStructDef {
-            name: name.clone(),
+            name,
             fields,
             span: self.span.clone(),
         })

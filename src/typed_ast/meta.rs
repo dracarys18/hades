@@ -33,13 +33,25 @@ impl CompilerContext {
         &self.structs
     }
 
+    pub fn register_function(
+        &mut self,
+        name: FunctionName,
+        sig: FunctionSignature,
+    ) -> Result<(), SemanticError> {
+        self.functions.insert(name, sig)
+    }
+
+    pub fn set_current_function(&mut self, name: FunctionName, return_type: Types) {
+        self.current_function = Some((name, return_type));
+    }
+
     pub fn enter_function(
         &mut self,
         name: FunctionName,
-        signature: FunctionSignature,
+        sig: FunctionSignature,
     ) -> Result<(), SemanticError> {
-        self.current_function = Some((name.clone(), signature.return_type.clone()));
-        self.functions.insert(name, signature)
+        self.set_current_function(name.clone(), sig.return_type.clone());
+        self.functions.insert(name, sig)
     }
 
     pub fn enter_scope(&mut self) {

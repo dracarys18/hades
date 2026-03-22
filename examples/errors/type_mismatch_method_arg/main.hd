@@ -1,0 +1,13 @@
+struct Scaler {
+    base: int,
+
+    fn scale(self: Self, factor: int): int {
+        return self.base * factor;
+    }
+}
+
+fn main(): int {
+    let s = Scaler { base: 5 };
+    let result = s.scale(true);
+    return result;
+}

@@ -1,0 +1,10 @@
+struct Rect {
+    width: int,
+    height: int
+}
+
+fn main(): int {
+    let r = Rect { width: 10, height: 5 };
+    let a = r.area();
+    return a;
+}

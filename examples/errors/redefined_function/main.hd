@@ -1,0 +1,11 @@
+fn greet(): int {
+    return 1;
+}
+
+fn greet(): int {
+    return 2;
+}
+
+fn main(): int {
+    return greet();
+}

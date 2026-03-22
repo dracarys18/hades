@@ -1,0 +1,12 @@
+struct Flag {
+    active: bool,
+
+    fn get(self: Self): int {
+        return self.active;
+    }
+}
+
+fn main(): int {
+    let f = Flag { active: true };
+    return f.get();
+}

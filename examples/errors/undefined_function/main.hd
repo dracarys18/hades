@@ -1,0 +1,4 @@
+fn main(): int {
+    let result = compute(10);
+    return result;
+}

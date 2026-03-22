@@ -15,81 +15,84 @@ NC='\033[0m'
 PASSED=0
 FAILED=0
 
+echo "Building hades..."
+cargo build --bin hades --quiet
+HADES=$(cargo build --bin hades --message-format=json --quiet 2>/dev/null \
+    | python3 -c "import sys,json; [print(m['executable']) for l in sys.stdin for m in [json.loads(l)] if m.get('executable')]")
+
+echo ""
+echo "Running example tests..."
+echo ""
+
 test_example() {
     local file=$1
     local dir=$(dirname "$file")
     local basename=$(basename "$file" .hd)
     local name="${file#examples/}"
     local name="${name%.hd}"
-    
-    local expected_file
-    local command
-    if [ "$basename" = "main" ]; then
-        expected_file="${dir}/.expected"
-        command="run"
-    else
-        expected_file="${file%.hd}.expected"
-        command="check"
-    fi
-    
+
+    local expected_file="${dir}/.expected"
+    local expect_failure=false
+    [ -f "${dir}/.expect_failure" ] && expect_failure=true
+
+    local command="run"
+
     echo -n "Testing $name... "
 
     set +e
-    OUTPUT=$(cargo run --bin hades --quiet -- $command "$file" 2>&1)
+    OUTPUT=$("$HADES" $command "$file" 2>&1)
     EXIT_CODE=$?
     set -e
-    
+
     if [ -f "$expected_file" ]; then
-        local expected=$(cat "$expected_file")
+        local expected
+        expected=$(cat "$expected_file")
         if [ "$OUTPUT" = "$expected" ]; then
             echo -e "${GREEN}✓${NC}"
             PASSED=$((PASSED + 1))
-            return 0
         else
             echo -e "${RED}✗${NC}"
-            echo "  Expected output differs"
-            echo "  Expected file: $expected_file"
+            echo "  Expected: $expected"
+            echo "  Got:      $OUTPUT"
             FAILED=$((FAILED + 1))
-            return 1
+        fi
+    elif [ "$expect_failure" = true ]; then
+        if [ $EXIT_CODE -ne 0 ]; then
+            echo -e "${GREEN}✓${NC}"
+            PASSED=$((PASSED + 1))
+        else
+            echo -e "${RED}✗${NC}"
+            echo "  Expected failure but exited 0"
+            echo "  Output: $OUTPUT"
+            FAILED=$((FAILED + 1))
         fi
     else
         if [ $EXIT_CODE -eq 0 ]; then
             echo -e "${GREEN}✓${NC}"
             PASSED=$((PASSED + 1))
-            return 0
         else
             echo -e "${RED}✗${NC}"
             echo "  File: $file"
             echo "  Output: $OUTPUT"
             FAILED=$((FAILED + 1))
-            return 1
         fi
     fi
 }
-
-echo "Building hades..."
-cargo build --bin hades --quiet
-
-echo ""
-echo "Running example tests..."
-echo ""
 
 current_category=""
 
 while IFS= read -r file; do
     category=$(echo "$file" | cut -d'/' -f2)
-    
+
     if [ "$current_category" != "$category" ]; then
-        if [ -n "$current_category" ]; then
-            echo ""
-        fi
+        [ -n "$current_category" ] && echo ""
         category_display=$(echo "$category" | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')
         echo -e "${YELLOW}${category_display}:${NC}"
         current_category="$category"
     fi
-    
+
     test_example "$file" || true
-done < <(find examples -name "*.hd" -type f | sort)
+done < <(find examples -name "main.hd" -type f | sort)
 
 echo ""
 echo "================================"

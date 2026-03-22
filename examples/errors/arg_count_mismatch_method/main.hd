@@ -1,0 +1,14 @@
+struct Point {
+    x: int,
+    y: int,
+
+    fn getX(self: Self): int {
+        return self.x;
+    }
+}
+
+fn main(): int {
+    let p = Point { x: 10, y: 20 };
+    let x = p.getX(1, 2);
+    return x;
+}

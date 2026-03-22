@@ -1,0 +1,12 @@
+struct Point {
+    x: int,
+
+    fn bad(a: int, self: Self): int {
+        return self.x + a;
+    }
+}
+
+fn main(): int {
+    let p = Point { x: 1 };
+    return p.bad(2);
+}

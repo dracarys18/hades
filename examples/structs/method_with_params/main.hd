@@ -1,0 +1,22 @@
+struct Point {
+    x: int,
+    y: int,
+
+    fn translate(self: Self, dx: int, dy: int): int {
+        let nx = self.x + dx;
+        let ny = self.y + dy;
+        return nx + ny;
+    }
+
+    fn scale(self: Self, factor: int): int {
+        return (self.x + self.y) * factor;
+    }
+}
+
+fn main(): int {
+    let p = Point { x: 10, y: 20 };
+    let t = p.translate(5, 3);
+    let s = p.scale(2);
+    printf("translate=%d scale=%d\n", t, s);
+    return 0;
+}

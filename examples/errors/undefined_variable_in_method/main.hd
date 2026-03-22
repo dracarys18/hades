@@ -1,0 +1,12 @@
+struct Counter {
+    value: int,
+
+    fn get(self: Self): int {
+        return missing;
+    }
+}
+
+fn main(): int {
+    let c = Counter { value: 10 };
+    return c.get();
+}

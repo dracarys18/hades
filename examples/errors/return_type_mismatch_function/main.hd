@@ -1,0 +1,7 @@
+fn is_positive(x: int): bool {
+    return x;
+}
+
+fn main(): int {
+    return 0;
+}

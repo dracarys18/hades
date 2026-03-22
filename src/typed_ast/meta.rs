@@ -45,15 +45,6 @@ impl CompilerContext {
         self.current_function = Some((name, return_type));
     }
 
-    pub fn enter_function(
-        &mut self,
-        name: FunctionName,
-        sig: FunctionSignature,
-    ) -> Result<(), SemanticError> {
-        self.set_current_function(name.clone(), sig.return_type.clone());
-        self.functions.insert(name, sig)
-    }
-
     pub fn enter_scope(&mut self) {
         self.idents.enter_scope();
     }

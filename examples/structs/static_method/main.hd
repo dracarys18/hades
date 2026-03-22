@@ -1,0 +1,20 @@
+struct Point {
+    x: int,
+    y: int,
+
+    fn origin(): Point {
+        return Point { x: 0, y: 0 };
+    }
+
+    fn new(x: int, y: int): Point {
+        return Point { x: x, y: y };
+    }
+}
+
+fn main():int {
+    let p = Point::origin();
+    let q = Point::new(3, 4);
+    printf("%d\n", p.x);
+    printf("%d\n", q.x);
+    return 0;
+}

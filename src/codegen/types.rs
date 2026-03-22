@@ -3,11 +3,11 @@ use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::error::Span;
 use crate::tokens::Ident;
 use crate::typed_ast::{CompilerContext, TypedFieldKind};
-use inkwell::AddressSpace;
 use inkwell::context::Context;
 use inkwell::types::{
     AnyTypeEnum, BasicType, BasicTypeEnum, FloatType, FunctionType, IntType, StructType,
 };
+use inkwell::AddressSpace;
 
 pub struct TypeConverter<'ctx> {
     context: &'ctx Context,
@@ -91,11 +91,11 @@ impl<'ctx> TypeConverter<'ctx> {
                 from: format!("struct {name}"),
                 to: "LLVM type".to_string(),
             })?;
-        let mut field_types = Vec::new();
-        for (_, field_type) in struct_def.iter() {
-            let llvm_field_type = self.to_llvm_type(&field_type.get_type(), compiler_ctx)?;
-            field_types.push(llvm_field_type);
-        }
+        let field_types = struct_def
+            .iter()
+            .filter(|(_, kind)| matches!(kind, TypedFieldKind::Var(_)))
+            .map(|(_, kind)| self.to_llvm_type(&kind.get_type(), compiler_ctx))
+            .collect::<CodegenResult<Vec<_>>>()?;
 
         let struct_type = self.context.struct_type(&field_types, false);
         Ok(struct_type)

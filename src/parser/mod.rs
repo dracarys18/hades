@@ -872,6 +872,37 @@ impl Parser {
                         });
                     }
                 }
+                Some(tok) if token_matches!(tok, TokenKind::DoubleColon) => {
+                    self.next();
+                    let struct_name = match &expr {
+                        Expr::Ident(name) => name.clone(),
+                        _ => {
+                            let span = self.current_span().into_range();
+                            let source_id = self.source_id.clone();
+                            return Err(ParseError::unexpected_token(
+                                None,
+                                "struct name before '::'",
+                                span,
+                                source_id,
+                            ));
+                        }
+                    };
+                    let method_name = self.expect_identifier()?;
+                    self.expect(&TokenKind::LeftParen)?;
+                    let args = self.parse_comma_separated(
+                        |parser| parser.parse_assignment(),
+                        &TokenKind::RightParen,
+                    )?;
+                    self.expect(&TokenKind::RightParen)?;
+                    expr = Expr::Call {
+                        func: FunctionName::new(
+                            format!("{}__{}", method_name.inner(), struct_name.inner()),
+                            method_name.span().clone(),
+                        ),
+                        receiver: None,
+                        args,
+                    };
+                }
                 Some(tok) if token_matches!(tok, TokenKind::LeftBracket) => {
                     self.next();
                     let index_expr = self.parse_primary_with_flags(false)?;

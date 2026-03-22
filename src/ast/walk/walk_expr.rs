@@ -90,8 +90,9 @@ fn walk_typed_args(
                     .type_match(i, &typed.get_type())
                     .then(|| typed.clone())
                     .ok_or_else(|| {
+                        let expected = params.type_at(i).map(|t| t.to_string()).unwrap_or_default();
                         SemanticError::type_mismatch(
-                            typed.get_type().to_string(),
+                            expected,
                             typed.get_type().to_string(),
                             span.clone(),
                         )

@@ -108,7 +108,7 @@ impl<'a> Compiler {
         std::fs::create_dir_all(consts::BUILD_PATH).expect("Failed to create build directory");
     }
 
-    pub fn check(&self, source: &'a str, filename: &'a str) {
+    pub fn check(&self, source: &'a str, filename: &'a str) -> bool {
         let source_trimmed = source.trim();
         let mut cache = FileCache::from(vec![(PathBuf::from(filename), source_trimmed)]);
 
@@ -126,7 +126,7 @@ impl<'a> Compiler {
                 for e in err {
                     e.eprint(&mut cache);
                 }
-                return;
+                return false;
             }
         };
 
@@ -135,14 +135,16 @@ impl<'a> Compiler {
             Ok(a) => a,
             Err(err) => {
                 err.into_error().eprint(&mut cache);
-                return;
+                return false;
             }
         };
 
         if let Err(err) = analyzer.analyze() {
             eprintln!("Error during semantic analysis: {err}");
-            return;
+            return false;
         }
+
+        true
     }
 
     pub fn compile(&self, entry_path: impl AsRef<Path>, output_path: impl AsRef<Path>) -> bool {

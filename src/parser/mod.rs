@@ -494,33 +494,41 @@ impl Parser {
     fn parse_parameter_list(&mut self) -> ParseResult<Vec<(ParamKind, Types)>> {
         self.expect(&TokenKind::LeftParen)?;
 
-        let params = self
-            .peek()
-            .map(|t| t.kind().eq(&TokenKind::Self_))
-            .unwrap_or_default()
-            .then(|| {
-                self.parse_comma_separated(
-                    |parser| {
-                        parser.expect_keyword(&TokenKind::Self_)?;
-                        let name = ParamKind::Self_(Selff::new(parser.current_span()));
-                        parser.expect(&TokenKind::Colon)?;
-                        let param_type = parser.expect_type()?;
-                        Ok((name, param_type))
-                    },
-                    &TokenKind::RightParen,
-                )
-            })
-            .unwrap_or_else(|| {
-                self.parse_comma_separated(
-                    |parser| {
-                        let name = parser.expect_identifier()?;
-                        parser.expect(&TokenKind::Colon)?;
-                        let param_type = parser.expect_type()?;
-                        Ok((ParamKind::Ident(name), param_type))
-                    },
-                    &TokenKind::RightParen,
-                )
-            })?;
+        let mut params = Vec::new();
+
+        if self.peek().is_some_and(|t| t.kind().eq(&TokenKind::Self_)) {
+            self.expect_keyword(&TokenKind::Self_)?;
+            let name = ParamKind::Self_(Selff::new(self.current_span()));
+            self.expect(&TokenKind::Colon)?;
+            let param_type = self.expect_type()?;
+            params.push((name, param_type));
+            self.consume_if(&TokenKind::Comma);
+        }
+
+        let mut rest = self.parse_comma_separated(
+            |parser| {
+                if parser
+                    .peek()
+                    .is_some_and(|t| t.kind().eq(&TokenKind::Self_))
+                {
+                    let span = parser.current_span().into_range();
+                    let source_id = parser.source_id.clone();
+                    return Err(ParseError::unexpected_token(
+                        parser.peek().cloned(),
+                        "parameter name",
+                        span,
+                        source_id,
+                    ));
+                }
+                let name = parser.expect_identifier()?;
+                parser.expect(&TokenKind::Colon)?;
+                let param_type = parser.expect_type()?;
+                Ok((ParamKind::Ident(name), param_type))
+            },
+            &TokenKind::RightParen,
+        )?;
+        params.append(&mut rest);
+
         self.expect(&TokenKind::RightParen)?;
         Ok(params)
     }

@@ -23,7 +23,9 @@ fn main() {
             let compiler = compiler::Compiler::new();
 
             compiler.prepare();
-            compiler.check(&source, args.source.to_str().unwrap());
+            if !compiler.check(&source, args.source.to_str().unwrap()) {
+                std::process::exit(1);
+            }
         }
 
         cmd::Commands::Run(args) => {
@@ -34,13 +36,13 @@ fn main() {
                 .output
                 .unwrap_or_else(|| PathBuf::from(format!("{}/output", consts::BUILD_PATH)));
 
-            let res = compiler.compile(&args.source, &path);
-
-            if res {
-                Command::new(path)
-                    .status()
-                    .expect("Failed to run the compiled program");
+            if !compiler.compile(&args.source, &path) {
+                std::process::exit(1);
             }
+
+            Command::new(path)
+                .status()
+                .expect("Failed to run the compiled program");
         }
 
         cmd::Commands::EmitLlvm(args) => {

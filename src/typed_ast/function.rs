@@ -12,11 +12,27 @@ pub enum Params {
 }
 
 impl Params {
+    pub fn type_at(&self, num: usize) -> Option<&Types> {
+        match self {
+            Params::Variadic => None,
+            Params::Fixed(map) => map
+                .iter()
+                .filter(|(k, _)| !matches!(k, ParamKind::Self_(_)))
+                .map(|(_, v)| v)
+                .nth(num),
+        }
+    }
+
     pub fn type_match(&self, num: usize, other_type: &Types) -> bool {
         match self {
             Params::Variadic => true,
             Params::Fixed(map) => {
-                let expected_type = map.values().nth(num).expect("Parameter not found");
+                let expected_type = map
+                    .iter()
+                    .filter(|(k, _)| !matches!(k, ParamKind::Self_(_)))
+                    .map(|(_, v)| v)
+                    .nth(num)
+                    .expect("Parameter not found");
 
                 match expected_type {
                     Types::Generic(typs) => typs.contains(other_type),

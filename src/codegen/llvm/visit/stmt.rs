@@ -283,11 +283,14 @@ impl Visit for TypedStructDef {
     type Output<'ctx> = ();
 
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
-        for (_, field) in &self.fields {
-            if let TypedFieldKind::Func(method) = field {
-                method.visit(context)?;
-            }
-        }
-        Ok(())
+        self.fields
+            .iter()
+            .filter(|(_, field)| matches!(field, TypedFieldKind::Func(_)))
+            .try_for_each(|(name, field)| {
+                if let TypedFieldKind::Func(method) = field {
+                    method.visit(context)?;
+                }
+                Ok(())
+            })
     }
 }

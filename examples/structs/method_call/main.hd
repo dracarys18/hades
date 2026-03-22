@@ -1,0 +1,25 @@
+struct Point {
+    x: int,
+    y: int,
+
+    fn getX(self: Self): int {
+        return self.x;
+    }
+
+    fn getY(self: Self): int {
+        return self.y;
+    }
+
+    fn sum(self: Self): int {
+        return self.x + self.y;
+    }
+}
+
+fn main(): int {
+    let p = Point { x: 10, y: 20 };
+    let x = p.getX();
+    let y = p.getY();
+    let s = p.sum();
+    printf("x=%d y=%d sum=%d\n", x, y, s);
+    return 0;
+}

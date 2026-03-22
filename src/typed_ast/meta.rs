@@ -3,11 +3,12 @@ use crate::typed_ast::{
     function::{FunctionSignature, Functions},
     ident::IdentMap,
     struc::{Field, Structs},
+    TypedFieldKind,
 };
 
 use crate::ast::Types;
 use crate::error::Span;
-use crate::tokens::{Ident, Op};
+use crate::tokens::{FunctionName, Ident, Op};
 use indexmap::IndexMap;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -15,7 +16,7 @@ pub struct CompilerContext {
     idents: IdentMap,
     functions: Functions,
     structs: Structs,
-    current_function: Option<(Ident, Types)>,
+    current_function: Option<(FunctionName, Types)>,
 }
 
 impl CompilerContext {
@@ -32,13 +33,16 @@ impl CompilerContext {
         &self.structs
     }
 
-    pub fn enter_function(
+    pub fn register_function(
         &mut self,
-        name: Ident,
-        signature: FunctionSignature,
+        name: FunctionName,
+        sig: FunctionSignature,
     ) -> Result<(), SemanticError> {
-        self.current_function = Some((name.clone(), signature.return_type.clone()));
-        self.functions.insert(name, signature)
+        self.functions.insert(name, sig)
+    }
+
+    pub fn set_current_function(&mut self, name: FunctionName, return_type: Types) {
+        self.current_function = Some((name, return_type));
     }
 
     pub fn enter_scope(&mut self) {
@@ -64,7 +68,7 @@ impl CompilerContext {
             .cloned()
     }
 
-    pub fn insert_struct(&mut self, name: Ident, fields: IndexMap<Ident, Types>) {
+    pub fn insert_struct(&mut self, name: Ident, fields: IndexMap<Ident, TypedFieldKind>) {
         self.structs.insert(name.clone(), fields);
     }
 
@@ -78,7 +82,7 @@ impl CompilerContext {
 
     pub fn get_function_signature(
         &self,
-        name: &Ident,
+        name: &FunctionName,
     ) -> Result<&FunctionSignature, SemanticError> {
         self.functions.get(name)
     }

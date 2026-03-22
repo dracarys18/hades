@@ -4,6 +4,7 @@ use crate::codegen::traits::Visit;
 use crate::typed_ast::{
     TypedArrayIndex, TypedAssignExpr, TypedBinaryExpr, TypedExpr, TypedFieldAccess,
 };
+use inkwell::values::PointerValue;
 
 pub mod assign;
 pub mod binary;
@@ -14,10 +15,40 @@ pub mod variable;
 
 pub use assign::Assignment;
 pub use binary::BinaryOp;
-pub use call::FunctionCall;
+pub use call::{visit_function_call, visit_method_call};
 pub use struct_init::StructInit;
 pub use unary::UnaryOp;
 pub use variable::VariableAccess;
+
+impl<'ctx> LLVMContext<'ctx> {
+    pub(super) fn get_ptr(&mut self, expr: &TypedExpr) -> CodegenResult<PointerValue<'ctx>> {
+        if let TypedExpr::Ident { ident, .. } = expr {
+            return self.get_variable(ident).map(|v| v.value());
+        }
+        expr.visit(self).and_then(|val| {
+            val.value.try_into().or_else(|_| {
+                let symbols = self.symbols();
+                self.type_converter()
+                    .to_llvm_type(&val.type_info, symbols)
+                    .and_then(|t| {
+                        self.builder().build_alloca(t, "tmp_ptr").map_err(|e| {
+                            CodegenError::LLVMBuild {
+                                message: e.to_string(),
+                            }
+                        })
+                    })
+                    .and_then(|ptr| {
+                        self.builder()
+                            .build_store(ptr, val.value)
+                            .map_err(|e| CodegenError::LLVMBuild {
+                                message: e.to_string(),
+                            })
+                            .map(|_| ptr)
+                    })
+            })
+        })
+    }
+}
 
 impl Visit for TypedExpr {
     type Output<'ctx> = CodegenValue<'ctx>;
@@ -26,22 +57,23 @@ impl Visit for TypedExpr {
         match self {
             Self::Value(value) => value.visit(context),
             Self::Ident { ident, typ } => {
-                let var_access = VariableAccess::new(ident, typ.visit_options());
-                var_access.visit(context)
+                VariableAccess::new(ident, typ.visit_options()).visit(context)
             }
             Self::Binary(binary) => binary.visit(context),
-            Self::Unary { op, expr, .. } => {
-                let unary_op = UnaryOp::new(op, expr);
-                unary_op.visit(context)
-            }
-            Self::Call { func, args, .. } => {
-                let function_call = FunctionCall::new(func.inner(), args);
-                function_call.visit(context)
-            }
-            Self::StructInit { name, fields, .. } => {
-                let struct_init = StructInit::new(name, fields);
-                struct_init.visit(context)
-            }
+            Self::Unary { op, expr, .. } => UnaryOp::new(op, expr).visit(context),
+            Self::Call {
+                func,
+                args,
+                receiver: Some(recv),
+                ..
+            } => visit_method_call(func.inner(), recv, args, context),
+            Self::Call {
+                func,
+                args,
+                receiver: None,
+                ..
+            } => visit_function_call(func.inner(), args, context),
+            Self::StructInit { name, fields, .. } => StructInit::new(name, fields).visit(context),
             Self::Assign(assign) => assign.visit(context),
             Self::FieldAccess(field) => field.visit(context),
             Self::ArrayIndex(index) => index.visit(context),
@@ -52,8 +84,7 @@ impl Visit for TypedExpr {
 impl Visit for TypedAssignExpr {
     type Output<'ctx> = CodegenValue<'ctx>;
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
-        let assignment = Assignment::new(&self.target, &self.op, &self.value);
-        assignment.visit(context)
+        Assignment::new(&self.target, &self.op, &self.value).visit(context)
     }
 }
 
@@ -61,9 +92,7 @@ impl Visit for TypedArrayIndex {
     type Output<'ctx> = CodegenValue<'ctx>;
 
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
-        let array_value = self.expr.visit(context)?;
-        let array_ptr = array_value.value.into_pointer_value();
-
+        let array_ptr = context.get_ptr(&self.expr)?;
         let index_value = self.index.visit(context)?;
         let symbols = context.symbols();
         let elem_type = context
@@ -81,22 +110,21 @@ impl Visit for TypedArrayIndex {
             )?
         };
 
-        let val = context
+        context
             .builder()
-            .build_load(elem_type, elem_ptr, "array_elem")?;
-
-        Ok(CodegenValue {
-            value: val,
-            type_info: self.typ.get_array_elem_type(),
-        })
+            .build_load(elem_type, elem_ptr, "array_elem")
+            .map(|val| CodegenValue {
+                value: val,
+                type_info: self.typ.get_array_elem_type(),
+            })
+            .map_err(CodegenError::from)
     }
 }
 
 impl Visit for TypedBinaryExpr {
     type Output<'ctx> = CodegenValue<'ctx>;
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
-        let binary_op = BinaryOp::new(&self.left, &self.op, &self.right);
-        binary_op.visit(context)
+        BinaryOp::new(&self.left, &self.op, &self.right).visit(context)
     }
 }
 
@@ -104,56 +132,30 @@ impl Visit for TypedFieldAccess {
     type Output<'ctx> = CodegenValue<'ctx>;
 
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
+        let struct_ptr = context.get_ptr(self.expr.as_ref())?;
         let compiler_context = context.symbols();
-
-        let struct_ptr = match self.expr.as_ref() {
-            crate::typed_ast::TypedExpr::Ident { ident, .. } => {
-                context.get_variable(&ident)?.value()
-            }
-            _ => {
-                let struct_value = self.expr.visit(context)?;
-                if struct_value.value.is_pointer_value() {
-                    struct_value.value.into_pointer_value()
-                } else {
-                    let struct_type = context
-                        .type_converter()
-                        .to_llvm_type(&self.struct_type, compiler_context)?;
-                    let temp_ptr = context
-                        .builder()
-                        .build_alloca(struct_type, "temp_struct")
-                        .map_err(|e| CodegenError::LLVMBuild {
-                            message: format!("Failed to create temporary struct allocation: {e}"),
-                        })?;
-                    context
-                        .builder()
-                        .build_store(temp_ptr, struct_value.value)
-                        .map_err(|e| CodegenError::LLVMBuild {
-                            message: format!("Failed to store temporary struct: {e}"),
-                        })?;
-                    temp_ptr
-                }
-            }
-        };
 
         let struct_type = context
             .type_converter()
             .to_llvm_type(&self.struct_type, compiler_context)?;
 
         let struct_name = self.struct_type.unwrap_struct_name();
-        let strct = context.symbols().structs();
-        let field_index = strct.field_index(struct_name, &self.field);
+        let field_index = context
+            .symbols()
+            .structs()
+            .field_index(struct_name, &self.field);
 
         let zero = context.context().i32_type().const_zero();
-        let field_index = context
+        let field_index_val = context
             .context()
             .i32_type()
             .const_int(field_index as u64, false);
 
-        let field_val = unsafe {
+        let field_ptr = unsafe {
             context.builder().build_in_bounds_gep(
                 struct_type,
                 struct_ptr,
-                &[zero, field_index],
+                &[zero, field_index_val],
                 "struct_fetch",
             )
         }
@@ -161,16 +163,17 @@ impl Visit for TypedFieldAccess {
             message: "Failed to create struct field pointer".to_string(),
         })?;
 
-        let type_conv = context.type_converter();
-        let field_llvm_type = type_conv.to_llvm_type(&self.field_type, compiler_context)?;
+        let field_llvm_type = context
+            .type_converter()
+            .to_llvm_type(&self.field_type, compiler_context)?;
 
-        let field_val = context
+        context
             .builder()
-            .build_load(field_llvm_type, field_val, "field_access")?;
-
-        Ok(CodegenValue {
-            value: field_val,
-            type_info: self.field_type.clone(),
-        })
+            .build_load(field_llvm_type, field_ptr, "field_access")
+            .map(|val| CodegenValue {
+                value: val,
+                type_info: self.field_type.clone(),
+            })
+            .map_err(CodegenError::from)
     }
 }

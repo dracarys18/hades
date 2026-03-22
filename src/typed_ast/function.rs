@@ -1,15 +1,14 @@
 use super::builtins::BUILTIN_FUNCTIONS;
 use crate::ast::Types;
 use crate::consts::MAX_FUNCTION_PARAMS;
-use crate::tokens::Ident;
+use crate::tokens::{FunctionName, Ident, ParamKind};
 use crate::typed_ast::SemanticError;
-
 use indexmap::IndexMap;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Params {
     Variadic,
-    Fixed(IndexMap<Ident, Types>),
+    Fixed(IndexMap<ParamKind, Types>),
 }
 
 impl Params {
@@ -19,11 +18,10 @@ impl Params {
             Params::Fixed(map) => {
                 let expected_type = map.values().nth(num).expect("Parameter not found");
 
-                let cond = match expected_type {
-                    Types::Generic(typs) => typs.contains(&other_type),
+                match expected_type {
+                    Types::Generic(typs) => typs.contains(other_type),
                     _ => other_type == expected_type,
-                };
-                cond
+                }
             }
         }
     }
@@ -31,21 +29,28 @@ impl Params {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionSignature {
+    pub receiver: Option<Types>,
     pub params: Params,
     pub return_type: Types,
 }
 
 impl FunctionSignature {
-    pub fn new(params: IndexMap<Ident, Types>, return_type: Types) -> Self {
+    pub fn new(
+        params: IndexMap<ParamKind, Types>,
+        return_type: Types,
+        receiver: Option<Types>,
+    ) -> Self {
         Self {
             params: Params::Fixed(params),
             return_type,
+            receiver,
         }
     }
 
     pub fn new_variadic(return_type: Types) -> Self {
         Self {
             params: Params::Variadic,
+            receiver: None,
             return_type,
         }
     }
@@ -53,7 +58,17 @@ impl FunctionSignature {
     pub fn param_count(&self) -> usize {
         match &self.params {
             Params::Variadic => MAX_FUNCTION_PARAMS,
-            Params::Fixed(map) => map.len(),
+            Params::Fixed(map) => map
+                .keys()
+                .filter(|p| !matches!(p, ParamKind::Self_(_)))
+                .count(),
+        }
+    }
+
+    pub fn check_arg_count(&self, provided: usize) -> bool {
+        match &self.params {
+            Params::Variadic => provided <= self.param_count(),
+            Params::Fixed(_) => provided == self.param_count(),
         }
     }
 
@@ -61,7 +76,7 @@ impl FunctionSignature {
         self.params.clone()
     }
 
-    pub fn to_fixed_params(&self) -> IndexMap<Ident, Types> {
+    pub fn to_fixed_params(&self) -> IndexMap<ParamKind, Types> {
         match &self.params {
             Params::Variadic => panic!("Variadic functions are not supported yet"),
             Params::Fixed(map) => map.clone(),
@@ -71,37 +86,53 @@ impl FunctionSignature {
     pub fn return_type(&self) -> &Types {
         &self.return_type
     }
+
+    pub fn receiver(&self) -> Option<Types> {
+        self.receiver.clone()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Functions {
-    inner: IndexMap<Ident, FunctionSignature>,
+    inner: IndexMap<FunctionName, FunctionSignature>,
 }
 
 impl Functions {
     pub fn new() -> Self {
-        let built_ins = BUILTIN_FUNCTIONS.clone();
+        let built_ins = BUILTIN_FUNCTIONS
+            .iter()
+            .map(|(k, v)| {
+                let fn_name = FunctionName::new(k.inner().to_string(), k.span().clone());
+                (fn_name, v.clone())
+            })
+            .collect();
         Self { inner: built_ins }
     }
 
-    pub fn insert(&mut self, name: Ident, sig: FunctionSignature) -> Result<(), SemanticError> {
+    pub fn insert(
+        &mut self,
+        name: FunctionName,
+        sig: FunctionSignature,
+    ) -> Result<(), SemanticError> {
         if self.inner.contains_key(&name) {
+            let ident = name.to_ident();
             return Err(SemanticError::redefined_function(
-                name.clone(),
-                name.span().clone(),
+                ident.clone(),
+                ident.span().clone(),
             ));
         }
         self.inner.insert(name, sig);
         Ok(())
     }
 
-    pub fn get_unchecked(&self, name: &Ident) -> &FunctionSignature {
+    pub fn get_unchecked(&self, name: &FunctionName) -> &FunctionSignature {
         self.inner.get(name).expect("Function not found")
     }
 
-    pub fn get(&self, name: &Ident) -> Result<&FunctionSignature, SemanticError> {
-        self.inner
-            .get(name)
-            .ok_or_else(|| SemanticError::undefined_function(name.clone(), name.span().clone()))
+    pub fn get(&self, name: &FunctionName) -> Result<&FunctionSignature, SemanticError> {
+        self.inner.get(name).ok_or_else(|| {
+            let ident = name.to_ident();
+            SemanticError::undefined_function(ident.clone(), ident.span().clone())
+        })
     }
 }

@@ -4,7 +4,7 @@ use crate::ast::*;
 use crate::error::Span;
 use crate::parser::error::FinalParseResult;
 use crate::token_matches;
-use crate::tokens::{Assoc, Ident, Op, Token, TokenKind};
+use crate::tokens::{Assoc, FunctionName, Ident, Op, ParamKind, Selff, Token, TokenKind};
 use error::{ParseError, ParseResult};
 use indexmap::IndexMap;
 use std::ops::Range;
@@ -169,12 +169,39 @@ impl Parser {
         }
     }
 
+    fn expect_keyword(&mut self, expected: &TokenKind) -> ParseResult<()> {
+        let source_id = self.source_id.clone();
+        let token = self.next();
+        match token {
+            Some(ref t) if t.kind() == expected => Ok(()),
+            Some(t) => {
+                let span = t.span().into_range();
+                Err(ParseError::unexpected_token(
+                    Some(t),
+                    &format!("'{expected:?}'"),
+                    span,
+                    source_id,
+                ))
+            }
+            None => {
+                let span = self.eof_span().into_range();
+                Err(ParseError::unexpected_token(
+                    None,
+                    &format!("'{expected:?}'"),
+                    span,
+                    source_id,
+                ))
+            }
+        }
+    }
+
     fn expect_type(&mut self) -> ParseResult<Types> {
         let source_id = self.source_id.clone();
         let token = self.next();
         match token {
             Some(tok) => match tok.kind() {
                 TokenKind::Ident(name) => Ok(Types::from_str(name)),
+                TokenKind::Self_ => Ok(Types::Self_),
                 _ => {
                     let span = tok.span().into_range();
                     Err(ParseError::unexpected_token(
@@ -226,7 +253,7 @@ impl Parser {
         let start_tok = self.current_span();
         self.expect(&TokenKind::Struct)?;
         let name = self.expect_identifier()?;
-        let fields = self.parse_field_list()?;
+        let fields = self.parse_field_list(name.clone())?;
         let end = self.prev_span();
 
         Ok(Stmt::StructDef(StructDef {
@@ -239,7 +266,8 @@ impl Parser {
     fn parse_function_def(&mut self) -> ParseResult<Stmt> {
         let start_tok = self.current_span();
         self.expect(&TokenKind::Fn)?;
-        let name = self.expect_identifier()?;
+        let name_ident = self.expect_identifier()?;
+        let name = FunctionName::new(name_ident.inner().to_string(), name_ident.span().clone());
         let params = self.parse_parameter_list()?;
         let return_type = self.parse_optional_return_type()?;
         let body = self.parse_block()?;
@@ -248,10 +276,11 @@ impl Parser {
 
         Ok(Stmt::FuncDef(FuncDef {
             name,
+            parent_struct: None,
             params,
             return_type,
             body: Block::new(body.into(), span.clone()),
-            span: span,
+            span,
         }))
     }
 
@@ -462,40 +491,85 @@ impl Parser {
         }
     }
 
-    fn parse_parameter_list(&mut self) -> ParseResult<Vec<(Ident, Types)>> {
+    fn parse_parameter_list(&mut self) -> ParseResult<Vec<(ParamKind, Types)>> {
         self.expect(&TokenKind::LeftParen)?;
-        let params = self.parse_comma_separated(
-            |parser| {
-                let name = parser.expect_identifier()?;
-                parser.expect(&TokenKind::Colon)?;
-                let param_type = parser.expect_type()?;
-                Ok((name, param_type))
-            },
-            &TokenKind::RightParen,
-        )?;
+
+        let params = self
+            .peek()
+            .map(|t| t.kind().eq(&TokenKind::Self_))
+            .unwrap_or_default()
+            .then(|| {
+                self.parse_comma_separated(
+                    |parser| {
+                        parser.expect_keyword(&TokenKind::Self_)?;
+                        let name = ParamKind::Self_(Selff::new(parser.current_span()));
+                        parser.expect(&TokenKind::Colon)?;
+                        let param_type = parser.expect_type()?;
+                        Ok((name, param_type))
+                    },
+                    &TokenKind::RightParen,
+                )
+            })
+            .unwrap_or_else(|| {
+                self.parse_comma_separated(
+                    |parser| {
+                        let name = parser.expect_identifier()?;
+                        parser.expect(&TokenKind::Colon)?;
+                        let param_type = parser.expect_type()?;
+                        Ok((ParamKind::Ident(name), param_type))
+                    },
+                    &TokenKind::RightParen,
+                )
+            })?;
         self.expect(&TokenKind::RightParen)?;
         Ok(params)
     }
 
-    fn parse_field_list(&mut self) -> ParseResult<IndexMap<Ident, Types>> {
+    fn parse_field_list(&mut self, struct_name: Ident) -> ParseResult<IndexMap<Ident, FieldKind>> {
         self.expect(&TokenKind::LeftBrace)?;
         let mut fields = IndexMap::new();
-
         while !self
             .peek()
             .is_some_and(|tok| token_matches!(tok, TokenKind::RightBrace))
         {
-            let field_name = self.expect_identifier()?;
-            self.expect(&TokenKind::Colon)?;
-            let field_type = self.expect_type()?;
-            fields.insert(field_name, field_type);
+            let field = self.peek().ok_or_else(|| {
+                let span = self.eof_span().into_range();
+                ParseError::unexpected_token(
+                    None,
+                    "field declaration",
+                    span,
+                    self.source_id.clone(),
+                )
+            })?;
 
-            if !self.consume_if(&TokenKind::Comma)
-                && !self
-                    .peek()
-                    .is_some_and(|tok| token_matches!(tok, TokenKind::RightBrace))
-            {
-                break;
+            match field.kind() {
+                TokenKind::Fn => {
+                    let mut func = self.parse_function_def()?.unwrap_func_def();
+                    func.parent_struct = Some(struct_name.clone());
+                    let key = func.name.to_ident();
+                    fields.insert(key, FieldKind::Func(func));
+                }
+                TokenKind::Ident(field_name) => {
+                    let field_name = field_name.clone();
+                    self.next();
+                    self.expect(&TokenKind::Colon)?;
+                    let field_type = self.expect_type()?;
+                    fields.insert(field_name, FieldKind::Var(field_type));
+
+                    if !self.consume_if(&TokenKind::Comma)
+                        && !self
+                            .peek()
+                            .is_some_and(|tok| token_matches!(tok, TokenKind::RightBrace))
+                    {
+                        break;
+                    }
+                }
+                _ => Err(ParseError::unexpected_token(
+                    Some(field.clone()),
+                    "field declaration",
+                    field.span().into_range(),
+                    self.source_id.clone(),
+                ))?,
             }
         }
 
@@ -659,6 +733,11 @@ impl Parser {
                     Ok(expr)
                 }
                 TokenKind::LeftBracket => self.parse_array_literal(),
+                TokenKind::Self_ => {
+                    let self_ident =
+                        crate::tokens::Ident::new("self".to_string(), tok.span().clone());
+                    self.parse_postfix_chain(Expr::Ident(self_ident))
+                }
                 _ => {
                     let span = tok.span().into_range();
                     Err(ParseError::unexpected_token(
@@ -760,10 +839,30 @@ impl Parser {
                 Some(tok) if token_matches!(tok, TokenKind::Dot) => {
                     self.next();
                     let field_name = self.expect_identifier()?;
-                    expr = Expr::FieldAccess(FieldAccessExpr {
-                        expr: Box::new(expr),
-                        field: field_name,
-                    });
+                    if self
+                        .peek()
+                        .is_some_and(|tok| token_matches!(tok, TokenKind::LeftParen))
+                    {
+                        self.next(); // consume '('
+                        let args = self.parse_comma_separated(
+                            |parser| parser.parse_assignment(),
+                            &TokenKind::RightParen,
+                        )?;
+                        self.expect(&TokenKind::RightParen)?;
+                        expr = Expr::Call {
+                            func: FunctionName::new(
+                                field_name.inner().to_string(),
+                                field_name.span().clone(),
+                            ),
+                            receiver: Some(Box::new(expr)),
+                            args,
+                        };
+                    } else {
+                        expr = Expr::FieldAccess(FieldAccessExpr {
+                            expr: Box::new(expr),
+                            field: field_name,
+                        });
+                    }
                 }
                 Some(tok) if token_matches!(tok, TokenKind::LeftBracket) => {
                     self.next();
@@ -820,7 +919,8 @@ impl Parser {
         self.expect(&TokenKind::RightParen)?;
 
         Ok(Expr::Call {
-            func: func_name,
+            func: FunctionName::new(func_name.inner().to_string(), func_name.span().clone()),
+            receiver: None,
             args,
         })
     }

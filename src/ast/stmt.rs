@@ -4,7 +4,7 @@ use crate::{
     ast::{AssignExpr, BinaryExpr, Program, Types},
     error::{SemanticError, Span},
     impl_span,
-    tokens::Ident,
+    tokens::{FunctionName, Ident, ParamKind},
 };
 use derive_more::Debug;
 use indexmap::IndexMap;
@@ -71,14 +71,21 @@ pub struct For {
 #[derive(Clone, PartialEq, Debug)]
 pub struct StructDef {
     pub name: Ident,
-    pub fields: IndexMap<Ident, Types>,
+    pub fields: IndexMap<Ident, FieldKind>,
     pub span: Span,
 }
 
 #[derive(Clone, PartialEq, Debug)]
+pub enum FieldKind {
+    Var(Types),
+    Func(FuncDef),
+}
+
+#[derive(Clone, PartialEq, Debug)]
 pub struct FuncDef {
-    pub name: Ident,
-    pub params: Vec<(Ident, Types)>,
+    pub name: FunctionName,
+    pub parent_struct: Option<Ident>,
+    pub params: Vec<(ParamKind, Types)>,
     pub return_type: Types,
     pub body: Block,
     pub span: Span,
@@ -146,6 +153,15 @@ impl Stmt {
             panic!("Stmt is not a Let");
         }
     }
+
+    pub fn unwrap_func_def(self) -> FuncDef {
+        if let Stmt::FuncDef(fd) = self {
+            fd
+        } else {
+            panic!("Stmt is not a FuncDef");
+        }
+    }
+
     pub fn span(&self) -> &Span {
         match self {
             Stmt::Let(le) => le.span(),

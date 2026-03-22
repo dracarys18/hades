@@ -4,7 +4,8 @@ use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::codegen::traits::Visit;
 use crate::typed_ast::{
-    TypedBlock, TypedContinue, TypedFor, TypedFuncDef, TypedIf, TypedReturn, TypedStmt, TypedWhile,
+    TypedBlock, TypedContinue, TypedFieldKind, TypedFor, TypedFuncDef, TypedIf, TypedReturn,
+    TypedStmt, TypedStructDef, TypedWhile,
 };
 
 impl Visit for TypedStmt {
@@ -24,7 +25,7 @@ impl Visit for TypedStmt {
                 func_def.visit(context)?;
                 Ok(())
             }
-            Self::StructDef(_) => Ok(()),
+            Self::StructDef(struct_def) => struct_def.visit(context),
             Self::ModuleDecl(_) => Ok(()),
             Self::Import(_) => Ok(()),
         }
@@ -191,9 +192,19 @@ impl Visit for TypedFuncDef {
         let symbols = context.symbols();
         let sigature = self.signature.clone();
         let params = sigature.to_fixed_params();
-        for (_, param_type) in &params {
-            let llvm_type = context.type_converter().to_llvm_type(param_type, symbols)?;
-            param_types.push(llvm_type.into());
+
+        for (param, declared_type) in &params {
+            match param {
+                crate::tokens::ParamKind::Self_(_) => {
+                    param_types.push(context.type_converter().ptr_type().into());
+                }
+                crate::tokens::ParamKind::Ident(_) => {
+                    let llvm_type = context
+                        .type_converter()
+                        .to_llvm_type(declared_type, symbols)?;
+                    param_types.push(llvm_type.into());
+                }
+            }
         }
 
         let fn_type: FunctionType = if sigature.return_type == crate::ast::Types::Void {
@@ -217,15 +228,26 @@ impl Visit for TypedFuncDef {
         let entry_block = context.create_basic_block("entry");
         context.position_at_end(entry_block);
 
-        for (i, (param_name, param_type)) in params.iter().enumerate() {
+        for (i, (param, declared_type)) in params.iter().enumerate() {
             let param_val = function.get_nth_param(i as u32).unwrap();
-            param_val.set_name(param_name.inner());
+            let name = param.name();
+            param_val.set_name(name.inner());
 
-            let param_llvm_type = context.type_converter().to_llvm_type(param_type, symbols)?;
-
-            let param_alloca = context.create_alloca(param_name.inner(), param_llvm_type)?;
-            context.create_store(param_alloca, param_val)?;
-            context.declare_variable(param_name.clone(), param_alloca, param_type.clone())?;
+            match param {
+                crate::tokens::ParamKind::Self_(_) => {
+                    let typ = sigature
+                        .receiver()
+                        .expect("Self_ param but no receiver on signature");
+                    context.declare_variable(name, param_val.into_pointer_value(), typ)?;
+                }
+                crate::tokens::ParamKind::Ident(_) => {
+                    let typ = declared_type.clone();
+                    let llvm_type = context.type_converter().to_llvm_type(&typ, symbols)?;
+                    let alloca = context.create_alloca(name.inner(), llvm_type)?;
+                    context.create_store(alloca, param_val)?;
+                    context.declare_variable(name, alloca, typ)?;
+                }
+            }
         }
 
         self.body.visit(context)?;
@@ -254,5 +276,21 @@ impl Visit for TypedFuncDef {
         context.clear_current_function();
 
         Ok(function)
+    }
+}
+
+impl Visit for TypedStructDef {
+    type Output<'ctx> = ();
+
+    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
+        self.fields
+            .iter()
+            .filter(|(_, field)| matches!(field, TypedFieldKind::Func(_)))
+            .try_for_each(|(name, field)| {
+                if let TypedFieldKind::Func(method) = field {
+                    method.visit(context)?;
+                }
+                Ok(())
+            })
     }
 }

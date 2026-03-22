@@ -7,6 +7,7 @@
   "else"
   "while"
   "for"
+  "self"
 ] @keyword
 
 ; Types

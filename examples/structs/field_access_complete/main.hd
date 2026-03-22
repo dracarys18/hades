@@ -1,6 +1,10 @@
 struct Point {
     x: int,
-    y: int
+    y: int,
+
+    fn Getx(self: Self): int {
+        return self.x;
+    }
 }
 
 struct Line {

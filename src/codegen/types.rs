@@ -2,7 +2,7 @@ use crate::ast::{ArrayType, Types};
 use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::error::Span;
 use crate::tokens::Ident;
-use crate::typed_ast::CompilerContext;
+use crate::typed_ast::{CompilerContext, TypedFieldKind};
 use inkwell::AddressSpace;
 use inkwell::context::Context;
 use inkwell::types::{
@@ -68,6 +68,13 @@ impl<'ctx> TypeConverter<'ctx> {
                     array_type.into()
                 }
             },
+            // Self_ must be resolved to actual type before this pass
+            Types::Self_ => {
+                return Err(CodegenError::TypeConversion {
+                    from: "self".to_string(),
+                    to: "LLVM type".to_string(),
+                });
+            }
         };
 
         Ok(llvm_type)
@@ -86,7 +93,7 @@ impl<'ctx> TypeConverter<'ctx> {
             })?;
         let mut field_types = Vec::new();
         for (_, field_type) in struct_def.iter() {
-            let llvm_field_type = self.to_llvm_type(field_type, compiler_ctx)?;
+            let llvm_field_type = self.to_llvm_type(&field_type.get_type(), compiler_ctx)?;
             field_types.push(llvm_field_type);
         }
 

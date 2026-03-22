@@ -1,66 +1,68 @@
-use crate::codegen::BuiltinRegistar;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
+use crate::codegen::BuiltinRegistar;
 use crate::typed_ast::TypedExpr;
+use inkwell::values::BasicMetadataValueEnum;
 
-pub struct FunctionCall<'a> {
-    pub name: &'a str,
-    pub args: &'a [TypedExpr],
+pub fn visit_function_call<'ctx>(
+    name: &str,
+    args: &[TypedExpr],
+    context: &mut LLVMContext<'ctx>,
+) -> CodegenResult<CodegenValue<'ctx>> {
+    let function = context.get_function(name)?;
+    let arg_values = args
+        .iter()
+        .map(|a| a.visit(context).map(|v| v.value.into()))
+        .collect::<CodegenResult<Vec<BasicMetadataValueEnum>>>()?;
+    build_call(name, &arg_values, context)
 }
 
-impl<'a> FunctionCall<'a> {
-    pub fn new(name: &'a str, args: &'a [TypedExpr]) -> Self {
-        Self { name, args }
-    }
+pub fn visit_method_call<'ctx>(
+    name: &str,
+    receiver: &TypedExpr,
+    args: &[TypedExpr],
+    context: &mut LLVMContext<'ctx>,
+) -> CodegenResult<CodegenValue<'ctx>> {
+    let self_ptr = context.get_ptr(receiver)?;
+    let arg_values = std::iter::once(Ok(self_ptr.into()))
+        .chain(
+            args.iter()
+                .map(|a| a.visit(context).map(|v| v.value.into())),
+        )
+        .collect::<CodegenResult<Vec<BasicMetadataValueEnum>>>()?;
+    build_call(name, &arg_values, context)
 }
 
-impl<'a> Visit for FunctionCall<'a> {
-    type Output<'ctx> = CodegenValue<'ctx>;
+fn build_call<'ctx>(
+    name: &str,
+    arg_values: &[BasicMetadataValueEnum<'ctx>],
+    context: &mut LLVMContext<'ctx>,
+) -> CodegenResult<CodegenValue<'ctx>> {
+    let name_fn = crate::tokens::FunctionName::new(name.to_string(), Default::default());
+    let return_type = context
+        .symbols()
+        .get_function_signature(&name_fn)
+        .map_err(|_| CodegenError::FunctionNotFound {
+            name: name.to_string(),
+        })?
+        .return_type()
+        .clone();
 
-    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
-        let function = context.get_function(self.name)?;
-
-        let mut arg_values = Vec::new();
-        for arg in self.args {
-            let arg_val = arg.visit(context)?;
-            arg_values.push(arg_val.value.into());
-        }
-
-        let name_ident = crate::tokens::Ident::new(self.name.to_string(), Default::default());
-        let return_type = context
-            .symbols()
-            .get_function_signature(&name_ident)
-            .map_err(|_| CodegenError::FunctionNotFound {
-                name: self.name.to_string(),
-            })?
-            .return_type()
-            .clone();
-
-        if BuiltinRegistar::is_builtin_function(self.name) {
-            let call_result =
-                BuiltinRegistar::handle(self.name, context, &arg_values).map_err(|_| {
-                    CodegenError::LLVMBuild {
-                        message: format!("Failed to generate function call to {}", self.name),
-                    }
-                })?;
-
-            return Ok(CodegenValue::new(
-                call_result.try_into().unwrap(),
-                return_type,
-            ));
-        }
-
-        let call_result = context
-            .builder()
-            .build_call(function, &arg_values, "call")
+    if BuiltinRegistar::is_builtin_function(name) {
+        return BuiltinRegistar::handle(name, context, arg_values)
+            .map(|v| CodegenValue::new(v.try_into().unwrap(), return_type))
             .map_err(|_| CodegenError::LLVMBuild {
-                message: format!("Failed to generate function call to {}", self.name),
-            })?;
-
-        Ok(CodegenValue::new(
-            call_result.try_as_basic_value().unwrap_left(),
-            return_type,
-        ))
+                message: format!("Failed to generate builtin call to {name}"),
+            });
     }
+
+    let function = context.get_function(name)?;
+    context
+        .builder()
+        .build_call(function, arg_values, "call")
+        .map_err(|_| CodegenError::LLVMBuild {
+            message: format!("Failed to generate function call to {name}"),
+        })
+        .map(|r| CodegenValue::new(r.try_as_basic_value().unwrap_basic(), return_type))
 }

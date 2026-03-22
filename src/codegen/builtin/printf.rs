@@ -1,10 +1,10 @@
 use super::Builtin;
 use crate::codegen::{
-    LLVMContext,
     error::{CodegenError, CodegenResult},
+    LLVMContext,
 };
-use inkwell::AddressSpace;
 use inkwell::values::{AnyValueEnum, BasicMetadataValueEnum, FunctionValue};
+use inkwell::AddressSpace;
 
 pub struct Printf;
 
@@ -46,10 +46,6 @@ impl Builtin for Printf {
                 message: "Failed to build printf call".to_string(),
             })?;
 
-        Ok(call_result
-            .try_as_basic_value()
-            .left()
-            .unwrap_or_else(|| context.context().i32_type().const_zero().into())
-            .into())
+        Ok(call_result.try_as_basic_value().unwrap_basic().into())
     }
 }

@@ -1,7 +1,7 @@
-use crate::{ast::Types, consts::GOOLAG_MESSAGE, tokens::Ident};
+use crate::{ast::Types, consts::GOOLAG_MESSAGE, tokens::Ident, typed_ast::TypedFieldKind};
 use indexmap::IndexMap;
 
-pub type Field = IndexMap<Ident, Types>;
+pub type Field = IndexMap<Ident, TypedFieldKind>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Structs {
@@ -15,7 +15,7 @@ impl Structs {
         }
     }
 
-    pub fn insert(&mut self, name: Ident, fields: IndexMap<Ident, Types>) -> bool {
+    pub fn insert(&mut self, name: Ident, fields: IndexMap<Ident, TypedFieldKind>) -> bool {
         self.inner.insert(name, fields).is_none()
     }
 
@@ -25,6 +25,12 @@ impl Structs {
 
     pub fn field_index(&self, name: &Ident, field_name: &Ident) -> usize {
         let field = self.inner.get(name).expect(GOOLAG_MESSAGE);
-        field.get_index_of(field_name).expect(GOOLAG_MESSAGE)
+        field
+            .iter()
+            .filter(|(_, kind)| matches!(kind, TypedFieldKind::Var(_)))
+            .enumerate()
+            .find(|(_, (k, _))| *k == field_name)
+            .map(|(idx, _)| idx)
+            .expect(GOOLAG_MESSAGE)
     }
 }

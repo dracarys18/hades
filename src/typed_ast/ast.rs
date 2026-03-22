@@ -1,7 +1,7 @@
 use crate::{
     ast::{ImportPrefix, Types},
     error::Span,
-    tokens::Ident,
+    tokens::{FunctionName, Ident},
     typed_ast::{
         expr::{TypedAssignExpr, TypedBinaryExpr},
         function::FunctionSignature,
@@ -10,7 +10,7 @@ use crate::{
 use derive_more::Debug;
 use indexmap::IndexMap;
 
-use super::{TypedProgram, expr::TypedExpr};
+use super::{expr::TypedExpr, TypedProgram};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypedBlock {
@@ -85,13 +85,19 @@ pub struct TypedFor {
 #[derive(Clone, PartialEq, Debug)]
 pub struct TypedStructDef {
     pub name: Ident,
-    pub fields: IndexMap<Ident, Types>,
+    pub fields: IndexMap<Ident, TypedFieldKind>,
     pub span: Span,
 }
 
 #[derive(Clone, PartialEq, Debug)]
+pub enum TypedFieldKind {
+    Var(Types),
+    Func(TypedFuncDef),
+}
+
+#[derive(Clone, PartialEq, Debug)]
 pub struct TypedFuncDef {
-    pub name: Ident,
+    pub name: FunctionName,
     pub signature: FunctionSignature,
     pub body: TypedBlock,
     pub span: Span,
@@ -123,4 +129,13 @@ pub enum TypedStmt {
     Return(TypedReturn),
     ModuleDecl(TypedModuleDecl),
     Import(TypedImport),
+}
+
+impl TypedFieldKind {
+    pub fn get_type(&self) -> Types {
+        match self {
+            TypedFieldKind::Var(typ) => typ.clone(),
+            TypedFieldKind::Func(func_def) => func_def.signature.return_type().clone(),
+        }
+    }
 }

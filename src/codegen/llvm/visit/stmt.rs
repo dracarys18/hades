@@ -192,16 +192,19 @@ impl Visit for TypedFuncDef {
         let symbols = context.symbols();
         let sigature = self.signature.clone();
         let params = sigature.to_fixed_params();
-        let is_method = sigature.receiver().is_some();
 
-        // Methods receive `self` as an implicit first parameter (a pointer).
-        if is_method {
-            param_types.push(context.type_converter().ptr_type().into());
-        }
-
-        for (_, param_type) in &params {
-            let llvm_type = context.type_converter().to_llvm_type(param_type, symbols)?;
-            param_types.push(llvm_type.into());
+        for (param, declared_type) in &params {
+            match param {
+                crate::tokens::ParamKind::Self_(_) => {
+                    param_types.push(context.type_converter().ptr_type().into());
+                }
+                crate::tokens::ParamKind::Ident(_) => {
+                    let llvm_type = context
+                        .type_converter()
+                        .to_llvm_type(declared_type, symbols)?;
+                    param_types.push(llvm_type.into());
+                }
+            }
         }
 
         let fn_type: FunctionType = if sigature.return_type == crate::ast::Types::Void {
@@ -225,33 +228,27 @@ impl Visit for TypedFuncDef {
         let entry_block = context.create_basic_block("entry");
         context.position_at_end(entry_block);
 
-        // Declare `self` as first param for methods.
-        // Register the received pointer directly as the variable value (no double indirection),
-        // so that field access on `self` works identically to a regular struct variable.
-        let param_offset = if is_method {
-            let self_ptr_val = function.get_nth_param(0).unwrap().into_pointer_value();
-            self_ptr_val.set_name("self");
-            let self_ident = crate::tokens::Ident::new("self".to_string(), Default::default());
-            let struct_name = sigature.receiver().unwrap();
-            context.declare_variable(
-                self_ident,
-                self_ptr_val,
-                crate::ast::Types::Struct(struct_name),
-            )?;
-            1
-        } else {
-            0
-        };
+        for (i, (param, declared_type)) in params.iter().enumerate() {
+            let param_val = function.get_nth_param(i as u32).unwrap();
+            let name = param.name();
+            param_val.set_name(name.inner());
 
-        for (i, (param_name, param_type)) in params.iter().enumerate() {
-            let param_val = function.get_nth_param((i + param_offset) as u32).unwrap();
-            param_val.set_name(param_name.inner());
-
-            let param_llvm_type = context.type_converter().to_llvm_type(param_type, symbols)?;
-
-            let param_alloca = context.create_alloca(param_name.inner(), param_llvm_type)?;
-            context.create_store(param_alloca, param_val)?;
-            context.declare_variable(param_name.clone(), param_alloca, param_type.clone())?;
+            match param {
+                crate::tokens::ParamKind::Self_(_) => {
+                    let typ = sigature
+                        .receiver()
+                        .expect("Self_ param but no receiver on signature");
+                    // Register the pointer directly — no alloca, no double indirection.
+                    context.declare_variable(name, param_val.into_pointer_value(), typ)?;
+                }
+                crate::tokens::ParamKind::Ident(_) => {
+                    let typ = declared_type.clone();
+                    let llvm_type = context.type_converter().to_llvm_type(&typ, symbols)?;
+                    let alloca = context.create_alloca(name.inner(), llvm_type)?;
+                    context.create_store(alloca, param_val)?;
+                    context.declare_variable(name, alloca, typ)?;
+                }
+            }
         }
 
         self.body.visit(context)?;

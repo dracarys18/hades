@@ -20,6 +20,7 @@ pub enum Types {
     Generic(Vec<Types>),
     Array(ArrayType),
     Struct(Ident),
+    Self_,
 }
 
 impl std::fmt::Display for Types {
@@ -39,6 +40,7 @@ impl std::fmt::Display for Types {
                 ArrayType::BoolArray(size) => write!(f, "bool[{size}]"),
                 ArrayType::StructArray(size, name) => write!(f, "struct {name}[{size}]"),
             },
+            Types::Self_ => write!(f, "self"),
         }
     }
 }

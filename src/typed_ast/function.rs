@@ -1,15 +1,14 @@
 use super::builtins::BUILTIN_FUNCTIONS;
 use crate::ast::Types;
 use crate::consts::MAX_FUNCTION_PARAMS;
-use crate::tokens::{FunctionName, Ident};
+use crate::tokens::{FunctionName, Ident, ParamKind};
 use crate::typed_ast::SemanticError;
-
 use indexmap::IndexMap;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Params {
     Variadic,
-    Fixed(IndexMap<Ident, Types>),
+    Fixed(IndexMap<ParamKind, Types>),
 }
 
 impl Params {
@@ -30,16 +29,16 @@ impl Params {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionSignature {
-    pub receiver: Option<Ident>,
+    pub receiver: Option<Types>,
     pub params: Params,
     pub return_type: Types,
 }
 
 impl FunctionSignature {
     pub fn new(
-        params: IndexMap<Ident, Types>,
-        receiver: Option<Ident>,
+        params: IndexMap<ParamKind, Types>,
         return_type: Types,
+        receiver: Option<Types>,
     ) -> Self {
         Self {
             params: Params::Fixed(params),
@@ -59,7 +58,11 @@ impl FunctionSignature {
     pub fn param_count(&self) -> usize {
         match &self.params {
             Params::Variadic => MAX_FUNCTION_PARAMS,
-            Params::Fixed(map) => map.len(),
+            // Self_ is included in params but not counted as a call-site argument.
+            Params::Fixed(map) => map
+                .keys()
+                .filter(|p| !matches!(p, ParamKind::Self_(_)))
+                .count(),
         }
     }
 
@@ -67,7 +70,7 @@ impl FunctionSignature {
         self.params.clone()
     }
 
-    pub fn to_fixed_params(&self) -> IndexMap<Ident, Types> {
+    pub fn to_fixed_params(&self) -> IndexMap<ParamKind, Types> {
         match &self.params {
             Params::Variadic => panic!("Variadic functions are not supported yet"),
             Params::Fixed(map) => map.clone(),
@@ -78,7 +81,7 @@ impl FunctionSignature {
         &self.return_type
     }
 
-    pub fn receiver(&self) -> Option<Ident> {
+    pub fn receiver(&self) -> Option<Types> {
         self.receiver.clone()
     }
 }

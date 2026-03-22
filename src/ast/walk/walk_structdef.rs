@@ -28,8 +28,9 @@ impl WalkAst for StructDef {
         span: crate::error::Span,
     ) -> Result<Self::Output, SemanticError> {
         let name = self.name.clone();
+        let mut fields = IndexMap::new();
 
-        // --- Pass 1: register var-only skeleton so method bodies can resolve self's fields ---
+        // Pre-register var fields so method bodies can resolve self's field types.
         let var_only = self
             .fields
             .iter()
@@ -40,24 +41,20 @@ impl WalkAst for StructDef {
             .collect();
         ctx.insert_struct(name.clone(), var_only);
 
-        // --- Pass 2: walk all fields ---
-        let mut fields = IndexMap::new();
         for (k, v) in &self.fields {
             match v {
                 FieldKind::Var(t) => {
                     fields.insert(k.clone(), TypedFieldKind::Var(t.clone()));
                 }
                 FieldKind::Func(func_def) => {
-                    let mangled = func_def.name.mangle(&name);
                     let mut mangled_func = func_def.clone();
-                    mangled_func.name = mangled;
-
+                    mangled_func.name = func_def.name.mangle(&name);
                     let typed = mangled_func.walk(ctx, span.clone())?;
-                    // Store under the original (unmangled) method name so call-site lookup works.
                     fields.insert(k.clone(), TypedFieldKind::Func(typed));
                 }
             }
         }
+        ctx.insert_struct(name.clone(), fields.clone());
 
         Ok(TypedStructDef {
             name: name.clone(),

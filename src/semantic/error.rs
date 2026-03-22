@@ -139,6 +139,13 @@ impl SemanticError {
         }
     }
 
+    pub fn self_outside_method(span: Span) -> Self {
+        Self {
+            message: String::from("'self' parameter is only valid inside a method"),
+            span,
+        }
+    }
+
     pub fn into_error(self) -> Error {
         Error::new_with_span(self.message, self.span)
     }

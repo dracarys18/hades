@@ -3,11 +3,11 @@ use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::error::Span;
 use crate::tokens::Ident;
 use crate::typed_ast::{CompilerContext, TypedFieldKind};
+use inkwell::AddressSpace;
 use inkwell::context::Context;
 use inkwell::types::{
     AnyTypeEnum, BasicType, BasicTypeEnum, FloatType, FunctionType, IntType, StructType,
 };
-use inkwell::AddressSpace;
 
 pub struct TypeConverter<'ctx> {
     context: &'ctx Context,
@@ -68,6 +68,13 @@ impl<'ctx> TypeConverter<'ctx> {
                     array_type.into()
                 }
             },
+            // Self_ must be resolved to actual type before this pass
+            Types::Self_ => {
+                return Err(CodegenError::TypeConversion {
+                    from: "self".to_string(),
+                    to: "LLVM type".to_string(),
+                });
+            }
         };
 
         Ok(llvm_type)
@@ -86,11 +93,8 @@ impl<'ctx> TypeConverter<'ctx> {
             })?;
         let mut field_types = Vec::new();
         for (_, field_type) in struct_def.iter() {
-            // Only include data fields in the LLVM struct layout; methods are not stored in memory.
-            if let TypedFieldKind::Var(_) = field_type {
-                let llvm_field_type = self.to_llvm_type(&field_type.get_type(), compiler_ctx)?;
-                field_types.push(llvm_field_type);
-            }
+            let llvm_field_type = self.to_llvm_type(&field_type.get_type(), compiler_ctx)?;
+            field_types.push(llvm_field_type);
         }
 
         let struct_type = self.context.struct_type(&field_types, false);

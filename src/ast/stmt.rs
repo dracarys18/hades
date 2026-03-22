@@ -4,7 +4,7 @@ use crate::{
     ast::{AssignExpr, BinaryExpr, Program, Types},
     error::{SemanticError, Span},
     impl_span,
-    tokens::{FunctionName, Ident},
+    tokens::{FunctionName, Ident, ParamKind},
 };
 use derive_more::Debug;
 use indexmap::IndexMap;
@@ -85,7 +85,7 @@ pub enum FieldKind {
 pub struct FuncDef {
     pub name: FunctionName,
     pub parent_struct: Option<Ident>,
-    pub params: Vec<(Ident, Types)>,
+    pub params: Vec<(ParamKind, Types)>,
     pub return_type: Types,
     pub body: Block,
     pub span: Span,

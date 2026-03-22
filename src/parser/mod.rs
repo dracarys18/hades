@@ -4,7 +4,7 @@ use crate::ast::*;
 use crate::error::Span;
 use crate::parser::error::FinalParseResult;
 use crate::token_matches;
-use crate::tokens::{Assoc, FunctionName, Ident, Op, Token, TokenKind};
+use crate::tokens::{Assoc, FunctionName, Ident, Op, ParamKind, Selff, Token, TokenKind};
 use error::{ParseError, ParseResult};
 use indexmap::IndexMap;
 use std::ops::Range;
@@ -169,12 +169,39 @@ impl Parser {
         }
     }
 
+    fn expect_keyword(&mut self, expected: &TokenKind) -> ParseResult<()> {
+        let source_id = self.source_id.clone();
+        let token = self.next();
+        match token {
+            Some(ref t) if t.kind() == expected => Ok(()),
+            Some(t) => {
+                let span = t.span().into_range();
+                Err(ParseError::unexpected_token(
+                    Some(t),
+                    &format!("'{expected:?}'"),
+                    span,
+                    source_id,
+                ))
+            }
+            None => {
+                let span = self.eof_span().into_range();
+                Err(ParseError::unexpected_token(
+                    None,
+                    &format!("'{expected:?}'"),
+                    span,
+                    source_id,
+                ))
+            }
+        }
+    }
+
     fn expect_type(&mut self) -> ParseResult<Types> {
         let source_id = self.source_id.clone();
         let token = self.next();
         match token {
             Some(tok) => match tok.kind() {
                 TokenKind::Ident(name) => Ok(Types::from_str(name)),
+                TokenKind::Self_ => Ok(Types::Self_),
                 _ => {
                     let span = tok.span().into_range();
                     Err(ParseError::unexpected_token(
@@ -464,29 +491,36 @@ impl Parser {
         }
     }
 
-    fn parse_parameter_list(&mut self) -> ParseResult<Vec<(Ident, Types)>> {
+    fn parse_parameter_list(&mut self) -> ParseResult<Vec<(ParamKind, Types)>> {
         self.expect(&TokenKind::LeftParen)?;
-        let params = self.parse_comma_separated(
-            |parser| {
-                // Allow `self: Self` as the first parameter of a method.
-                if parser
-                    .peek()
-                    .is_some_and(|tok| token_matches!(tok, TokenKind::Self_))
-                {
-                    let self_tok = parser.next().unwrap();
-                    let self_ident = Ident::new("self".to_string(), self_tok.span().clone());
-                    parser.expect(&TokenKind::Colon)?;
-                    // Consume the `Self` type keyword (written as an identifier).
-                    parser.expect_identifier()?;
-                    return Ok((self_ident, Types::Void)); // type resolved by walker
-                }
-                let name = parser.expect_identifier()?;
-                parser.expect(&TokenKind::Colon)?;
-                let param_type = parser.expect_type()?;
-                Ok((name, param_type))
-            },
-            &TokenKind::RightParen,
-        )?;
+
+        let params = self
+            .peek()
+            .map(|t| t.kind().eq(&TokenKind::Self_))
+            .unwrap_or_default()
+            .then(|| {
+                self.parse_comma_separated(
+                    |parser| {
+                        parser.expect_keyword(&TokenKind::Self_)?;
+                        let name = ParamKind::Self_(Selff::new(parser.current_span()));
+                        parser.expect(&TokenKind::Colon)?;
+                        let param_type = parser.expect_type()?;
+                        Ok((name, param_type))
+                    },
+                    &TokenKind::RightParen,
+                )
+            })
+            .unwrap_or_else(|| {
+                self.parse_comma_separated(
+                    |parser| {
+                        let name = parser.expect_identifier()?;
+                        parser.expect(&TokenKind::Colon)?;
+                        let param_type = parser.expect_type()?;
+                        Ok((ParamKind::Ident(name), param_type))
+                    },
+                    &TokenKind::RightParen,
+                )
+            })?;
         self.expect(&TokenKind::RightParen)?;
         Ok(params)
     }

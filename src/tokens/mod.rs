@@ -1,12 +1,16 @@
 mod function_name;
 mod ident;
 mod op;
+mod param_kind;
+mod selff;
 
 use std::fmt::Debug;
 
 pub use function_name::*;
 pub use ident::*;
 pub use op::*;
+pub use param_kind::*;
+pub use selff::*;
 
 use crate::error::Span;
 

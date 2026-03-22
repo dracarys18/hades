@@ -1,6 +1,6 @@
 use crate::ast::{FuncDef, Types, WalkAst};
 use crate::error::SemanticError;
-use crate::tokens::Ident;
+use crate::tokens::ParamKind;
 use crate::typed_ast::{CompilerContext, FunctionSignature, TypedFuncDef};
 use indexmap::IndexMap;
 
@@ -11,38 +11,29 @@ impl WalkAst for FuncDef {
         ctx: &mut CompilerContext,
         _span: crate::error::Span,
     ) -> Result<Self::Output, SemanticError> {
-        // Separate `self: Self` from regular params.
-        // The walker resolves `self`'s placeholder Void type to Struct(parent_struct).
-        let (self_param, regular_params): (Vec<_>, Vec<_>) = self
+        let params_map = self
             .params
             .iter()
-            .partition(|(name, _)| name.inner() == "self");
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect::<IndexMap<_, _>>();
 
-        let has_self = !self_param.is_empty();
-
-        // Build the function signature from regular (non-self) params only.
-        let params_map: IndexMap<Ident, Types> = regular_params
-            .iter()
-            .map(|(k, v)| ((*k).clone(), (*v).clone()))
-            .collect();
-
-        let function_signature = FunctionSignature::new(
-            params_map,
-            self.parent_struct.clone(),
-            self.return_type.clone(),
-        );
+        let receiver = self
+            .parent_struct
+            .as_ref()
+            .map(|s| Types::Struct(s.clone()));
+        let function_signature =
+            FunctionSignature::new(params_map, self.return_type.clone(), receiver);
         ctx.enter_function(self.name.clone(), function_signature.clone())?;
 
-        // Insert `self` into scope with the resolved struct type.
-        if has_self {
-            if let Some(ref struct_name) = self.parent_struct {
-                let self_ident = Ident::new("self".to_string(), self.span.clone());
-                ctx.insert_variable(self_ident, Types::Struct(struct_name.clone()));
-            }
-        }
-
-        for (param_name, param_type) in &regular_params {
-            ctx.insert_variable((*param_name).clone(), (*param_type).clone());
+        for (param, declared_type) in &self.params {
+            let resolved_type = match param {
+                ParamKind::Self_(_) => match &self.parent_struct {
+                    Some(s) => Types::Struct(s.clone()),
+                    None => return Err(SemanticError::self_outside_method(param.span().clone())),
+                },
+                ParamKind::Ident(_) => declared_type.clone(),
+            };
+            ctx.insert_variable(param.name(), resolved_type);
         }
 
         let typed_body = self.body.walk(ctx, self.span.clone())?;

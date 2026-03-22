@@ -238,7 +238,6 @@ impl Visit for TypedFuncDef {
                     let typ = sigature
                         .receiver()
                         .expect("Self_ param but no receiver on signature");
-                    // Register the pointer directly — no alloca, no double indirection.
                     context.declare_variable(name, param_val.into_pointer_value(), typ)?;
                 }
                 crate::tokens::ParamKind::Ident(_) => {

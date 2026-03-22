@@ -58,11 +58,17 @@ impl FunctionSignature {
     pub fn param_count(&self) -> usize {
         match &self.params {
             Params::Variadic => MAX_FUNCTION_PARAMS,
-            // Self_ is included in params but not counted as a call-site argument.
             Params::Fixed(map) => map
                 .keys()
                 .filter(|p| !matches!(p, ParamKind::Self_(_)))
                 .count(),
+        }
+    }
+
+    pub fn check_arg_count(&self, provided: usize) -> bool {
+        match &self.params {
+            Params::Variadic => provided <= self.param_count(),
+            Params::Fixed(_) => provided == self.param_count(),
         }
     }
 

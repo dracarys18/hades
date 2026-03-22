@@ -3,10 +3,6 @@ use crate::tokens::Ident;
 use std::fmt::Debug;
 use std::hash::Hash;
 
-/// A function name that knows how to mangle itself into a method name.
-///
-/// Method name mangling: `Outer__method` is produced by `outer.mangle(method)`.
-/// This is the canonical place for all name-mangling logic.
 #[derive(Clone)]
 pub struct FunctionName {
     name: String,
@@ -18,7 +14,6 @@ impl FunctionName {
         Self { name, span }
     }
 
-    /// The raw name string.
     pub fn inner(&self) -> &str {
         &self.name
     }
@@ -27,9 +22,6 @@ impl FunctionName {
         &self.span
     }
 
-    /// Produce the mangled name: `self__other`.
-    ///
-    /// Example: `get_x.mangle(Point)` → `FunctionName("get_x__Point")`.
     pub fn mangle(&self, other: &Ident) -> FunctionName {
         FunctionName {
             name: format!("{}__{}", self.name, other.inner()),

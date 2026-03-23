@@ -15,7 +15,7 @@ pub mod variable;
 
 pub use assign::Assignment;
 pub use binary::BinaryOp;
-pub use call::{visit_function_call, visit_method_call};
+pub use call::{FunctionCall, MethodCall};
 pub use struct_init::StructInit;
 pub use unary::UnaryOp;
 pub use variable::VariableAccess;
@@ -66,13 +66,22 @@ impl Visit for TypedExpr {
                 args,
                 receiver: Some(recv),
                 ..
-            } => visit_method_call(func.inner(), recv, args, context),
+            } => MethodCall {
+                name: func.inner(),
+                receiver: recv,
+                args,
+            }
+            .visit(context),
             Self::Call {
                 func,
                 args,
                 receiver: None,
                 ..
-            } => visit_function_call(func.inner(), args, context),
+            } => FunctionCall {
+                name: func.inner(),
+                args,
+            }
+            .visit(context),
             Self::StructInit { name, fields, .. } => StructInit::new(name, fields).visit(context),
             Self::Assign(assign) => assign.visit(context),
             Self::FieldAccess(field) => field.visit(context),

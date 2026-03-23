@@ -1,15 +1,13 @@
 use crate::ast::{FuncDef, Types, WalkAst};
+use crate::consts::ENTRY_POINT;
 use crate::error::SemanticError;
-use crate::tokens::ParamKind;
+use crate::tokens::{FunctionName, ParamKind};
 use crate::typed_ast::{CompilerContext, FunctionSignature, TypedFuncDef};
 use indexmap::IndexMap;
 
 impl FuncDef {
     pub fn register(&self, ctx: &mut CompilerContext) -> Result<(), SemanticError> {
-        let effective_name = match &self.parent_struct {
-            Some(s) => self.name.mangle(s),
-            None => self.name.clone(),
-        };
+        let name = self.effective_name(ctx);
         let params_map = self
             .params
             .iter()
@@ -20,7 +18,24 @@ impl FuncDef {
             .as_ref()
             .map(|s| Types::Struct(s.clone()));
         let sig = FunctionSignature::new(params_map, self.return_type.clone(), receiver);
-        ctx.register_function(effective_name, sig)
+        ctx.register_function(name, sig)
+    }
+
+    fn effective_name(&self, ctx: &CompilerContext) -> FunctionName {
+        let base = match &self.parent_struct {
+            Some(s) => self.name.mangle(s),
+            None => self.name.clone(),
+        };
+        if base.inner() == ENTRY_POINT {
+            return base;
+        }
+        match ctx.module_name() {
+            Some(mod_name) => FunctionName::new(
+                format!("{}__{}", mod_name, base.inner()),
+                base.span().clone(),
+            ),
+            None => base,
+        }
     }
 }
 
@@ -31,10 +46,7 @@ impl WalkAst for FuncDef {
         ctx: &mut CompilerContext,
         _span: crate::error::Span,
     ) -> Result<Self::Output, SemanticError> {
-        let effective_name = match &self.parent_struct {
-            Some(s) => self.name.mangle(s),
-            None => self.name.clone(),
-        };
+        let effective_name = self.effective_name(ctx);
 
         if self.parent_struct.is_none() {
             self.register(ctx)?;

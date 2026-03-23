@@ -3,8 +3,8 @@ import std::math
 fn compute(): int {
     let x: int = 100;
     let y: int = 50;
-    let m: int = min(x, y);
-    return m + max(x, y);
+    let m: int = math::min(x, y);
+    return m + math::max(x, y);
 }
 
 fn main(): int {

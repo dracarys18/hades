@@ -3,6 +3,7 @@ use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
 use crate::typed_ast::{TypedArrayLiteral, TypedValue};
+use inkwell::module::Linkage;
 use inkwell::values::BasicValueEnum;
 
 impl Visit for TypedValue {
@@ -79,6 +80,7 @@ fn generate_string_value<'ctx>(
         .add_global(const_str.get_type(), None, "str");
     global.set_initializer(&const_str);
     global.set_constant(true);
+    global.set_linkage(Linkage::Private);
 
     let zero = context.context().i32_type().const_zero();
     let ptr = unsafe {

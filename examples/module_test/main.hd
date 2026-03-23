@@ -3,6 +3,6 @@ import std::math
 fn main(): int {
     let a: int = 10;
     let b: int = 20;
-    let result: int = min(a, b);
+    let result: int = math::min(a, b);
     return result;
 }

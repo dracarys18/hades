@@ -19,6 +19,7 @@ pub struct CompilerContext {
     functions: Functions,
     structs: Structs,
     current_function: Option<(FunctionName, Types)>,
+    module_name: Option<String>,
 }
 
 impl CompilerContext {
@@ -28,7 +29,16 @@ impl CompilerContext {
             functions: Functions::new(),
             structs: Structs::new(),
             current_function: None,
+            module_name: None,
         }
+    }
+
+    pub fn set_module_name(&mut self, name: String) {
+        self.module_name = Some(name);
+    }
+
+    pub fn module_name(&self) -> Option<&str> {
+        self.module_name.as_deref()
     }
 
     pub fn structs(&self) -> &Structs {

@@ -93,7 +93,7 @@ pub fn compile_module_to_object<'ctx>(
             "generic",
             "",
             OptimizationLevel::Default,
-            RelocMode::Default,
+            RelocMode::PIC,
             CodeModel::Default,
         )
         .ok_or_else(|| CodegenError::LLVMBuild {

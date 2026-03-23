@@ -1,21 +1,21 @@
 use crate::ast::{QualifiedCall, WalkAst};
 use crate::error::{SemanticError, Span};
-use crate::tokens::FunctionName;
 use crate::typed_ast::{CompilerContext, TypedExpr};
 
-use super::func::{qualified_or_bare, walk_typed_args};
+use super::func::walk_typed_args;
 
 impl WalkAst for QualifiedCall {
     type Output = TypedExpr;
 
     fn walk(&self, ctx: &mut CompilerContext, span: Span) -> Result<Self::Output, SemanticError> {
         let resolved = if ctx.structs().fields(&self.qualifier).is_some() {
-            qualified_or_bare(&self.func.mangle(&self.qualifier), ctx)
+            let mangled = self.func.mangle(&self.qualifier);
+            ctx.module_name()
+                .map(|m| mangled.full_name(m))
+                .filter(|n| ctx.get_function_signature(n).is_ok())
+                .unwrap_or_else(|| mangled.clone())
         } else {
-            FunctionName::new(
-                format!("{}__{}", self.qualifier.inner(), self.func.inner()),
-                self.func.span().clone(),
-            )
+            self.func.full_name(self.qualifier.inner())
         };
         let sig = ctx.get_function_signature(&resolved)?;
         let return_type = sig.return_type().clone();

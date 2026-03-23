@@ -29,6 +29,13 @@ impl FunctionName {
         }
     }
 
+    pub fn full_name(&self, qualifier: &str) -> FunctionName {
+        FunctionName {
+            name: format!("{}__{}", qualifier, self.name),
+            span: self.span.clone(),
+        }
+    }
+
     pub fn to_ident(&self) -> Ident {
         Ident::new(self.name.clone(), self.span.clone())
     }

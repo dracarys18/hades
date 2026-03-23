@@ -1,13 +1,16 @@
 use crate::ast::{Expr, FunctionCall, WalkAst};
 use crate::error::{SemanticError, Span};
-use crate::tokens::FunctionName;
 use crate::typed_ast::{CompilerContext, TypedExpr};
 
 impl WalkAst for FunctionCall {
     type Output = TypedExpr;
 
     fn walk(&self, ctx: &mut CompilerContext, span: Span) -> Result<Self::Output, SemanticError> {
-        let resolved = qualified_or_bare(&self.func, ctx);
+        let resolved = ctx
+            .module_name()
+            .map(|m| self.func.full_name(m))
+            .filter(|n| ctx.get_function_signature(n).is_ok())
+            .unwrap_or_else(|| self.func.clone());
         let sig = ctx.get_function_signature(&resolved)?;
         let return_type = sig.return_type().clone();
         let params = sig.params();
@@ -28,19 +31,6 @@ impl WalkAst for FunctionCall {
             typ: return_type,
         })
     }
-}
-
-pub fn qualified_or_bare(name: &FunctionName, ctx: &CompilerContext) -> FunctionName {
-    if let Some(mod_name) = ctx.module_name() {
-        let qualified = FunctionName::new(
-            format!("{}__{}", mod_name, name.inner()),
-            name.span().clone(),
-        );
-        if ctx.get_function_signature(&qualified).is_ok() {
-            return qualified;
-        }
-    }
-    name.clone()
 }
 
 pub fn walk_typed_args(

@@ -2,7 +2,7 @@ use crate::ast::{MethodCall, WalkAst};
 use crate::error::{SemanticError, Span};
 use crate::typed_ast::{CompilerContext, TypedExpr};
 
-use super::func::{qualified_or_bare, walk_typed_args};
+use super::func::walk_typed_args;
 
 impl WalkAst for MethodCall {
     type Output = TypedExpr;
@@ -12,7 +12,11 @@ impl WalkAst for MethodCall {
         let mangled = self
             .func
             .mangle(typed_receiver.get_type().unwrap_struct_name());
-        let resolved = qualified_or_bare(&mangled, ctx);
+        let resolved = ctx
+            .module_name()
+            .map(|m| mangled.full_name(m))
+            .filter(|n| ctx.get_function_signature(n).is_ok())
+            .unwrap_or_else(|| mangled.clone());
         let sig = ctx.get_function_signature(&resolved)?;
         let return_type = sig.return_type().clone();
         let params = sig.params();

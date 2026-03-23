@@ -7,7 +7,7 @@ use indexmap::IndexMap;
 
 impl FuncDef {
     pub fn register(&self, ctx: &mut CompilerContext) -> Result<(), SemanticError> {
-        let name = self.effective_name(ctx);
+        let name = self.full_name(ctx);
         let params_map = self
             .params
             .iter()
@@ -21,7 +21,7 @@ impl FuncDef {
         ctx.register_function(name, sig)
     }
 
-    fn effective_name(&self, ctx: &CompilerContext) -> FunctionName {
+    fn full_name(&self, ctx: &CompilerContext) -> FunctionName {
         let base = match &self.parent_struct {
             Some(s) => self.name.mangle(s),
             None => self.name.clone(),
@@ -29,13 +29,7 @@ impl FuncDef {
         if base.inner() == ENTRY_POINT {
             return base;
         }
-        match ctx.module_name() {
-            Some(mod_name) => FunctionName::new(
-                format!("{}__{}", mod_name, base.inner()),
-                base.span().clone(),
-            ),
-            None => base,
-        }
+        ctx.module_name().map(|m| base.full_name(m)).unwrap_or(base)
     }
 }
 
@@ -46,14 +40,14 @@ impl WalkAst for FuncDef {
         ctx: &mut CompilerContext,
         _span: crate::error::Span,
     ) -> Result<Self::Output, SemanticError> {
-        let effective_name = self.effective_name(ctx);
+        let name = self.full_name(ctx);
 
         if self.parent_struct.is_none() {
             self.register(ctx)?;
         }
 
-        let sig = ctx.get_function_signature(&effective_name)?.clone();
-        ctx.set_current_function(effective_name.clone(), self.return_type.clone());
+        let sig = ctx.get_function_signature(&name)?.clone();
+        ctx.set_current_function(name.clone(), self.return_type.clone());
 
         for (param, declared_type) in &self.params {
             let resolved_type = match param {
@@ -70,7 +64,7 @@ impl WalkAst for FuncDef {
         ctx.exit_function();
 
         Ok(TypedFuncDef {
-            name: effective_name,
+            name,
             signature: sig,
             body: typed_body,
             span: self.span.clone(),

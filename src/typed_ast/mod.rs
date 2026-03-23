@@ -4,6 +4,7 @@ mod expr;
 mod function;
 mod ident;
 mod meta;
+pub mod signatures;
 mod struc;
 mod value;
 
@@ -14,12 +15,10 @@ pub use expr::{
 };
 pub use function::{FunctionSignature, Params};
 pub use meta::CompilerContext;
+pub use signatures::ModuleSignatures;
 pub use value::{TypedArrayLiteral, TypedValue};
 
-use crate::{
-    ast::{Program, WalkAst},
-    error::{SemanticError, Span},
-};
+use crate::module::ModulePath;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypedProgram(pub Vec<ast::TypedStmt>);
@@ -53,33 +52,10 @@ impl IntoIterator for TypedProgram {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct TypedAstMeta {
-    ast: TypedProgram,
-    ctx: CompilerContext,
-}
-
-impl TypedAstMeta {
-    pub fn new() -> Self {
-        let ast = TypedProgram::new(vec![]);
-        let ctx = CompilerContext::new();
-
-        Self { ast, ctx }
-    }
-
-    pub fn prepare(self, program: &Program) -> Result<Self, SemanticError> {
-        let mut ctx = CompilerContext::new();
-        let ast = program.walk(&mut ctx, Span::default());
-        match ast {
-            Err(e) => Err(e),
-            Ok(ast) => Ok(Self { ast, ctx }),
-        }
-    }
-
-    pub fn ast(&self) -> &TypedProgram {
-        &self.ast
-    }
-    pub fn ctx(&self) -> &CompilerContext {
-        &self.ctx
-    }
+pub struct TypedModule {
+    pub path: ModulePath,
+    pub program: TypedProgram,
+    pub signatures: ModuleSignatures,
+    pub ctx: CompilerContext,
+    pub imports: Vec<ModulePath>,
 }

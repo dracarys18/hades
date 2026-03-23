@@ -1,0 +1,8 @@
+import self::circle
+import self::square
+
+fn main(): int {
+    circle::describe(5);
+    square::describe(3);
+    return 0;
+}

@@ -1,11 +1,12 @@
 use crate::ast::{ArrayType, Types};
 use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::error::Span;
-use crate::tokens::Ident;
-use crate::typed_ast::{CompilerContext, TypedFieldKind};
+use crate::tokens::{Ident, ParamKind};
+use crate::typed_ast::{CompilerContext, FunctionSignature, TypedFieldKind};
 use inkwell::context::Context;
 use inkwell::types::{
-    AnyTypeEnum, BasicType, BasicTypeEnum, FloatType, FunctionType, IntType, StructType,
+    AnyTypeEnum, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FloatType, FunctionType, IntType,
+    StructType,
 };
 use inkwell::AddressSpace;
 
@@ -174,5 +175,25 @@ impl<'ctx> TypeConverter<'ctx> {
             (t1, t2) if t1 == t2 => t1.clone(),
             _ => left.clone(),
         }
+    }
+
+    pub fn params_to_llvm_types(
+        &mut self,
+        sig: &FunctionSignature,
+        compiler_ctx: &CompilerContext,
+    ) -> CodegenResult<Vec<BasicMetadataTypeEnum<'ctx>>> {
+        let params = sig.to_fixed_params();
+        let mut param_types = Vec::new();
+        for (param, declared_type) in &params {
+            match param {
+                ParamKind::Self_(_) => {
+                    param_types.push(self.ptr_type().into());
+                }
+                ParamKind::Ident(_) => {
+                    param_types.push(self.to_llvm_type(declared_type, compiler_ctx)?.into());
+                }
+            }
+        }
+        Ok(param_types)
     }
 }

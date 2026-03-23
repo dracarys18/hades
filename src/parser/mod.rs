@@ -900,14 +900,14 @@ impl Parser {
                             &TokenKind::RightParen,
                         )?;
                         self.expect(&TokenKind::RightParen)?;
-                        expr = Expr::Call {
+                        expr = Expr::Call(CallKind::Method(MethodCall {
+                            receiver: Box::new(expr),
                             func: FunctionName::new(
                                 field_name.inner().to_string(),
                                 field_name.span().clone(),
                             ),
-                            receiver: Some(Box::new(expr)),
                             args,
-                        };
+                        }));
                     } else {
                         expr = Expr::FieldAccess(FieldAccessExpr {
                             expr: Box::new(expr),
@@ -930,21 +930,21 @@ impl Parser {
                             ));
                         }
                     };
-                    let method_name = self.expect_identifier()?;
+                    let func_name = self.expect_identifier()?;
                     self.expect(&TokenKind::LeftParen)?;
                     let args = self.parse_comma_separated(
                         |parser| parser.parse_assignment(),
                         &TokenKind::RightParen,
                     )?;
                     self.expect(&TokenKind::RightParen)?;
-                    expr = Expr::Call {
+                    expr = Expr::Call(CallKind::Qualified(QualifiedCall {
+                        qualifier: struct_name,
                         func: FunctionName::new(
-                            format!("{}__{}", method_name.inner(), struct_name.inner()),
-                            method_name.span().clone(),
+                            func_name.inner().to_string(),
+                            func_name.span().clone(),
                         ),
-                        receiver: None,
                         args,
-                    };
+                    }));
                 }
                 Some(tok) if token_matches!(tok, TokenKind::LeftBracket) => {
                     self.next();
@@ -1000,10 +1000,9 @@ impl Parser {
             self.parse_comma_separated(|parser| parser.parse_assignment(), &TokenKind::RightParen)?;
         self.expect(&TokenKind::RightParen)?;
 
-        Ok(Expr::Call {
+        Ok(Expr::Call(CallKind::Function(FunctionCall {
             func: FunctionName::new(func_name.inner().to_string(), func_name.span().clone()),
-            receiver: None,
             args,
-        })
+        })))
     }
 }

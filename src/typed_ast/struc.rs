@@ -33,4 +33,8 @@ impl Structs {
             .map(|(idx, _)| idx)
             .expect(GOOLAG_MESSAGE)
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&Ident, &Field)> {
+        self.inner.iter()
+    }
 }

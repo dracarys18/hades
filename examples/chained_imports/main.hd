@@ -4,7 +4,7 @@ fn main(): int {
     let x: int = 5;
     let y: int = 10;
     let z: int = 15;
-    let result: int = add_three(x, y, z);
+    let result: int = intermediate::add_three(x, y, z);
     printf("%d\n", result);
     return 0;
 }

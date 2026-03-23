@@ -1,0 +1,4 @@
+fn describe(side: int): int {
+    printf("square with side %d\n", side);
+    return 0;
+}

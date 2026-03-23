@@ -1,10 +1,11 @@
 use crate::ast::ModuleDecl;
 use crate::ast::WalkAst;
+use crate::consts::ENTRY_POINT;
 use crate::error::SemanticError;
 use crate::error::Span;
 use crate::typed_ast::{CompilerContext, TypedModuleDecl};
 
-const DISALLOWED_MODULE_NAMES: &[&str] = &["main", "std", "core"];
+const DISALLOWED_MODULE_NAMES: &[&str] = &[ENTRY_POINT, "std", "core"];
 
 impl WalkAst for ModuleDecl {
     type Output = TypedModuleDecl;

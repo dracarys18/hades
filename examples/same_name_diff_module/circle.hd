@@ -1,0 +1,4 @@
+fn describe(r: int): int {
+    printf("circle with radius %d\n", r);
+    return 0;
+}

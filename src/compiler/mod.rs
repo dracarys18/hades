@@ -1,7 +1,6 @@
-use crate::ast::Program;
-use crate::module::Registry;
+use crate::module::{Module, ModulePath, Registry};
 use crate::semantic::analyzer::{Analyzer, Unprepared};
-use crate::{consts, lexer, parser};
+use crate::{codegen::llvm::visit::program as codegen, consts, lexer, parser};
 use ariadne::{Cache, Source};
 use inkwell::context::Context;
 use std::path::PathBuf;
@@ -130,8 +129,14 @@ impl<'a> Compiler {
             }
         };
 
+        let module = Module {
+            path: ModulePath::Local(filename.to_string()),
+            ast: program,
+            imports: vec![],
+        };
+
         let analyzer = Analyzer::<Unprepared>::new();
-        let analyzer = match analyzer.prepare(&program) {
+        let analyzer = match analyzer.prepare(vec![module]) {
             Ok(a) => a,
             Err(err) => {
                 err.into_error().eprint(&mut cache);
@@ -151,18 +156,18 @@ impl<'a> Compiler {
         let output_path = output_path.as_ref();
         let mut cache = FileSourceCache::new();
 
-        let program = match Registry::load(entry_path) {
-            Ok(p) => p,
+        let modules = match Registry::load(entry_path) {
+            Ok(m) => m,
             Err(err) => {
                 eprintln!("Failed to load modules: {err}");
                 return false;
             }
         };
 
-        let context = Context::create();
+        let llvm_ctx = Context::create();
         let analyzer = Analyzer::<Unprepared>::new();
 
-        let prepared = match analyzer.prepare(&program) {
+        let prepared = match analyzer.prepare(modules) {
             Ok(p) => p,
             Err(err) => {
                 err.into_error().eprint(&mut cache);
@@ -175,19 +180,53 @@ impl<'a> Compiler {
             return false;
         }
 
-        if let Err(err) = prepared.verify_module(&context, consts::MAIN_MODULE_NAME) {
-            eprintln!("Module verification failed: {err}");
+        let typed_modules = prepared.modules();
+        let sig_map: HashMap<&ModulePath, _> = typed_modules
+            .iter()
+            .map(|m| (&m.path, &m.signatures))
+            .collect();
+
+        let mut obj_paths: Vec<PathBuf> = Vec::new();
+
+        for typed_module in typed_modules {
+            let obj_path =
+                PathBuf::from(consts::BUILD_PATH).join(format!("{}.o", typed_module.path.name()));
+
+            let import_sigs: Vec<_> = typed_module
+                .imports
+                .iter()
+                .filter_map(|p| sig_map.get(p).copied())
+                .collect();
+
+            if let Err(err) = codegen::compile(typed_module, &import_sigs, &llvm_ctx, &obj_path) {
+                eprintln!("Compilation failed for {}: {err}", typed_module.path);
+                return false;
+            }
+
+            obj_paths.push(obj_path);
+        }
+
+        let mut cmd = std::process::Command::new("clang");
+        for obj in &obj_paths {
+            cmd.arg(obj);
+        }
+        cmd.arg("-o").arg(output_path).arg("-lc");
+
+        let status = match cmd.status() {
+            Ok(s) => s,
+            Err(err) => {
+                eprintln!("Failed to invoke clang: {err}");
+                return false;
+            }
+        };
+
+        if !status.success() {
+            eprintln!("Clang failed to create executable");
             return false;
         }
 
-        if let Err(err) = prepared.compile(&context, consts::MAIN_MODULE_NAME, output_path) {
-            eprintln!("Compilation failed: {err}");
-            return false;
-        }
-
-        if let Err(err) = prepared.cleanup(output_path) {
-            eprintln!("Cleanup failed: {err}");
-            return false;
+        for obj in &obj_paths {
+            let _ = std::fs::remove_file(obj);
         }
 
         true
@@ -198,19 +237,34 @@ impl<'a> Compiler {
         entry_path: impl AsRef<Path>,
         context: &inkwell::context::Context,
     ) -> Result<(), String> {
-        let program = Registry::load(entry_path).map_err(|e| e.to_string())?;
+        let modules = Registry::load(entry_path).map_err(|e| e.to_string())?;
 
         let analyzer = Analyzer::<Unprepared>::new();
         let prepared = analyzer
-            .prepare(&program)
+            .prepare(modules)
             .map_err(|e| e.into_error().to_string())?;
         prepared.analyze().map_err(|e| e.to_string())?;
 
-        let ir = prepared
-            .generate_ir(context, consts::MAIN_MODULE_NAME)
-            .map_err(|e| e.to_string())?;
+        let typed_modules = prepared.modules();
+        let sig_map: HashMap<&ModulePath, _> = typed_modules
+            .iter()
+            .map(|m| (&m.path, &m.signatures))
+            .collect();
 
-        println!("{}", ir);
+        for typed_module in typed_modules {
+            let import_sigs: Vec<_> = typed_module
+                .imports
+                .iter()
+                .filter_map(|p| sig_map.get(p).copied())
+                .collect();
+
+            let ir =
+                codegen::emit_ir(typed_module, &import_sigs, context).map_err(|e| e.to_string())?;
+
+            println!("; === module: {} ===", typed_module.path);
+            println!("{}", ir);
+        }
+
         Ok(())
     }
 

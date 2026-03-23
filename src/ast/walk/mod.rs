@@ -1,3 +1,4 @@
+pub mod call;
 mod walk_block;
 mod walk_continue;
 mod walk_expr;

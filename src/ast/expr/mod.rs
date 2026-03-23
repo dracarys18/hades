@@ -8,6 +8,33 @@ use super::value::Value;
 use crate::tokens::{FunctionName, Ident, Op};
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct FunctionCall {
+    pub func: FunctionName,
+    pub args: Vec<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct MethodCall {
+    pub receiver: Box<Expr>,
+    pub func: FunctionName,
+    pub args: Vec<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct QualifiedCall {
+    pub qualifier: Ident,
+    pub func: FunctionName,
+    pub args: Vec<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum CallKind {
+    Function(FunctionCall),
+    Method(MethodCall),
+    Qualified(QualifiedCall),
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Value(Value),
     Ident(Ident),
@@ -23,11 +50,7 @@ pub enum Expr {
     },
     Assign(AssignExpr),
     FieldAccess(FieldAccessExpr),
-    Call {
-        func: FunctionName,
-        args: Vec<Expr>,
-        receiver: Option<Box<Expr>>,
-    },
+    Call(CallKind),
 }
 
 impl Expr {

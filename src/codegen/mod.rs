@@ -1,7 +1,7 @@
 mod builtin;
 mod context;
 mod error;
-mod llvm;
+pub mod llvm;
 mod options;
 mod symbols;
 mod traits;

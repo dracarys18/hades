@@ -1,40 +1,15 @@
+pub mod func;
+pub mod method;
+
+pub use func::FunctionCall;
+pub use method::MethodCall;
+
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
-use crate::codegen::traits::Visit;
 use crate::codegen::BuiltinRegistar;
-use crate::typed_ast::TypedExpr;
 use inkwell::values::BasicMetadataValueEnum;
 
-pub fn visit_function_call<'ctx>(
-    name: &str,
-    args: &[TypedExpr],
-    context: &mut LLVMContext<'ctx>,
-) -> CodegenResult<CodegenValue<'ctx>> {
-    let function = context.get_function(name)?;
-    let arg_values = args
-        .iter()
-        .map(|a| a.visit(context).map(|v| v.value.into()))
-        .collect::<CodegenResult<Vec<BasicMetadataValueEnum>>>()?;
-    build_call(name, &arg_values, context)
-}
-
-pub fn visit_method_call<'ctx>(
-    name: &str,
-    receiver: &TypedExpr,
-    args: &[TypedExpr],
-    context: &mut LLVMContext<'ctx>,
-) -> CodegenResult<CodegenValue<'ctx>> {
-    let self_ptr = context.get_ptr(receiver)?;
-    let arg_values = std::iter::once(Ok(self_ptr.into()))
-        .chain(
-            args.iter()
-                .map(|a| a.visit(context).map(|v| v.value.into())),
-        )
-        .collect::<CodegenResult<Vec<BasicMetadataValueEnum>>>()?;
-    build_call(name, &arg_values, context)
-}
-
-fn build_call<'ctx>(
+pub fn build_call<'ctx>(
     name: &str,
     arg_values: &[BasicMetadataValueEnum<'ctx>],
     context: &mut LLVMContext<'ctx>,

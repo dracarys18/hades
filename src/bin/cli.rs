@@ -15,7 +15,9 @@ fn main() {
                 std::path::PathBuf::from(format!("{}/output", consts::BUILD_PATH))
             });
 
-            compiler.compile(&args.source, path);
+            if !compiler.compile(&args.source, path) {
+                std::process::exit(1);
+            }
         }
 
         cmd::Commands::Check(args) => {

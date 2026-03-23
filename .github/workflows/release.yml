@@ -168,73 +168,51 @@ jobs:
           git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
           cd C:\vcpkg
           .\bootstrap-vcpkg.bat
-          
+
           echo "Installing libxml2 via vcpkg..."
           .\vcpkg install libxml2:x64-windows-static
-          
+
           # Copy libxml2 lib to a location the linker can find
           $vcpkgLibPath = "C:\vcpkg\installed\x64-windows-static\lib"
           if (Test-Path "$vcpkgLibPath\libxml2.lib") {
-            # LLVM wants libxml2s.lib (static), vcpkg provides libxml2.lib
             Copy-Item "$vcpkgLibPath\libxml2.lib" "$vcpkgLibPath\libxml2s.lib"
             echo "Copied libxml2.lib to libxml2s.lib"
           }
-          
+
           # Set LIB path for vcpkg libraries
           $env:LIB = "$vcpkgLibPath;$env:LIB"
           echo "LIB=$env:LIB" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          
-          # Download and extract LLVM
-          $llvmArchive = "https://github.com/llvm/llvm-project/releases/download/llvmorg-18.1.8/clang+llvm-18.1.8-x86_64-pc-windows-msvc.tar.xz"
-          
-          echo "Downloading LLVM development archive..."
+
+          # Download and extract LLVM 21
+          $llvmArchive = "https://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.0/clang%2Bllvm-21.1.0-x86_64-pc-windows-msvc.tar.xz"
+
+          echo "Downloading LLVM 21 development archive..."
           cd C:\
           Invoke-WebRequest -Uri $llvmArchive -OutFile llvm.tar.xz
-          
+
           echo "Installing 7-Zip to extract archive..."
           choco install 7zip -y
-          
+
           echo "Extracting LLVM..."
           & "C:\Program Files\7-Zip\7z.exe" x llvm.tar.xz -so | & "C:\Program Files\7-Zip\7z.exe" x -si -ttar -o"C:\"
-          
+
           # Find the extracted directory
-          $llvmDir = Get-ChildItem -Path "C:\" -Directory | Where-Object { $_.Name -like "clang+llvm-18*" } | Select-Object -First 1
+          $llvmDir = Get-ChildItem -Path "C:\" -Directory | Where-Object { $_.Name -like "clang+llvm-21*" } | Select-Object -First 1
           echo "LLVM extracted to: $($llvmDir.FullName)"
-          echo "LLVM_ROOT=$($llvmDir.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          
-      - name: Verify and configure LLVM
-        shell: pwsh
-        run: |
-          $llvmPath = $env:LLVM_ROOT
-          if (Test-Path $llvmPath) {
-            echo "LLVM installation at: $llvmPath"
-            
-            # Check for llvm-config
-            $llvmConfig = "$llvmPath\bin\llvm-config.exe"
-            if (Test-Path $llvmConfig) {
-              echo "Found llvm-config at: $llvmConfig"
-              & $llvmConfig --version
-            } else {
-              echo "ERROR: llvm-config not found at $llvmConfig"
-              echo "Contents of bin directory:"
-              Get-ChildItem "$llvmPath\bin" | Select-Object -First 20
-              exit 1
-            }
-            
-            # Add LLVM bin to PATH
-            $env:PATH = "$llvmPath\bin;$env:PATH"
-            echo "PATH=$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-            
-            # Update LIB path to include LLVM libs (append to existing from vcpkg)
-            $env:LIB = "$llvmPath\lib;$env:LIB"
-            echo "LIB=$env:LIB" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-            
-            # Set LLVM_SYS_180_PREFIX
-            echo "LLVM_SYS_180_PREFIX=$llvmPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          } else {
-            echo "ERROR: LLVM directory not found"
+
+          # Verify llvm-config
+          $llvmConfig = "$($llvmDir.FullName)\bin\llvm-config.exe"
+          if (-not (Test-Path $llvmConfig)) {
+            echo "ERROR: llvm-config not found at $llvmConfig"
+            Get-ChildItem "$($llvmDir.FullName)\bin" | Select-Object -First 20
             exit 1
           }
+          & $llvmConfig --version
+
+          # Export env vars
+          echo "PATH=$($llvmDir.FullName)\bin;$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "LIB=$($llvmDir.FullName)\lib;$env:LIB" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "LLVM_SYS_211_PREFIX=$($llvmDir.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -271,8 +249,8 @@ jobs:
 
       - name: Install LLVM and dependencies
         run: |
-          brew install llvm@18 zstd
-        
+          brew install llvm@21 zstd
+
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -280,8 +258,8 @@ jobs:
 
       - name: Build
         env:
-          LLVM_CONFIG: /opt/homebrew/opt/llvm@18/bin/llvm-config
-          LLVM_SYS_180_PREFIX: /opt/homebrew/opt/llvm@18
+          LLVM_CONFIG: /opt/homebrew/opt/llvm@21/bin/llvm-config
+          LLVM_SYS_211_PREFIX: /opt/homebrew/opt/llvm@21
           MACOSX_DEPLOYMENT_TARGET: '11.0'
           RUSTFLAGS: -C link-arg=-L/opt/homebrew/lib -C link-arg=-lc++ -C link-arg=/opt/homebrew/lib/libzstd.a
         run: cargo build --release --verbose
@@ -384,7 +362,7 @@ jobs:
           This build may require Homebrew libraries. If you encounter issues, install:
           
           ```bash
-          brew install llvm@18 zstd
+          brew install llvm@21 zstd
           ```
           EOF
 

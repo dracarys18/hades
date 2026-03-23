@@ -1,4 +1,4 @@
-use crate::ast::Program;
+use crate::ast::{Program, Stmt};
 use crate::lexer::Lexer;
 use crate::module::error::ModuleError;
 use crate::module::path::ModulePath;
@@ -10,6 +10,7 @@ use std::path::PathBuf;
 pub struct Module {
     pub path: ModulePath,
     pub ast: Program,
+    pub imports: Vec<ModulePath>,
 }
 
 pub struct Loader {
@@ -91,9 +92,21 @@ impl Loader {
             error: "Parse error".to_string(),
         })?;
 
+        let imports = ast
+            .iter()
+            .filter_map(|stmt| {
+                if let Stmt::Import(imp) = stmt {
+                    self.resolver.resolve(imp).ok()
+                } else {
+                    None
+                }
+            })
+            .collect();
+
         Ok(Module {
             path: module_path.clone(),
             ast,
+            imports,
         })
     }
 }

@@ -1,4 +1,4 @@
-use inkwell::types::{AnyType, AnyTypeEnum, BasicType, FunctionType};
+use inkwell::types::{BasicType, FunctionType};
 
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult};
@@ -188,34 +188,23 @@ impl Visit for TypedFuncDef {
     type Output<'ctx> = inkwell::values::FunctionValue<'ctx>;
 
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
-        let mut param_types = Vec::new();
         let symbols = context.symbols();
-        let sigature = self.signature.clone();
-        let params = sigature.to_fixed_params();
+        let signature = self.signature.clone();
 
-        for (param, declared_type) in &params {
-            match param {
-                crate::tokens::ParamKind::Self_(_) => {
-                    param_types.push(context.type_converter().ptr_type().into());
-                }
-                crate::tokens::ParamKind::Ident(_) => {
-                    let llvm_type = context
-                        .type_converter()
-                        .to_llvm_type(declared_type, symbols)?;
-                    param_types.push(llvm_type.into());
-                }
-            }
-        }
+        let param_types = context
+            .type_converter()
+            .params_to_llvm_types(&signature, symbols)?;
 
-        let fn_type: FunctionType = if sigature.return_type == crate::ast::Types::Void {
+        let fn_type: FunctionType = if signature.return_type == crate::ast::Types::Void {
             context
                 .type_converter()
                 .void_type()
                 .fn_type(&param_types, false)
         } else {
+            let symbols = context.symbols();
             let return_type = context
                 .type_converter()
-                .to_llvm_type(&sigature.return_type, symbols)?;
+                .to_llvm_type(&signature.return_type, symbols)?;
             return_type.fn_type(&param_types, false)
         };
 
@@ -228,6 +217,7 @@ impl Visit for TypedFuncDef {
         let entry_block = context.create_basic_block("entry");
         context.position_at_end(entry_block);
 
+        let params = signature.to_fixed_params();
         for (i, (param, declared_type)) in params.iter().enumerate() {
             let param_val = function.get_nth_param(i as u32).unwrap();
             let name = param.name();
@@ -235,13 +225,14 @@ impl Visit for TypedFuncDef {
 
             match param {
                 crate::tokens::ParamKind::Self_(_) => {
-                    let typ = sigature
+                    let typ = signature
                         .receiver()
                         .expect("Self_ param but no receiver on signature");
                     context.declare_variable(name, param_val.into_pointer_value(), typ)?;
                 }
                 crate::tokens::ParamKind::Ident(_) => {
                     let typ = declared_type.clone();
+                    let symbols = context.symbols();
                     let llvm_type = context.type_converter().to_llvm_type(&typ, symbols)?;
                     let alloca = context.create_alloca(name.inner(), llvm_type)?;
                     context.create_store(alloca, param_val)?;

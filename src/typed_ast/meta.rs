@@ -1,7 +1,9 @@
-use super::SemanticError;
+use crate::error::SemanticError;
+use crate::module::ModulePath;
 use crate::typed_ast::{
     function::{FunctionSignature, Functions},
     ident::IdentMap,
+    signatures::ModuleSignatures,
     struc::{Field, Structs},
     TypedFieldKind,
 };
@@ -232,6 +234,14 @@ impl CompilerContext {
                 operand.to_string(),
                 span,
             )),
+        }
+    }
+
+    pub fn into_signatures(self, path: ModulePath) -> ModuleSignatures {
+        ModuleSignatures {
+            path,
+            functions: self.functions.into_user_defined(),
+            structs: self.structs,
         }
     }
 }

@@ -31,9 +31,8 @@ impl<'ctx> LLVMContext<'ctx> {
     pub fn new(
         compiler_context: &'ctx CompilerContext,
         context: &'ctx Context,
-        module_name: &str,
+        module: Module<'ctx>,
     ) -> Self {
-        let module = context.create_module(module_name);
         let builder = context.create_builder();
         let type_converter = TypeConverter::new(context);
         let codegen_symbols = CodegenSymbols::new();

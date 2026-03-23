@@ -1,11 +1,12 @@
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::codegen::traits::{CodegenVisitor, Visit};
-use crate::semantic::analyzer::{Analyzer, Prepared};
-use crate::typed_ast::TypedProgram;
+use crate::typed_ast::{ModuleSignatures, TypedModule, TypedProgram};
+use inkwell::module::Linkage;
+use inkwell::types::BasicType;
 use inkwell::{
-    OptimizationLevel,
     targets::{CodeModel, FileType, RelocMode, Target, TargetMachine},
+    OptimizationLevel,
 };
 
 impl Visit for TypedProgram {
@@ -17,127 +18,93 @@ impl Visit for TypedProgram {
     }
 }
 
-impl Analyzer<Prepared> {
-    pub fn generate_code<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<()> {
-        self.ast().visit(context)
-    }
-
-    pub fn compile_to_llvm<'ctx>(
-        &'ctx self,
-        llvm_context: &'ctx inkwell::context::Context,
-        module_name: &str,
-    ) -> CodegenResult<LLVMContext<'ctx>> {
-        let mut context = LLVMContext::new(self.ctx(), llvm_context, module_name);
-        self.generate_code(&mut context)?;
-        Ok(context)
-    }
-
-    pub fn generate_ir<'ctx>(
-        &self,
-        llvm_context: &'ctx inkwell::context::Context,
-        module_name: &str,
-    ) -> CodegenResult<String> {
-        let context = self.compile_to_llvm(llvm_context, module_name)?;
-        Ok(context.module().print_to_string().to_string())
-    }
-
-    pub fn verify_module(
-        &self,
-        llvm_context: &inkwell::context::Context,
-        module_name: &str,
-    ) -> CodegenResult<bool> {
-        let context = self.compile_to_llvm(llvm_context, module_name)?;
-        Ok(context.module().verify().is_ok())
-    }
-
-    pub fn write_to_file(
-        &self,
-        llvm_context: &inkwell::context::Context,
-        module_name: &str,
-        file_path: &std::path::Path,
-    ) -> CodegenResult<()> {
-        let ir = self.generate_ir(llvm_context, module_name)?;
-        std::fs::write(file_path, ir).map_err(|e| {
-            crate::codegen::error::CodegenError::LLVMBuild {
-                message: format!("Failed to write IR to file: {e}"),
+pub fn declare_imports<'ctx>(
+    sigs: &[&ModuleSignatures],
+    context: &mut LLVMContext<'ctx>,
+) -> CodegenResult<()> {
+    for sig in sigs {
+        for (name, fn_sig) in &sig.functions {
+            if context.module().get_function(name.inner()).is_some() {
+                continue;
             }
-        })?;
-        Ok(())
-    }
-
-    pub fn compile_to_object(
-        &self,
-        llvm_context: &inkwell::context::Context,
-        module_name: &str,
-        output_path: &std::path::Path,
-    ) -> CodegenResult<()> {
-        let context = self.compile_to_llvm(llvm_context, module_name)?;
-
-        Target::initialize_all(&inkwell::targets::InitializationConfig::default());
-
-        let triple = TargetMachine::get_default_triple();
-        let target = Target::from_triple(&triple).map_err(|e| {
-            crate::codegen::error::CodegenError::LLVMBuild {
-                message: format!("Failed to get target from triple: {e}"),
-            }
-        })?;
-
-        let target_machine = target
-            .create_target_machine(
-                &triple,
-                "generic",
-                "",
-                OptimizationLevel::Default,
-                RelocMode::Default,
-                CodeModel::Default,
-            )
-            .ok_or_else(|| CodegenError::LLVMBuild {
-                message: "Failed to create target machine".to_string(),
-            })?;
-
-        target_machine
-            .write_to_file(context.module(), FileType::Object, output_path)
-            .map_err(|e| CodegenError::LLVMBuild {
-                message: format!("Failed to write object file: {e}"),
-            })?;
-
-        Ok(())
-    }
-
-    pub fn compile(
-        &self,
-        llvm_context: &inkwell::context::Context,
-        module_name: &str,
-        output_path: &std::path::Path,
-    ) -> CodegenResult<()> {
-        let object_path = output_path.with_extension("o");
-        self.compile_to_object(llvm_context, module_name, &object_path)?;
-
-        let status = std::process::Command::new("clang")
-            .arg(object_path.to_str().unwrap())
-            .arg("-o")
-            .arg(output_path.to_str().unwrap())
-            .arg("-lc")
-            .status()
-            .map_err(|e| CodegenError::LLVMBuild {
-                message: format!("Failed to invoke gcc: {e}"),
-            })?;
-
-        if !status.success() {
-            return Err(CodegenError::LLVMBuild {
-                message: "Clang failed to create executable".to_string(),
-            });
+            let symbols = context.symbols();
+            let param_types = context
+                .type_converter()
+                .params_to_llvm_types(fn_sig, symbols)?;
+            let fn_type = if fn_sig.return_type == crate::ast::Types::Void {
+                context
+                    .type_converter()
+                    .void_type()
+                    .fn_type(&param_types, false)
+            } else {
+                let symbols = context.symbols();
+                let ret = context
+                    .type_converter()
+                    .to_llvm_type(&fn_sig.return_type, symbols)?;
+                ret.fn_type(&param_types, false)
+            };
+            context
+                .module()
+                .add_function(name.inner(), fn_type, Some(Linkage::External));
         }
-        Ok(())
     }
+    Ok(())
+}
 
-    pub fn cleanup(&self, output_path: &std::path::Path) -> CodegenResult<()> {
-        let object_path = output_path.with_extension("o");
-        if object_path.exists() {
-            std::fs::remove_file(&object_path).map_err(|e| CodegenError::LLVMBuild {
-                message: format!("Failed to remove object file: {e}"),
-            })?;
-        }
-        Ok(())
-    }
+pub fn codegen_module<'ctx>(
+    typed_module: &'ctx TypedModule,
+    import_sigs: &[&ModuleSignatures],
+    llvm_ctx: &'ctx inkwell::context::Context,
+) -> CodegenResult<LLVMContext<'ctx>> {
+    let llvm_module = llvm_ctx.create_module(&typed_module.path.to_string());
+    let mut context = LLVMContext::new(&typed_module.ctx, llvm_ctx, llvm_module);
+    declare_imports(import_sigs, &mut context)?;
+    typed_module.program.visit(&mut context)?;
+    Ok(context)
+}
+
+pub fn emit_module_ir<'ctx>(
+    typed_module: &'ctx TypedModule,
+    import_sigs: &[&ModuleSignatures],
+    llvm_ctx: &'ctx inkwell::context::Context,
+) -> CodegenResult<String> {
+    let context = codegen_module(typed_module, import_sigs, llvm_ctx)?;
+    Ok(context.module().print_to_string().to_string())
+}
+
+pub fn compile_module_to_object<'ctx>(
+    typed_module: &'ctx TypedModule,
+    import_sigs: &[&ModuleSignatures],
+    llvm_ctx: &'ctx inkwell::context::Context,
+    output_path: &std::path::Path,
+) -> CodegenResult<()> {
+    let context = codegen_module(typed_module, import_sigs, llvm_ctx)?;
+
+    Target::initialize_all(&inkwell::targets::InitializationConfig::default());
+
+    let triple = TargetMachine::get_default_triple();
+    let target = Target::from_triple(&triple).map_err(|e| CodegenError::LLVMBuild {
+        message: format!("Failed to get target from triple: {e}"),
+    })?;
+
+    let target_machine = target
+        .create_target_machine(
+            &triple,
+            "generic",
+            "",
+            OptimizationLevel::Default,
+            RelocMode::Default,
+            CodeModel::Default,
+        )
+        .ok_or_else(|| CodegenError::LLVMBuild {
+            message: "Failed to create target machine".to_string(),
+        })?;
+
+    target_machine
+        .write_to_file(context.module(), FileType::Object, output_path)
+        .map_err(|e| CodegenError::LLVMBuild {
+            message: format!("Failed to write object file: {e}"),
+        })?;
+
+    Ok(())
 }

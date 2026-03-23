@@ -1,8 +1,8 @@
 use super::builtins::BUILTIN_FUNCTIONS;
 use crate::ast::Types;
 use crate::consts::MAX_FUNCTION_PARAMS;
+use crate::error::SemanticError;
 use crate::tokens::{FunctionName, Ident, ParamKind};
-use crate::typed_ast::SemanticError;
 use indexmap::IndexMap;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -150,5 +150,16 @@ impl Functions {
             let ident = name.to_ident();
             SemanticError::undefined_function(ident.clone(), ident.span().clone())
         })
+    }
+
+    pub fn into_user_defined(self) -> IndexMap<FunctionName, FunctionSignature> {
+        let builtin_names: std::collections::HashSet<String> = BUILTIN_FUNCTIONS
+            .keys()
+            .map(|k| k.inner().to_string())
+            .collect();
+        self.inner
+            .into_iter()
+            .filter(|(name, _)| !builtin_names.contains(name.inner()))
+            .collect()
     }
 }

@@ -3,12 +3,12 @@ use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::codegen::symbols::{CodegenSymbols, LLVMVariable};
 use crate::codegen::types::TypeConverter;
 use crate::tokens::Ident;
-use crate::typed_ast::CompilerContext;
+use crate::typed_ast::{CompilerContext, ModuleSignatures};
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
 use inkwell::context::Context;
-use inkwell::module::Module;
-use inkwell::types::BasicTypeEnum;
+use inkwell::module::{Linkage, Module};
+use inkwell::types::{BasicType, BasicTypeEnum};
 use inkwell::values::{BasicValueEnum, FunctionValue, PointerValue};
 
 pub struct LoopContext<'ctx> {
@@ -233,5 +233,33 @@ impl<'ctx> LLVMContext<'ctx> {
 
     pub fn exit_scope(&mut self) {
         self.codegen_symbols.exit_scope();
+    }
+
+    pub fn declare_imports(&mut self, sigs: &[&ModuleSignatures]) -> CodegenResult<()> {
+        for sig in sigs {
+            for (name, fn_sig) in &sig.functions {
+                if self.module().get_function(name.inner()).is_some() {
+                    continue;
+                }
+                let symbols = self.symbols();
+                let param_types = self
+                    .type_converter()
+                    .params_to_llvm_types(fn_sig, symbols)?;
+                let fn_type = if fn_sig.return_type == Types::Void {
+                    self.type_converter()
+                        .void_type()
+                        .fn_type(&param_types, false)
+                } else {
+                    let symbols = self.symbols();
+                    let ret = self
+                        .type_converter()
+                        .to_llvm_type(&fn_sig.return_type, symbols)?;
+                    ret.fn_type(&param_types, false)
+                };
+                self.module()
+                    .add_function(name.inner(), fn_type, Some(Linkage::External));
+            }
+        }
+        Ok(())
     }
 }

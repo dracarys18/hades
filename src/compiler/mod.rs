@@ -198,9 +198,7 @@ impl<'a> Compiler {
                 .filter_map(|p| sig_map.get(p).copied())
                 .collect();
 
-            if let Err(err) =
-                codegen::compile_module_to_object(typed_module, &import_sigs, &llvm_ctx, &obj_path)
-            {
+            if let Err(err) = codegen::compile(typed_module, &import_sigs, &llvm_ctx, &obj_path) {
                 eprintln!("Compilation failed for {}: {err}", typed_module.path);
                 return false;
             }
@@ -260,8 +258,8 @@ impl<'a> Compiler {
                 .filter_map(|p| sig_map.get(p).copied())
                 .collect();
 
-            let ir = codegen::emit_module_ir(typed_module, &import_sigs, context)
-                .map_err(|e| e.to_string())?;
+            let ir =
+                codegen::emit_ir(typed_module, &import_sigs, context).map_err(|e| e.to_string())?;
 
             println!("; === module: {} ===", typed_module.path);
             println!("{}", ir);

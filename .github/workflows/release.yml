@@ -34,7 +34,8 @@ jobs:
           chmod +x llvm.sh
           ./llvm.sh 21
           apt-get install -y llvm-21-dev libpolly-21-dev zlib1g-dev libzstd-dev
-          ln -s /usr/bin/llvm-config-18 /usr/local/bin/llvm-config
+          echo "LLVM_SYS_211_PREFIX=/usr/lib/llvm-21" >> $GITHUB_ENV
+          echo "LLVM_CONFIG=/usr/bin/llvm-config-21" >> $GITHUB_ENV
 
       - name: Install Rust
         run: |
@@ -44,7 +45,6 @@ jobs:
       - name: Build
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
-          export LLVM_CONFIG=llvm-config-18
           cargo build --release --verbose
           
       - name: Verify binary
@@ -59,7 +59,7 @@ jobs:
           
           # Copy LLVM shared libraries
           ldd target/release/hades | grep "=> /" | awk '{print $3}' | while read lib; do
-            if [[ "$lib" == /usr/lib/llvm-18* ]] || [[ "$lib" == *libzstd* ]] || [[ "$lib" == *libz.so* ]]; then
+            if [[ "$lib" == /usr/lib/llvm-21* ]] || [[ "$lib" == *libzstd* ]] || [[ "$lib" == *libz.so* ]]; then
               cp "$lib" hades-bundle/lib/
             fi
           done

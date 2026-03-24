@@ -4,9 +4,9 @@ pub mod method;
 pub use func::FunctionCall;
 pub use method::MethodCall;
 
+use crate::codegen::BuiltinRegistar;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
-use crate::codegen::BuiltinRegistar;
 use inkwell::values::BasicMetadataValueEnum;
 
 pub fn build_call<'ctx>(

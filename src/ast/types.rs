@@ -1,3 +1,4 @@
+use crate::codegen::VisitOptions;
 use crate::tokens::Ident;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -96,6 +97,10 @@ impl Types {
         } else {
             panic!("Expected an Array type")
         }
+    }
+
+    pub fn visit_options(&self) -> VisitOptions {
+        VisitOptions::new()
     }
 
     pub fn unwrap_struct_name(&self) -> &Ident {

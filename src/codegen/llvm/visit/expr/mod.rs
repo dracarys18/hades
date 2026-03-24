@@ -1,7 +1,7 @@
+use crate::codegen::VisitOptions;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
-use crate::codegen::VisitOptions;
 use crate::typed_ast::{
     TypedArrayIndex, TypedAssignExpr, TypedBinaryExpr, TypedExpr, TypedFieldAccess,
 };
@@ -57,8 +57,8 @@ impl Visit for TypedExpr {
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
         match self {
             Self::Value(value) => value.visit(context),
-            Self::Ident { ident, .. } => {
-                VariableAccess::new(ident, VisitOptions::new()).visit(context)
+            Self::Ident { ident, typ } => {
+                VariableAccess::new(ident, typ.visit_options()).visit(context)
             }
             Self::Binary(binary) => binary.visit(context),
             Self::Unary { op, expr, .. } => UnaryOp::new(op, expr).visit(context),

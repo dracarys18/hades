@@ -10,7 +10,7 @@ use crate::{
 use derive_more::Debug;
 use indexmap::IndexMap;
 
-use super::{expr::TypedExpr, TypedProgram};
+use super::{TypedProgram, expr::TypedExpr};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypedBlock {

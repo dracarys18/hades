@@ -1,18 +1,20 @@
-; Locals for scope tracking
-
 ; Definitions
 (function_definition
-  (identifier) @local.definition.function)
+  name: (identifier) @local.definition.function)
 
 (parameter
-  (identifier) @local.definition.parameter)
+  name: (identifier) @local.definition.parameter)
 
 (var_decl
-  (identifier) @local.definition.var)
+  name: (identifier) @local.definition.var)
+
+(struct_definition
+  name: (identifier) @local.definition.type)
 
 ; Scopes
 (function_definition) @local.scope
-(block) @local.scope
+(struct_definition)   @local.scope
+(block)               @local.scope
 
 ; References
 (identifier) @local.reference

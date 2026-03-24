@@ -16,33 +16,80 @@ export default grammar({
   ],
   rules: {
     source_file: $ => repeat($._definition),
+
     _definition: $ => choice(
       $.function_definition,
+      $.struct_definition,
       $.var_decl,
-      $.function_call
+      $.function_call,
+      $.method_call,
+      $.qualified_call,
+      $.import_statement,
+      $.module_declaration,
+    ),
+
+    import_statement: $ => seq(
+      'import',
+      field('prefix', $.identifier),
+      '::',
+      field('module', $.identifier),
+    ),
+
+    module_declaration: $ => seq(
+      'module',
+      field('name', $.identifier),
     ),
 
     function_definition: $ => seq(
       'fn',
-      $.identifier,
+      field('name', $.identifier),
       $.parameter_list,
       ':',
       $._type,
       $.block
     ),
+
+    struct_definition: $ => seq(
+      'struct',
+      field('name', $.identifier),
+      '{',
+      repeat($.struct_member),
+      '}'
+    ),
+
+    struct_member: $ => choice(
+      $.struct_field,
+      $.function_definition
+    ),
+
+    struct_field: $ => seq(
+      field('name', $.identifier),
+      ':',
+      field('type', $._type),
+      optional(',')
+    ),
+
     var_decl: $ => seq(
       'let',
-      $.identifier,
+      field('name', $.identifier),
+      optional(seq(':', field('type', $._type))),
       '=',
-      choice(
-        $.expression,
-        $.identifier,
-        $.function_call_expr,
-        $.value_literal,
-        $.structInit
-      ),
+      $._expr_value,
       ';'
     ),
+
+    _expr_value: $ => choice(
+      $.expression,
+      $.array_index,
+      $.field_access,
+      $.method_call_expr,
+      $.qualified_call_expr,
+      $.function_call_expr,
+      $.identifier,
+      $.value_literal,
+      $.structInit
+    ),
+
     parameter_list: $ => seq(
       '(',
       optional(seq(
@@ -51,96 +98,205 @@ export default grammar({
       )),
       ')'
     ),
+
     parameter: $ => seq(
-      $.identifier,
+      field('name', $.identifier),
       ':',
-      $._type
+      field('type', $._type)
     ),
+
     value_literal: $ => choice(
       $.number,
       $.string,
-      $.boolean
+      $.boolean,
+      $.array_literal
     ),
-    _type: $ => choice(
+
+    array_literal: $ => seq(
+      '[',
+      optional(seq(
+        choice($.identifier, $.number, $.string, $.boolean),
+        repeat(seq(',', choice($.identifier, $.number, $.string, $.boolean)))
+      )),
+      ']'
+    ),
+
+    array_index: $ => seq(
+      field('array', $.identifier),
+      '[',
+      field('index', choice($.identifier, $.number, $.expression)),
+      ']'
+    ),
+
+    field_access: $ => seq(
+      field('object', choice($.identifier, $.array_index, $.field_access)),
+      '.',
+      field('field', $.identifier)
+    ),
+
+    method_call_expr: $ => seq(
+      field('object', choice($.identifier, $.field_access)),
+      '.',
+      field('method', $.identifier),
+      $.call_parameter_list
+    ),
+
+    method_call: $ => seq(
+      field('object', choice($.identifier, $.field_access)),
+      '.',
+      field('method', $.identifier),
+      $.call_parameter_list,
+      ';'
+    ),
+
+    array_type: $ => seq('[', $.number, ']', $._base_type),
+
+    _base_type: $ => choice(
       'bool',
       'int',
+      'float',
       'void',
-      $.identifier  // for custom types
+      'string',
+      'Self',
+      $.identifier
     ),
+
+    _type: $ => choice(
+      $._base_type,
+      $.array_type
+    ),
+
     block: $ => seq(
       '{',
       repeat($._statement),
       '}'
     ),
+
+    _call_arg: $ => choice(
+      $.expression,
+      $.array_index,
+      $.field_access,
+      $.method_call_expr,
+      $.qualified_call_expr,
+      $.function_call_expr,
+      $.identifier,
+      $.value_literal
+    ),
+
     call_parameter_list: $ => seq(
       '(',
       optional(seq(
-        choice($.expression, $.identifier, $.value_literal),
-        repeat(seq(',', choice($.expression, $.identifier, $.value_literal)))
+        $._call_arg,
+        repeat(seq(',', $._call_arg))
       )),
       ')'
     ),
+
     function_call: $ => seq(
-      $.identifier,
+      field('name', $.identifier),
       $.call_parameter_list,
       ';'
     ),
+
     function_call_expr: $ => seq(
-      $.identifier,
+      field('name', $.identifier),
       $.call_parameter_list
     ),
+
+    qualified_call: $ => seq(
+      field('module', $.identifier),
+      '::',
+      field('name', $.identifier),
+      $.call_parameter_list,
+      ';'
+    ),
+
+    qualified_call_expr: $ => seq(
+      field('module', $.identifier),
+      '::',
+      field('name', $.identifier),
+      $.call_parameter_list
+    ),
+
     _statement: $ => choice(
       $.return_statement,
       $.var_decl,
       $.function_call,
+      $.method_call,
+      $.qualified_call,
       $.if_statement,
       $.while_statement,
       $.for_statement,
-      $.assignment_statement
+      $.assignment_statement,
+      $.compound_assignment,
+      $.import_statement,
+      $.module_declaration,
+      $.function_definition,
+      $.struct_definition,
     ),
+
     return_statement: $ => seq(
       'return',
-      choice($.expression, $.identifier, $.value_literal),
+      $._expr_value,
       ';'
     ),
+
     if_statement: $ => seq(
       'if',
       '(',
-      choice($.expression, $.identifier, $.value_literal),
+      $._expr_value,
       ')',
       $.block,
       optional(seq('else', choice($.block, $.if_statement)))
     ),
+
     while_statement: $ => seq(
       'while',
       '(',
-      choice($.expression, $.identifier, $.value_literal),
+      $._expr_value,
       ')',
       $.block
     ),
+
     for_statement: $ => seq(
       'for',
-      '(',
       optional($.var_decl),
-      choice($.expression, $.identifier, $.value_literal),
+      $._expr_value,
       ';',
-      optional($.assignment_statement),
-      ')',
+      optional(choice($.assignment_statement, $.compound_assignment)),
       $.block
     ),
+
     assignment_statement: $ => seq(
-      $.identifier,
+      field('target', choice($.field_access, $.array_index, $.identifier)),
       '=',
-      choice($.expression, $.identifier, $.value_literal, $.function_call_expr, $.structInit),
+      $._expr_value,
       ';'
     ),
+
+    compound_assignment: $ => seq(
+      field('target', choice($.field_access, $.array_index, $.identifier)),
+      field('operator', choice('+=', '-=', '*=', '/=')),
+      choice(
+        $.expression,
+        $.array_index,
+        $.field_access,
+        $.method_call_expr,
+        $.qualified_call_expr,
+        $.function_call_expr,
+        $.identifier,
+        $.value_literal
+      ),
+      optional(';')
+    ),
+
     unary_expression: $ => prec(10, choice(
       seq('!', choice($.identifier, $.value_literal, $.expression)),
       seq('-', choice($.identifier, $.value_literal, $.expression)),
     )),
+
     binary_expression: $ => {
       const table = [
-        [prec.left, 1, '='],
         [prec.left, 2, '||'],
         [prec.left, 3, '&&'],
         [prec.left, 4, '|'],
@@ -151,29 +307,50 @@ export default grammar({
         [prec.left, 9, choice('*', '/', '%')],
       ];
 
+      const operand = $ => choice(
+        $.expression,
+        $.array_index,
+        $.field_access,
+        $.method_call_expr,
+        $.function_call_expr,
+        $.qualified_call_expr,
+        $.identifier,
+        $.value_literal
+      );
+
       return choice(...table.map(([fn, precedence, operator]) =>
         fn(precedence, seq(
-          field('left', choice($.expression, $.identifier, $.value_literal, $.function_call_expr)),
+          field('left', operand($)),
           field('operator', operator),
-          field('right', choice($.expression, $.identifier, $.value_literal, $.function_call_expr))
+          field('right', operand($))
         ))
       ));
     },
+
+    parenthesized_expression: $ => seq(
+      '(',
+      choice($.expression, $.array_index, $.field_access, $.identifier, $.value_literal),
+      ')'
+    ),
+
+    expression: $ => choice(
+      $.unary_expression,
+      $.binary_expression,
+      $.parenthesized_expression
+    ),
+
     fieldInit: $ => seq(
-      $.identifier,
+      field('name', $.identifier),
       ':',
-      choice($.identifier, $.value_literal, $.expression),
+      $._expr_value,
       optional(',')
     ),
+
     structInit: $ => seq(
-      $.identifier,
+      field('name', $.identifier),
       '{',
       repeat($.fieldInit),
       '}',
-    ),
-    expression: $ => choice(
-      $.unary_expression,
-      $.binary_expression
     ),
 
     identifier: $ => /[a-zA-Z_][a-zA-Z0-9_]*/,

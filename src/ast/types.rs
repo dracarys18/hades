@@ -1,4 +1,3 @@
-use crate::codegen::VisitOptions;
 use crate::tokens::Ident;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -104,13 +103,6 @@ impl Types {
             Types::Struct(name) => name,
             Types::Array(ArrayType::StructArray(_, name)) => name,
             _ => panic!("Expected a Struct type"),
-        }
-    }
-
-    pub fn visit_options(&self) -> VisitOptions {
-        match self {
-            Types::Array(_) => VisitOptions::new().with_ptr(true),
-            _ => VisitOptions::new(),
         }
     }
 }

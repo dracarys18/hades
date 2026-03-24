@@ -248,7 +248,7 @@ impl Visit for TypedFuncDef {
                 context.build_return(None)?;
             } else {
                 let default_val = match self.signature.return_type {
-                    crate::ast::Types::Int => context.context().i32_type().const_zero().into(),
+                    crate::ast::Types::Int => context.context().i64_type().const_zero().into(),
                     crate::ast::Types::Float => context.context().f64_type().const_zero().into(),
                     crate::ast::Types::Bool => context.context().bool_type().const_zero().into(),
                     _ => {

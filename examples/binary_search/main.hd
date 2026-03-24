@@ -1,0 +1,30 @@
+fn binary_search(arr: [10]int, searchTerm: int): int {
+    let start = 0;
+    let end = 9;
+
+    while (start <= end) {
+        let mid = start + (end - start) / 2;
+
+        if (arr[mid] == searchTerm) {
+            return mid;
+        }
+
+        if (arr[mid] < searchTerm) {
+            printf("Mid: %d\n Elem: %d\n", mid, arr[mid]);
+            start = mid + 1;
+        } else {
+            printf("Mid: %d\n Elem: %d\n", mid, arr[mid]);
+            end = mid - 1;
+        }
+    }
+
+    return -1;
+}
+
+fn main(): int {
+    let arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    let loc = binary_search(arr, 2);
+    printf("%d\n", loc);
+
+    return 0;
+}

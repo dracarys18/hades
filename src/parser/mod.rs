@@ -200,6 +200,26 @@ impl Parser {
         let token = self.next();
         match token {
             Some(tok) => match tok.kind() {
+                TokenKind::LeftBracket => {
+                    let size = self
+                        .next()
+                        .and_then(|t| match t.kind() {
+                            TokenKind::Number(n) => Some(*n as usize),
+                            _ => None,
+                        })
+                        .ok_or_else(|| {
+                            let span = self.current_span().into_range();
+                            ParseError::unexpected_token(
+                                self.peek().cloned(),
+                                "array size",
+                                span,
+                                source_id.clone(),
+                            )
+                        })?;
+                    self.expect(&TokenKind::RightBracket)?;
+
+                    Ok(Types::Array(self.expect_type()?.array_type(size)))
+                }
                 TokenKind::Ident(name) => Ok(Types::from_str(name)),
                 TokenKind::Self_ => Ok(Types::Self_),
                 _ => {

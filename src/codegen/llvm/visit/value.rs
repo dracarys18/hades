@@ -55,7 +55,12 @@ impl Visit for TypedArrayLiteral {
             context.builder().build_store(elem_ptr, actual_value)?;
         }
 
-        Ok(CodegenValue::new(array_ptr.into(), self.elem_typ.clone()))
+        Ok(CodegenValue::new(
+            context
+                .builder()
+                .build_load(array_type, array_ptr, "array_val")?,
+            self.elem_typ.clone(),
+        ))
     }
 }
 

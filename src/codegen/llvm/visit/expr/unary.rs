@@ -35,7 +35,7 @@ impl<'a> Visit for UnaryOp<'a> {
         let builder = context.builder();
         let result_val: BasicValueEnum = match (&operand_val.type_info, self.op) {
             (Types::Int, Op::Minus | Op::Sub) => {
-                let zero = context.context().i32_type().const_zero();
+                let zero = context.context().i64_type().const_zero();
                 builder
                     .build_int_sub(zero, operand_val.value.into_int_value(), "neg")
                     .map_err(|e| CodegenError::LLVMBuild {

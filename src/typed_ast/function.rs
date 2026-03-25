@@ -35,7 +35,12 @@ impl Params {
                     .expect("Parameter not found");
 
                 match expected_type {
-                    Types::Generic(typs) => typs.contains(other_type),
+                    Types::Generic(typs) => typs.iter().any(|t| match (t, other_type) {
+                        (Types::Array(_), Types::Array(_)) => {
+                            t.get_array_elem_type() == other_type.get_array_elem_type()
+                        }
+                        _ => t == other_type,
+                    }),
                     _ => other_type == expected_type,
                 }
             }

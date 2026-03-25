@@ -1,3 +1,4 @@
+use crate::codegen::BuiltinRegistar;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
@@ -15,6 +16,10 @@ impl Visit for FunctionCall<'_> {
     type Output<'ctx> = CodegenValue<'ctx>;
 
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
+        if BuiltinRegistar::is_compile_time_function(self.name) {
+            return BuiltinRegistar::handle_compile_time(self.name, self.args, context);
+        }
+
         let arg_values = self
             .args
             .iter()

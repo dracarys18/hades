@@ -1,6 +1,6 @@
 fn binary_search(arr: [10]int, searchTerm: int): int {
     let start = 0;
-    let end = 9;
+    let end = len(arr);
 
     while (start <= end) {
         let mid = start + (end - start) / 2;

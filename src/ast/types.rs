@@ -21,6 +21,7 @@ pub enum Types {
     Array(ArrayType),
     Struct(Ident),
     Self_,
+    Pointer(Box<Types>),
 }
 
 impl std::fmt::Display for Types {
@@ -41,6 +42,7 @@ impl std::fmt::Display for Types {
                 ArrayType::StructArray(size, name) => write!(f, "struct {name}[{size}]"),
             },
             Types::Self_ => write!(f, "self"),
+            Types::Pointer(inner) => write!(f, "&{inner}"),
         }
     }
 }

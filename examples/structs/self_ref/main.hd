@@ -1,0 +1,32 @@
+struct Node {
+    val: int,
+    next: &Node,
+}
+
+fn wrap(n: &Node): &Node {
+    return n;
+}
+
+fn main(): int {
+    let c: Node = Node { val: 30, next: null };
+    let b: Node = Node { val: 20, next: &c };
+    let a: Node = Node { val: 10, next: &b };
+
+    printf("a.val: %d\n", a.val);
+    printf("b.val: %d\n", b.val);
+    printf("c.val: %d\n", c.val);
+
+    let pa: &Node = &a;
+    let pb: &Node = wrap(&b);
+    let pc: &Node = wrap(pa);
+
+    printf("(*pa).val: %d\n", (*pa).val);
+    printf("(*pb).val: %d\n", (*pb).val);
+    printf("(*pc).val: %d\n", (*pc).val);
+
+    (*pa).val = 99;
+    printf("(*pa).val after write: %d\n", (*pa).val);
+
+    printf("self-referential struct test passed\n");
+    return 0;
+}

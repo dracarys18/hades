@@ -33,11 +33,15 @@ pub fn build_call<'ctx>(
     }
 
     let function = context.get_function(name)?;
-    context
+    let call_site = context
         .builder()
         .build_call(function, arg_values, "call")
         .map_err(|_| CodegenError::LLVMBuild {
             message: format!("Failed to generate function call to {name}"),
-        })
-        .map(|r| CodegenValue::new(r.try_as_basic_value().unwrap_basic(), return_type))
+        })?;
+
+    Ok(match call_site.try_as_basic_value().basic() {
+        Some(v) => CodegenValue::new(v, return_type),
+        None => CodegenValue::Void,
+    })
 }

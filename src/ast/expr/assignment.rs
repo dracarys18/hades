@@ -9,6 +9,8 @@ pub enum AssignTarget {
     Ident(Ident),
     FieldAccess(FieldAccessExpr),
     ArrayIndex(ArrayIndexExpr),
+    /// Write-through deref: `*ptr = value`
+    Deref(Box<Expr>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -28,45 +28,40 @@ impl<'a> Visit for BinaryOp<'a> {
         let left_val = self.left.visit(context)?;
         let right_val = self.right.visit(context)?;
 
+        let left_typ = left_val.unwrap_concrete()?.type_info();
+        let right_typ = right_val.unwrap_concrete()?.type_info();
+
         let result_type = context
             .symbols()
-            .infer_binary_type(
-                &left_val.type_info,
-                self.op,
-                &right_val.type_info,
-                Span::default(),
-            )
+            .infer_binary_type(left_typ, self.op, right_typ, Span::default())
             .map_err(|_| CodegenError::TypeMismatch {
-                expected: format!(
-                    "{:?} {:?} {:?}",
-                    left_val.type_info, self.op, right_val.type_info
-                ),
+                expected: format!("{:?} {:?} {:?}", left_typ, self.op, right_typ),
                 actual: "incompatible types".to_string(),
             })?;
 
-        let result_val = match (&left_val.type_info, &right_val.type_info) {
+        let result_val = match (left_typ, right_typ) {
             (Types::Int, Types::Int) => generate_int_binary_op(
-                left_val.value.into_int_value(),
+                left_val.value()?.into_int_value(),
                 self.op,
-                right_val.value.into_int_value(),
+                right_val.value()?.into_int_value(),
                 context,
             )?,
             (Types::Float, Types::Float) => generate_float_binary_op(
-                left_val.value.into_float_value(),
+                left_val.value()?.into_float_value(),
                 self.op,
-                right_val.value.into_float_value(),
+                right_val.value()?.into_float_value(),
                 context,
             )?,
             (Types::Bool, Types::Bool) => generate_bool_binary_op(
-                left_val.value.into_int_value(),
+                left_val.value()?.into_int_value(),
                 self.op,
-                right_val.value.into_int_value(),
+                right_val.value()?.into_int_value(),
                 context,
             )?,
             _ => {
                 return Err(CodegenError::TypeMismatch {
-                    expected: format!("{:?}", left_val.type_info),
-                    actual: format!("{:?}", right_val.type_info),
+                    expected: format!("{:?}", left_typ),
+                    actual: format!("{:?}", left_typ),
                 });
             }
         };

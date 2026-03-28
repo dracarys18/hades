@@ -12,7 +12,7 @@ impl Visit for crate::typed_ast::TypedLet {
         let symbols = context.symbols();
         let var_type = context.type_converter().to_llvm_type(&self.typ, symbols)?;
         let alloca = context.create_alloca(var_name.inner(), var_type)?;
-        context.create_store(alloca, init_value.value)?;
+        context.create_store(alloca, init_value.value()?)?;
 
         context.declare_variable(var_name, alloca, self.typ.clone())?;
         Ok(())

@@ -222,6 +222,10 @@ impl Parser {
                 }
                 TokenKind::Ident(name) => Ok(Types::from_str(name)),
                 TokenKind::Self_ => Ok(Types::Self_),
+                TokenKind::BoleanAnd => {
+                    let inner = self.expect_type()?;
+                    Ok(Types::Pointer(Box::new(inner)))
+                }
                 _ => {
                     let span = tok.span().into_range();
                     Err(ParseError::unexpected_token(
@@ -709,6 +713,23 @@ impl Parser {
                     expr: Box::new(expr),
                 })
             }
+            tok if tok.is_some_and(|token| token_matches!(token, TokenKind::BoleanAnd)) => {
+                self.next();
+                let expr = self.parse_unary_with_flags(allow_struct_literals)?;
+                Ok(Expr::Unary {
+                    op: Op::Ref,
+                    expr: Box::new(expr),
+                })
+            }
+            tok if tok.is_some_and(|token| token_matches!(token, TokenKind::Multiply)) => {
+                self.next();
+                let expr = self.parse_unary_with_flags(allow_struct_literals)?;
+                let deref = Expr::Unary {
+                    op: Op::Deref,
+                    expr: Box::new(expr),
+                };
+                self.parse_postfix_chain(deref)
+            }
             _ => self.parse_primary_with_flags(allow_struct_literals),
         }
     }
@@ -778,6 +799,7 @@ impl Parser {
                 TokenKind::String(s) => Ok(Expr::Value(Value::String(s.clone()))),
                 TokenKind::True => Ok(Expr::Value(Value::Boolean(true))),
                 TokenKind::False => Ok(Expr::Value(Value::Boolean(false))),
+                TokenKind::Null => Ok(Expr::Null),
                 TokenKind::Ident(name) => {
                     if allow_struct_literals {
                         self.parse_postfix_expr_with_struct(name.clone())
@@ -792,7 +814,7 @@ impl Parser {
                         self.parse_binary_with_flags(0, false)?
                     };
                     self.expect(&TokenKind::RightParen)?;
-                    Ok(expr)
+                    self.parse_postfix_chain(expr)
                 }
                 TokenKind::LeftBracket => self.parse_array_literal(),
                 TokenKind::Self_ => {
@@ -850,6 +872,18 @@ impl Parser {
                     let value = self.parse_assignment()?;
                     return Ok(Expr::Assign(AssignExpr {
                         target: AssignTarget::ArrayIndex(index),
+                        op,
+                        value: Box::new(value),
+                    }));
+                }
+                Expr::Unary {
+                    op: Op::Deref,
+                    expr: inner,
+                } => {
+                    let op = Op::from_token(&self.next().unwrap()).unwrap();
+                    let value = self.parse_assignment()?;
+                    return Ok(Expr::Assign(AssignExpr {
+                        target: AssignTarget::Deref(inner),
                         op,
                         value: Box::new(value),
                     }));
@@ -1009,9 +1043,7 @@ impl Parser {
 
     fn parse_optional_custom_type(&mut self) -> ParseResult<Types> {
         self.expect(&TokenKind::Colon)?;
-
-        let type_name = self.expect_identifier()?;
-        Ok(Types::from_str(&type_name))
+        self.expect_type()
     }
 
     fn parse_function_call(&mut self, func_name: Ident) -> ParseResult<Expr> {

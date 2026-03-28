@@ -51,7 +51,7 @@ impl Visit for TypedIf {
 
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
         let cond_val = self.cond.expr().visit(context)?;
-        let cond_int = cond_val.value.into_int_value();
+        let cond_int = cond_val.value()?.into_int_value();
 
         let then_block = context.create_basic_block("if.then");
         let else_block = context.create_basic_block("if.else");
@@ -96,7 +96,7 @@ impl Visit for TypedWhile {
         context.position_at_end(loop_header);
 
         let cond_val = self.cond.visit(context)?;
-        let cond_int = cond_val.value.into_int_value();
+        let cond_int = cond_val.value()?.into_int_value();
 
         context.build_conditional_branch(cond_int.into(), loop_body, loop_exit)?;
 
@@ -129,7 +129,7 @@ impl Visit for TypedFor {
         context.position_at_end(loop_header);
 
         let cond_val = self.cond.visit(context)?;
-        let cond_int = cond_val.value.into_int_value();
+        let cond_int = cond_val.value()?.into_int_value();
 
         context.build_conditional_branch(cond_int.into(), loop_body, loop_exit)?;
 
@@ -158,7 +158,7 @@ impl Visit for TypedReturn {
         match &self.expr {
             Some(expr) => {
                 let return_val = expr.expr().visit(context)?;
-                context.build_return(Some(return_val.value))?;
+                context.build_return(Some(return_val.value()?))?;
             }
             None => {
                 context.build_return(None)?;

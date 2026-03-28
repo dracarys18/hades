@@ -1,11 +1,11 @@
 use crate::error::SemanticError;
 use crate::module::ModulePath;
 use crate::typed_ast::{
-    TypedFieldKind,
     function::{FunctionSignature, Functions},
     ident::IdentMap,
     signatures::ModuleSignatures,
     struc::{Field, Structs},
+    TypedFieldKind,
 };
 
 use crate::ast::Types;
@@ -233,6 +233,15 @@ impl CompilerContext {
             },
             Op::BitNot => match operand {
                 Types::Int => Ok(Types::Int),
+                _ => Err(SemanticError::invalid_unary_operation(
+                    format!("{op:?}"),
+                    operand.to_string(),
+                    span,
+                )),
+            },
+            Op::Ref => Ok(Types::Pointer(Box::new(operand.clone()))),
+            Op::Deref => match operand {
+                Types::Pointer(inner) => Ok(*inner.clone()),
                 _ => Err(SemanticError::invalid_unary_operation(
                     format!("{op:?}"),
                     operand.to_string(),

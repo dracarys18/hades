@@ -7,6 +7,8 @@ pub enum TypedAssignTarget {
     FieldAccess(TypedFieldAccess),
     Ident(Ident),
     ArrayIndex(TypedArrayIndex),
+    /// Write-through deref: `*ptr = value`
+    Deref(Box<TypedExpr>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -46,14 +46,30 @@ impl From<BuilderError> for CodegenError {
 pub type CodegenResult<T> = Result<T, CodegenError>;
 
 #[derive(Debug, Clone)]
-pub struct CodegenValue<'ctx> {
-    pub value: inkwell::values::BasicValueEnum<'ctx>,
-    pub type_info: Types,
+pub enum CodegenValue<'ctx> {
+    Void,
+    Concrete(ConcreteValue<'ctx>),
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ConcreteValue<'ctx> {
+    value: inkwell::values::BasicValueEnum<'ctx>,
+    type_info: Types,
+}
+
+impl<'ctx> ConcreteValue<'ctx> {
+    pub fn type_info(&self) -> &Types {
+        &self.type_info
+    }
 }
 
 impl<'ctx> CodegenValue<'ctx> {
     pub fn new(value: inkwell::values::BasicValueEnum<'ctx>, type_info: Types) -> Self {
-        Self { value, type_info }
+        Self::Concrete(ConcreteValue { value, type_info })
+    }
+
+    pub fn void() -> Self {
+        Self::Void
     }
 
     pub fn int32(context: &'ctx inkwell::context::Context, val: i32) -> Self {
@@ -69,5 +85,25 @@ impl<'ctx> CodegenValue<'ctx> {
     pub fn bool_val(context: &'ctx inkwell::context::Context, val: bool) -> Self {
         let llvm_val = context.bool_type().const_int(val as u64, false);
         Self::new(llvm_val.into(), Types::Bool)
+    }
+
+    pub fn value(&self) -> CodegenResult<inkwell::values::BasicValueEnum<'ctx>> {
+        match self {
+            CodegenValue::Void => Err(CodegenError::TypeMismatch {
+                expected: "non-void".to_string(),
+                actual: "void".to_string(),
+            }),
+            CodegenValue::Concrete(concrete) => Ok(concrete.value),
+        }
+    }
+
+    pub fn unwrap_concrete(&self) -> CodegenResult<&ConcreteValue<'ctx>> {
+        match self {
+            CodegenValue::Void => Err(CodegenError::TypeMismatch {
+                expected: "non-void".to_string(),
+                actual: "void".to_string(),
+            }),
+            CodegenValue::Concrete(concrete) => Ok(concrete),
+        }
     }
 }

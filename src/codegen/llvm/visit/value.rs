@@ -34,7 +34,7 @@ impl Visit for TypedArrayLiteral {
 
         for (i, element) in self.elements.iter().enumerate() {
             let elem_value = element.visit(context)?;
-            let actual_value = match (&elem_type, elem_value.value) {
+            let actual_value = match (&elem_type, elem_value.value()?) {
                 (Types::String, val) => val,
                 (_, BasicValueEnum::PointerValue(ptr)) => {
                     context.builder().build_load(llvm_elem_type, ptr, "elem")?

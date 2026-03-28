@@ -1,0 +1,33 @@
+fn identity_ptr(p: &int): &int {
+    return p;
+}
+
+fn pass_through(p: &int): &int {
+    let q: &int = p;
+    return q;
+}
+
+fn main(): int {
+    let x: int = 42;
+    let y: int = 100;
+
+    let p: &int = &x;
+    let q: &int = identity_ptr(p);
+    let r: &int = identity_ptr(&y);
+    let s: &int = pass_through(p);
+
+    let val: int = *p;
+    printf("*p = %d\n", val);
+    printf("*q = %d\n", *q);
+    printf("*r = %d\n", *r);
+    printf("*s = %d\n", *s);
+
+    *p = 99;
+    printf("after *p = 99, *p = %d\n", *p);
+
+    *p += 1;
+    printf("after *p += 1, *p = %d\n", *p);
+
+    printf("pointer test passed\n");
+    return 0;
+}

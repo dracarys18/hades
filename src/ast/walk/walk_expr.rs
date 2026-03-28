@@ -1,6 +1,6 @@
 use crate::ast::{
     ArrayIndexExpr, ArrayType, AssignExpr, AssignTarget, BinaryExpr, CallKind, Expr,
-    FieldAccessExpr, Types, WalkAst,
+    FieldAccessExpr, NullExpr, Types, WalkAst,
 };
 use crate::error::{SemanticError, Span};
 use crate::typed_ast::{
@@ -8,11 +8,14 @@ use crate::typed_ast::{
     TypedExpr, TypedExprAst, TypedFieldAccess,
 };
 
+use super::walk_possibly_null;
+
 impl WalkAst for Expr {
     type Output = TypedExpr;
 
     fn walk(&self, ctx: &mut CompilerContext, span: Span) -> Result<Self::Output, SemanticError> {
         match self {
+            Expr::Null => NullExpr::new(None).walk(ctx, span),
             Expr::Value(value) => Ok(TypedExpr::Value(value.walk(ctx, span)?)),
             Expr::Ident(ident) => ctx
                 .get_variable_type(ident, span)
@@ -32,16 +35,22 @@ impl WalkAst for Expr {
                                 span.clone(),
                             )
                         })?;
-                        let typed = field_expr.walk(ctx, span.clone())?;
-                        (typed.get_type() == expected.get_type())
-                            .then(|| (field_name.clone(), typed.clone()))
-                            .ok_or_else(|| {
-                                SemanticError::type_mismatch(
-                                    expected.get_type().to_string(),
-                                    typed.get_type().to_string(),
-                                    span.clone(),
-                                )
-                            })
+                        let expected_type = expected.get_type();
+                        let typed = walk_possibly_null(
+                            field_expr,
+                            Some(expected_type.clone()),
+                            ctx,
+                            span.clone(),
+                        )?;
+                        let typed_type = typed.get_type();
+                        if typed_type != expected_type {
+                            return Err(SemanticError::type_mismatch(
+                                expected_type.to_string(),
+                                typed_type.to_string(),
+                                span.clone(),
+                            ));
+                        }
+                        Ok((field_name.clone(), typed))
                     })
                     .collect::<Result<_, _>>()
                     .map(|typed_fields| TypedExpr::StructInit {
@@ -90,7 +99,8 @@ impl WalkAst for AssignExpr {
         match self.target {
             AssignTarget::Ident(ref ident) => {
                 let var_type = ctx.get_variable_type(ident, span.clone())?;
-                let typed_value = self.value.walk(ctx, span.clone())?;
+                let typed_value =
+                    walk_possibly_null(&self.value, Some(var_type.clone()), ctx, span.clone())?;
                 ctx.infer_binary_type(&var_type, &self.op, &typed_value.get_type(), span)
                     .map(|typ| TypedAssignExpr {
                         target: TypedAssignTarget::Ident(ident.clone()),
@@ -101,7 +111,12 @@ impl WalkAst for AssignExpr {
             }
             AssignTarget::FieldAccess(ref field) => {
                 let field = field.walk(ctx, span.clone())?;
-                let value = self.value.walk(ctx, span.clone())?;
+                let value = walk_possibly_null(
+                    &self.value,
+                    Some(field.field_type.clone()),
+                    ctx,
+                    span.clone(),
+                )?;
                 ctx.infer_binary_type(&field.field_type, &self.op, &value.get_type(), span)
                     .map(|typ| TypedAssignExpr {
                         target: TypedAssignTarget::FieldAccess(field.clone()),
@@ -117,6 +132,28 @@ impl WalkAst for AssignExpr {
                 ctx.infer_binary_type(&elem_type, &self.op, &value.get_type(), span)
                     .map(|typ| TypedAssignExpr {
                         target: TypedAssignTarget::ArrayIndex(typed_index),
+                        op: self.op.clone(),
+                        value: Box::new(value),
+                        typ,
+                    })
+            }
+            AssignTarget::Deref(ref inner_expr) => {
+                let typed_inner = inner_expr.walk(ctx, span.clone())?;
+                let pointee_type = match typed_inner.get_type() {
+                    Types::Pointer(inner) => *inner,
+                    other => {
+                        return Err(SemanticError::type_mismatch(
+                            "&T".to_string(),
+                            other.to_string(),
+                            span,
+                        ));
+                    }
+                };
+                let value =
+                    walk_possibly_null(&self.value, Some(pointee_type.clone()), ctx, span.clone())?;
+                ctx.infer_binary_type(&pointee_type, &self.op, &value.get_type(), span)
+                    .map(|typ| TypedAssignExpr {
+                        target: TypedAssignTarget::Deref(Box::new(typed_inner)),
                         op: self.op.clone(),
                         value: Box::new(value),
                         typ,

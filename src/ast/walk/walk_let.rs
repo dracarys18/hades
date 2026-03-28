@@ -1,23 +1,25 @@
 use crate::ast::{Let, Types, WalkAst};
-use crate::error::SemanticError;
-use crate::typed_ast::{CompilerContext, TypedLet};
+use crate::error::{SemanticError, Span};
+use crate::typed_ast::{CompilerContext, TypedExprAst, TypedLet};
+
+use super::walk_possibly_null;
 
 impl WalkAst for Let {
     type Output = TypedLet;
-    fn walk(
-        &self,
-        ctx: &mut CompilerContext,
-        _span: crate::error::Span,
-    ) -> Result<Self::Output, SemanticError> {
-        let typed_value = self.value.walk(ctx, self.span.clone())?;
 
-        let declared_type = self.declared_type.as_ref();
-        let inferred_type = typed_value.get_type();
-
+    fn walk(&self, ctx: &mut CompilerContext, _span: Span) -> Result<Self::Output, SemanticError> {
         let span = &self.span;
         let name = &self.name;
 
-        let final_type = match declared_type {
+        let typed_expr = walk_possibly_null(
+            &self.value.expr,
+            self.declared_type.clone(),
+            ctx,
+            span.clone(),
+        )?;
+        let inferred_type = typed_expr.get_type();
+
+        let final_type = match self.declared_type.as_ref() {
             Some(declared) => {
                 if declared != &inferred_type {
                     return Err(SemanticError::type_mismatch(
@@ -31,7 +33,7 @@ impl WalkAst for Let {
             None => inferred_type,
         };
 
-        if final_type.eq(&Types::Void) {
+        if final_type == Types::Void {
             return Err(SemanticError::invalid_type(name.clone(), span.clone()));
         }
 
@@ -39,7 +41,10 @@ impl WalkAst for Let {
         Ok(TypedLet {
             name: name.clone(),
             typ: final_type,
-            value: typed_value,
+            value: TypedExprAst {
+                expr: typed_expr,
+                span: span.clone(),
+            },
             span: span.clone(),
         })
     }

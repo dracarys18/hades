@@ -1,11 +1,11 @@
 use crate::error::SemanticError;
 use crate::module::ModulePath;
 use crate::typed_ast::{
-    TypedFieldKind,
     function::{FunctionSignature, Functions},
     ident::IdentMap,
     signatures::ModuleSignatures,
     struc::{Field, Structs},
+    TypedFieldKind,
 };
 
 use crate::ast::Types;
@@ -169,10 +169,7 @@ impl CompilerContext {
                 )),
             },
             Op::Assign => {
-                let null_ptr = Types::Pointer(Box::new(Types::Void));
-                let compatible =
-                    left == right || (matches!(left, Types::Pointer(_)) && right == &null_ptr);
-                if compatible {
+                if left == right {
                     Ok(left.clone())
                 } else {
                     Err(SemanticError::invalid_binary_operation(

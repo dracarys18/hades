@@ -34,7 +34,8 @@ pub enum TypedExpr {
         receiver: Option<Box<TypedExpr>>,
         typ: Types,
     },
-    Null,
+    /// Null pointer literal with the concrete pointer type inferred from context.
+    Null(Types),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -72,7 +73,7 @@ impl TypedExpr {
             TypedExpr::Call { typ, .. } => typ.clone(),
             TypedExpr::FieldAccess(TypedFieldAccess { field_type, .. }) => field_type.clone(),
             TypedExpr::ArrayIndex(TypedArrayIndex { typ, .. }) => typ.get_array_elem_type(),
-            TypedExpr::Null => Types::Pointer(Box::new(Types::Void)),
+            TypedExpr::Null(typ) => typ.clone(),
         }
     }
 }

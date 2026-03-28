@@ -1,8 +1,8 @@
 use inkwell::values::BasicValueEnum;
 
-use crate::codegen::VisitOptions;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
+use crate::codegen::VisitOptions;
 use crate::codegen::{
     context::LLVMContext, llvm::visit::expr::variable::VariableAccess, symbols::LLVMVariable,
 };
@@ -30,7 +30,7 @@ impl<'a> Assignment<'a> {
                     crate::typed_ast::TypedExpr::Ident { ident, .. } => {
                         ctx.get_variable(ident)?.value()
                     }
-                    _ => field.expr.visit(ctx)?.value.into_pointer_value(),
+                    other => ctx.get_ptr(other)?,
                 };
 
                 let struct_type = ctx
@@ -80,6 +80,30 @@ impl<'a> Assignment<'a> {
                     message: "Failed to create array element pointer for assignment".to_string(),
                 })?;
                 Ok(LLVMVariable::new(elem_ptr, elem_type))
+            }
+            TypedAssignTarget::Deref(inner) => {
+                // Evaluate the pointer expression, then load the pointer value stored in it.
+                // The result is the address we write through.
+                let ptr_holder = ctx.get_ptr(inner)?;
+                let symbols = ctx.symbols();
+                let pointee_type = match inner.get_type() {
+                    crate::ast::Types::Pointer(t) => *t,
+                    other => {
+                        return Err(CodegenError::LLVMBuild {
+                            message: format!("deref assign: expected pointer, got {other:?}"),
+                        })
+                    }
+                };
+                let llvm_ptr_type: inkwell::types::BasicTypeEnum =
+                    ctx.type_converter().ptr_type().into();
+                let loaded_ptr = ctx
+                    .builder()
+                    .build_load(llvm_ptr_type, ptr_holder, "deref_assign_ptr")
+                    .map_err(|e| CodegenError::LLVMBuild {
+                        message: e.to_string(),
+                    })?
+                    .into_pointer_value();
+                Ok(LLVMVariable::new(loaded_ptr, pointee_type))
             }
         }
     }
@@ -151,6 +175,39 @@ impl Visit for TypedAssignTarget {
             }
             Self::FieldAccess(field) => field.visit(context),
             Self::ArrayIndex(index) => index.visit(context),
+            Self::Deref(inner) => {
+                // Read through the pointer: load the pointer, then load the pointee.
+                let ptr_holder = context.get_ptr(inner)?;
+                let llvm_ptr_type: inkwell::types::BasicTypeEnum =
+                    context.type_converter().ptr_type().into();
+                let loaded_ptr = context
+                    .builder()
+                    .build_load(llvm_ptr_type, ptr_holder, "deref_read_ptr")
+                    .map_err(|e| CodegenError::LLVMBuild {
+                        message: e.to_string(),
+                    })?
+                    .into_pointer_value();
+                let pointee_type = match inner.get_type() {
+                    crate::ast::Types::Pointer(t) => *t,
+                    other => {
+                        return Err(CodegenError::LLVMBuild {
+                            message: format!("deref target read: expected pointer, got {other:?}"),
+                        })
+                    }
+                };
+                let symbols = context.symbols();
+                let llvm_pointee = context
+                    .type_converter()
+                    .to_llvm_type(&pointee_type, symbols)?;
+                context
+                    .builder()
+                    .build_load(llvm_pointee, loaded_ptr, "deref_read_val")
+                    .map(|val| CodegenValue {
+                        value: val,
+                        type_info: pointee_type,
+                    })
+                    .map_err(CodegenError::from)
+            }
         }
     }
 }

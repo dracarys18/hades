@@ -24,6 +24,9 @@ fn main(): int {
     printf("(*pb).val: %d\n", (*pb).val);
     printf("(*pc).val: %d\n", (*pc).val);
 
+    (*pa).val = 99;
+    printf("(*pa).val after write: %d\n", (*pa).val);
+
     printf("self-referential struct test passed\n");
     return 0;
 }

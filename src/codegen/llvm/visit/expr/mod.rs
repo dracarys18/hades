@@ -1,14 +1,14 @@
 use crate::ast::Types;
-use crate::codegen::VisitOptions;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
+use crate::codegen::VisitOptions;
 use crate::tokens::Op;
 use crate::typed_ast::{
     TypedArrayIndex, TypedAssignExpr, TypedBinaryExpr, TypedExpr, TypedFieldAccess,
 };
-use inkwell::AddressSpace;
 use inkwell::values::PointerValue;
+use inkwell::AddressSpace;
 
 pub mod assign;
 pub mod binary;
@@ -105,14 +105,14 @@ impl Visit for TypedExpr {
             Self::Assign(assign) => assign.visit(context),
             Self::FieldAccess(field) => field.visit(context),
             Self::ArrayIndex(index) => index.visit(context),
-            Self::Null => {
+            Self::Null(typ) => {
                 let ptr = context
                     .context()
                     .ptr_type(AddressSpace::default())
                     .const_null();
                 Ok(CodegenValue {
                     value: ptr.into(),
-                    type_info: Types::Pointer(Box::new(Types::Void)),
+                    type_info: typ.clone(),
                 })
             }
         }

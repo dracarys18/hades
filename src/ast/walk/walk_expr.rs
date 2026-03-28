@@ -32,21 +32,34 @@ impl WalkAst for Expr {
                                 span.clone(),
                             )
                         })?;
+                        let expected_type = expected.get_type();
+                        // null in a struct literal: resolve to the expected field pointer type.
+                        if let Expr::Null = field_expr {
+                            match &expected_type {
+                                Types::Pointer(_) => {
+                                    return Ok((
+                                        field_name.clone(),
+                                        TypedExpr::Null(expected_type.clone()),
+                                    ));
+                                }
+                                other => {
+                                    return Err(SemanticError::null_non_pointer(
+                                        other.to_string(),
+                                        span.clone(),
+                                    ));
+                                }
+                            }
+                        }
                         let typed = field_expr.walk(ctx, span.clone())?;
                         let typed_type = typed.get_type();
-                        let expected_type = expected.get_type();
-                        let compatible = typed_type == expected_type
-                            || (matches!(expected_type, Types::Pointer(_))
-                                && typed_type == Types::Pointer(Box::new(Types::Void)));
-                        compatible
-                            .then(|| (field_name.clone(), typed.clone()))
-                            .ok_or_else(|| {
-                                SemanticError::type_mismatch(
-                                    expected.get_type().to_string(),
-                                    typed.get_type().to_string(),
-                                    span.clone(),
-                                )
-                            })
+                        if typed_type != expected_type {
+                            return Err(SemanticError::type_mismatch(
+                                expected_type.to_string(),
+                                typed_type.to_string(),
+                                span.clone(),
+                            ));
+                        }
+                        Ok((field_name.clone(), typed))
                     })
                     .collect::<Result<_, _>>()
                     .map(|typed_fields| TypedExpr::StructInit {
@@ -66,7 +79,7 @@ impl WalkAst for Expr {
                     })
             }
             Expr::Assign(assign) => assign.walk(ctx, span).map(TypedExpr::Assign),
-            Expr::Null => Ok(TypedExpr::Null),
+            Expr::Null => Err(SemanticError::null_without_type(span)),
             Expr::Call(kind) => match kind {
                 CallKind::Function(call) => call.walk(ctx, span),
                 CallKind::Method(call) => call.walk(ctx, span),
@@ -96,7 +109,17 @@ impl WalkAst for AssignExpr {
         match self.target {
             AssignTarget::Ident(ref ident) => {
                 let var_type = ctx.get_variable_type(ident, span.clone())?;
-                let typed_value = self.value.walk(ctx, span.clone())?;
+                // null assign: resolve to lhs pointer type
+                let typed_value = if let Expr::Null = self.value.as_ref() {
+                    match &var_type {
+                        Types::Pointer(_) => TypedExpr::Null(var_type.clone()),
+                        other => {
+                            return Err(SemanticError::null_non_pointer(other.to_string(), span));
+                        }
+                    }
+                } else {
+                    self.value.walk(ctx, span.clone())?
+                };
                 ctx.infer_binary_type(&var_type, &self.op, &typed_value.get_type(), span)
                     .map(|typ| TypedAssignExpr {
                         target: TypedAssignTarget::Ident(ident.clone()),
@@ -107,7 +130,17 @@ impl WalkAst for AssignExpr {
             }
             AssignTarget::FieldAccess(ref field) => {
                 let field = field.walk(ctx, span.clone())?;
-                let value = self.value.walk(ctx, span.clone())?;
+                // null assign to field
+                let value = if let Expr::Null = self.value.as_ref() {
+                    match &field.field_type {
+                        Types::Pointer(_) => TypedExpr::Null(field.field_type.clone()),
+                        other => {
+                            return Err(SemanticError::null_non_pointer(other.to_string(), span));
+                        }
+                    }
+                } else {
+                    self.value.walk(ctx, span.clone())?
+                };
                 ctx.infer_binary_type(&field.field_type, &self.op, &value.get_type(), span)
                     .map(|typ| TypedAssignExpr {
                         target: TypedAssignTarget::FieldAccess(field.clone()),
@@ -123,6 +156,38 @@ impl WalkAst for AssignExpr {
                 ctx.infer_binary_type(&elem_type, &self.op, &value.get_type(), span)
                     .map(|typ| TypedAssignExpr {
                         target: TypedAssignTarget::ArrayIndex(typed_index),
+                        op: self.op.clone(),
+                        value: Box::new(value),
+                        typ,
+                    })
+            }
+            AssignTarget::Deref(ref inner_expr) => {
+                // Walk the pointer expression; it must be of type &T.
+                let typed_inner = inner_expr.walk(ctx, span.clone())?;
+                let pointee_type = match typed_inner.get_type() {
+                    Types::Pointer(inner) => *inner,
+                    other => {
+                        return Err(SemanticError::type_mismatch(
+                            "&T".to_string(),
+                            other.to_string(),
+                            span,
+                        ));
+                    }
+                };
+                // null assign through deref
+                let value = if let Expr::Null = self.value.as_ref() {
+                    match &pointee_type {
+                        Types::Pointer(_) => TypedExpr::Null(pointee_type.clone()),
+                        other => {
+                            return Err(SemanticError::null_non_pointer(other.to_string(), span));
+                        }
+                    }
+                } else {
+                    self.value.walk(ctx, span.clone())?
+                };
+                ctx.infer_binary_type(&pointee_type, &self.op, &value.get_type(), span)
+                    .map(|typ| TypedAssignExpr {
+                        target: TypedAssignTarget::Deref(Box::new(typed_inner)),
                         op: self.op.clone(),
                         value: Box::new(value),
                         typ,

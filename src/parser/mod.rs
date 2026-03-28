@@ -876,6 +876,18 @@ impl Parser {
                         value: Box::new(value),
                     }));
                 }
+                Expr::Unary {
+                    op: Op::Deref,
+                    expr: inner,
+                } => {
+                    let op = Op::from_token(&self.next().unwrap()).unwrap();
+                    let value = self.parse_assignment()?;
+                    return Ok(Expr::Assign(AssignExpr {
+                        target: AssignTarget::Deref(inner),
+                        op,
+                        value: Box::new(value),
+                    }));
+                }
                 _ => {
                     let span = self.current_span().into_range();
                     let source_id = self.source_id.clone();

@@ -87,7 +87,8 @@ export default grammar({
       $.function_call_expr,
       $.identifier,
       $.value_literal,
-      $.structInit
+      $.structInit,
+      $.deref_expr
     ),
 
     parameter_list: $ => seq(
@@ -109,7 +110,8 @@ export default grammar({
       $.number,
       $.string,
       $.boolean,
-      $.array_literal
+      $.array_literal,
+      'null'
     ),
 
     array_literal: $ => seq(
@@ -129,7 +131,7 @@ export default grammar({
     ),
 
     field_access: $ => seq(
-      field('object', choice($.identifier, $.array_index, $.field_access)),
+      field('object', choice($.identifier, $.array_index, $.field_access, $.deref_expr)),
       '.',
       field('field', $.identifier)
     ),
@@ -151,6 +153,8 @@ export default grammar({
 
     array_type: $ => seq('[', $.number, ']', $._base_type),
 
+    pointer_type: $ => seq('&', $._type),
+
     _base_type: $ => choice(
       'bool',
       'int',
@@ -163,7 +167,8 @@ export default grammar({
 
     _type: $ => choice(
       $._base_type,
-      $.array_type
+      $.array_type,
+      $.pointer_type
     ),
 
     block: $ => seq(
@@ -180,7 +185,8 @@ export default grammar({
       $.qualified_call_expr,
       $.function_call_expr,
       $.identifier,
-      $.value_literal
+      $.value_literal,
+      $.deref_expr
     ),
 
     call_parameter_list: $ => seq(
@@ -268,14 +274,14 @@ export default grammar({
     ),
 
     assignment_statement: $ => seq(
-      field('target', choice($.field_access, $.array_index, $.identifier)),
+      field('target', choice($.field_access, $.array_index, $.identifier, $.deref_expr)),
       '=',
       $._expr_value,
       ';'
     ),
 
     compound_assignment: $ => seq(
-      field('target', choice($.field_access, $.array_index, $.identifier)),
+      field('target', choice($.field_access, $.array_index, $.identifier, $.deref_expr)),
       field('operator', choice('+=', '-=', '*=', '/=')),
       choice(
         $.expression,
@@ -293,6 +299,13 @@ export default grammar({
     unary_expression: $ => prec(10, choice(
       seq('!', choice($.identifier, $.value_literal, $.expression)),
       seq('-', choice($.identifier, $.value_literal, $.expression)),
+      seq('&', choice($.identifier, $.field_access, $.array_index)),
+      seq('*', choice($.identifier, $.field_access, $.array_index, $.parenthesized_expression)),
+    )),
+
+    deref_expr: $ => prec(10, seq(
+      '*',
+      choice($.identifier, $.parenthesized_expression)
     )),
 
     binary_expression: $ => {
@@ -336,7 +349,8 @@ export default grammar({
     expression: $ => choice(
       $.unary_expression,
       $.binary_expression,
-      $.parenthesized_expression
+      $.parenthesized_expression,
+      $.deref_expr
     ),
 
     fieldInit: $ => seq(

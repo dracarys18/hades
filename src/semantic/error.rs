@@ -146,6 +146,25 @@ impl SemanticError {
         }
     }
 
+    pub fn null_without_type(span: Span) -> Self {
+        Self {
+            message: String::from(
+                "null requires an explicit pointer type annotation (e.g. let x: &T = null)",
+            ),
+            span,
+        }
+    }
+
+    pub fn null_non_pointer(declared: String, span: Span) -> Self {
+        Self {
+            message: format!(
+                "null can only be assigned to a pointer type, but declared type is {}",
+                declared
+            ),
+            span,
+        }
+    }
+
     pub fn into_error(self) -> Error {
         Error::new_with_span(self.message, self.span)
     }

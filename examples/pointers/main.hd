@@ -22,6 +22,12 @@ fn main(): int {
     printf("*r = %d\n", *r);
     printf("*s = %d\n", *s);
 
+    *p = 99;
+    printf("after *p = 99, *p = %d\n", *p);
+
+    *p += 1;
+    printf("after *p += 1, *p = %d\n", *p);
+
     printf("pointer test passed\n");
     return 0;
 }

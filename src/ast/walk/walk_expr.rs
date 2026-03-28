@@ -8,20 +8,7 @@ use crate::typed_ast::{
     TypedExpr, TypedExprAst, TypedFieldAccess,
 };
 
-/// Walk an expression that may be `null`, supplying the expected pointer type.
-/// If `expr` is not `Expr::Null`, fall through to the normal walk.
-fn walk_possibly_null(
-    expr: &Expr,
-    expected: Option<Types>,
-    ctx: &mut CompilerContext,
-    span: Span,
-) -> Result<TypedExpr, SemanticError> {
-    if let Expr::Null = expr {
-        NullExpr::new(expected).walk(ctx, span)
-    } else {
-        expr.walk(ctx, span)
-    }
-}
+use super::walk_possibly_null;
 
 impl WalkAst for Expr {
     type Output = TypedExpr;

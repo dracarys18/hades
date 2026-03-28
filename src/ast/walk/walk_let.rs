@@ -1,14 +1,8 @@
-use crate::ast::{Expr, Let, NullExpr, Types, WalkAst};
+use crate::ast::{Let, Types, WalkAst};
 use crate::error::{SemanticError, Span};
-use crate::typed_ast::{CompilerContext, TypedExpr, TypedExprAst, TypedLet};
+use crate::typed_ast::{CompilerContext, TypedExprAst, TypedLet};
 
-fn walk_null_rhs(
-    declared_type: Option<&Types>,
-    span: &Span,
-    ctx: &mut CompilerContext,
-) -> Result<TypedExpr, SemanticError> {
-    NullExpr::new(declared_type.cloned()).walk(ctx, span.clone())
-}
+use super::walk_possibly_null;
 
 impl WalkAst for Let {
     type Output = TypedLet;
@@ -17,23 +11,13 @@ impl WalkAst for Let {
         let span = &self.span;
         let name = &self.name;
 
-        if let Expr::Null = &self.value.expr {
-            let typed_null = walk_null_rhs(self.declared_type.as_ref(), span, ctx)?;
-            let typ = typed_null.get_type();
-            ctx.insert_variable(name.clone(), typ.clone());
-            return Ok(TypedLet {
-                name: name.clone(),
-                typ,
-                value: TypedExprAst {
-                    expr: typed_null,
-                    span: span.clone(),
-                },
-                span: span.clone(),
-            });
-        }
-
-        let typed_value = self.value.walk(ctx, span.clone())?;
-        let inferred_type = typed_value.get_type();
+        let typed_expr = walk_possibly_null(
+            &self.value.expr,
+            self.declared_type.clone(),
+            ctx,
+            span.clone(),
+        )?;
+        let inferred_type = typed_expr.get_type();
 
         let final_type = match self.declared_type.as_ref() {
             Some(declared) => {
@@ -57,7 +41,10 @@ impl WalkAst for Let {
         Ok(TypedLet {
             name: name.clone(),
             typ: final_type,
-            value: typed_value,
+            value: TypedExprAst {
+                expr: typed_expr,
+                span: span.clone(),
+            },
             span: span.clone(),
         })
     }

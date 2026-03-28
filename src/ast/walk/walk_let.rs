@@ -1,51 +1,41 @@
-use crate::ast::{Expr, Let, Types, WalkAst};
-use crate::error::SemanticError;
-use crate::typed_ast::{CompilerContext, TypedExpr, TypedLet};
+use crate::ast::{Expr, Let, NullExpr, Types, WalkAst};
+use crate::error::{SemanticError, Span};
+use crate::typed_ast::{CompilerContext, TypedExpr, TypedExprAst, TypedLet};
+
+fn walk_null_rhs(
+    declared_type: Option<&Types>,
+    span: &Span,
+    ctx: &mut CompilerContext,
+) -> Result<TypedExpr, SemanticError> {
+    NullExpr::new(declared_type.cloned()).walk(ctx, span.clone())
+}
 
 impl WalkAst for Let {
     type Output = TypedLet;
-    fn walk(
-        &self,
-        ctx: &mut CompilerContext,
-        _span: crate::error::Span,
-    ) -> Result<Self::Output, SemanticError> {
+
+    fn walk(&self, ctx: &mut CompilerContext, _span: Span) -> Result<Self::Output, SemanticError> {
         let span = &self.span;
         let name = &self.name;
 
-        // Special-case: bare `null` on the RHS requires an explicit pointer annotation.
         if let Expr::Null = &self.value.expr {
-            let declared = self
-                .declared_type
-                .as_ref()
-                .ok_or_else(|| SemanticError::null_without_type(span.clone()))?;
-            match declared {
-                Types::Pointer(_) => {
-                    ctx.insert_variable(name.clone(), declared.clone());
-                    return Ok(TypedLet {
-                        name: name.clone(),
-                        typ: declared.clone(),
-                        value: crate::typed_ast::TypedExprAst {
-                            expr: TypedExpr::Null(declared.clone()),
-                            span: span.clone(),
-                        },
-                        span: span.clone(),
-                    });
-                }
-                other => {
-                    return Err(SemanticError::null_non_pointer(
-                        other.to_string(),
-                        span.clone(),
-                    ));
-                }
-            }
+            let typed_null = walk_null_rhs(self.declared_type.as_ref(), span, ctx)?;
+            let typ = typed_null.get_type();
+            ctx.insert_variable(name.clone(), typ.clone());
+            return Ok(TypedLet {
+                name: name.clone(),
+                typ,
+                value: TypedExprAst {
+                    expr: typed_null,
+                    span: span.clone(),
+                },
+                span: span.clone(),
+            });
         }
 
-        let typed_value = self.value.walk(ctx, self.span.clone())?;
-
-        let declared_type = self.declared_type.as_ref();
+        let typed_value = self.value.walk(ctx, span.clone())?;
         let inferred_type = typed_value.get_type();
 
-        let final_type = match declared_type {
+        let final_type = match self.declared_type.as_ref() {
             Some(declared) => {
                 if declared != &inferred_type {
                     return Err(SemanticError::type_mismatch(
@@ -59,7 +49,7 @@ impl WalkAst for Let {
             None => inferred_type,
         };
 
-        if final_type.eq(&Types::Void) {
+        if final_type == Types::Void {
             return Err(SemanticError::invalid_type(name.clone(), span.clone()));
         }
 

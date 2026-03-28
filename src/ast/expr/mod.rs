@@ -5,7 +5,21 @@ pub use assignment::*;
 use indexmap::IndexMap;
 
 use super::value::Value;
+use crate::ast::Types;
 use crate::tokens::{FunctionName, Ident, Op};
+
+/// A `null` literal with the pointer type expected by the surrounding context.
+/// `expected` is `None` when `null` appears with no type context (an error).
+#[derive(Debug, Clone, PartialEq)]
+pub struct NullExpr {
+    pub expected: Option<Types>,
+}
+
+impl NullExpr {
+    pub fn new(expected: Option<Types>) -> Self {
+        Self { expected }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionCall {

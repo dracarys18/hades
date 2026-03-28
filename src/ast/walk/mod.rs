@@ -8,6 +8,7 @@ mod walk_if;
 mod walk_import;
 mod walk_let;
 mod walk_moduledecl;
+mod walk_null;
 mod walk_program;
 mod walk_return;
 mod walk_stmt;

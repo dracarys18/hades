@@ -1,7 +1,7 @@
+use crate::codegen::BuiltinRegistar;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
-use crate::codegen::BuiltinRegistar;
 use crate::typed_ast::TypedExpr;
 use inkwell::values::BasicMetadataValueEnum;
 
@@ -23,7 +23,7 @@ impl Visit for FunctionCall<'_> {
         let arg_values = self
             .args
             .iter()
-            .map(|a| a.visit(context).map(|v| v.value.into()))
+            .flat_map(|a| a.visit(context).map(|v| v.value().map(|v| v.into())))
             .collect::<CodegenResult<Vec<BasicMetadataValueEnum>>>()?;
         build_call(self.name, &arg_values, context)
     }

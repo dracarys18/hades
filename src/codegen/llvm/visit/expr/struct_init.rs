@@ -37,7 +37,7 @@ impl<'a> Visit for StructInit<'a> {
         // Iterate over fields
         for (i, (_, field_expr)) in self.fields.iter().enumerate() {
             let field_val = field_expr.visit(context)?;
-            let llvm_val = field_val.value;
+            let llvm_val = field_val.value()?;
 
             let field_ptr = context
                 .builder()

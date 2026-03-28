@@ -1,8 +1,8 @@
 use inkwell::values::BasicValueEnum;
 
+use crate::codegen::VisitOptions;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
-use crate::codegen::VisitOptions;
 use crate::codegen::{
     context::LLVMContext, llvm::visit::expr::variable::VariableAccess, symbols::LLVMVariable,
 };
@@ -72,7 +72,7 @@ impl<'a> Assignment<'a> {
                     ctx.builder().build_in_bounds_gep(
                         array_type,
                         array_ptr,
-                        &[zero, index_val.value.into_int_value()],
+                        &[zero, index_val.value()?.into_int_value()],
                         "array_assign_ptr",
                     )
                 }
@@ -91,7 +91,7 @@ impl<'a> Assignment<'a> {
                     other => {
                         return Err(CodegenError::LLVMBuild {
                             message: format!("deref assign: expected pointer, got {other:?}"),
-                        })
+                        });
                     }
                 };
                 let llvm_ptr_type: inkwell::types::BasicTypeEnum =
@@ -118,7 +118,7 @@ impl<'a> Visit for Assignment<'a> {
         let current_value = self.target.visit(context)?;
         match self.op {
             Op::PlusEqual => {
-                let new_value = generate_add(context, current_value.value, value_val.value)?;
+                let new_value = generate_add(context, current_value.value()?, value_val.value()?)?;
                 context
                     .builder()
                     .build_store(var_ptr.value(), new_value)
@@ -126,36 +126,36 @@ impl<'a> Visit for Assignment<'a> {
                         message: format!("Failed to build store for assignment: {e:?}"),
                     })?;
 
-                Ok(CodegenValue {
-                    value: new_value,
-                    type_info: value_val.type_info,
-                })
+                Ok(CodegenValue::new(
+                    new_value,
+                    value_val.unwrap_concrete()?.type_info().clone(),
+                ))
             }
             Op::MinusEqual => {
-                let new_value = generic_sub(context, current_value.value, value_val.value)?;
+                let new_value = generic_sub(context, current_value.value()?, value_val.value()?)?;
                 context
                     .builder()
                     .build_store(var_ptr.value(), new_value)
                     .map_err(|e| CodegenError::LLVMBuild {
                         message: format!("Failed to build store for assignment: {e:?}"),
                     })?;
-                Ok(CodegenValue {
-                    value: new_value,
-                    type_info: value_val.type_info,
-                })
+                Ok(CodegenValue::new(
+                    new_value,
+                    value_val.unwrap_concrete()?.type_info().clone(),
+                ))
             }
             Op::Assign => {
                 context
                     .builder()
-                    .build_store(var_ptr.value(), value_val.value)
+                    .build_store(var_ptr.value(), value_val.value()?)
                     .map_err(|e| CodegenError::LLVMBuild {
                         message: format!("Failed to build store for assignment: {e:?}"),
                     })?;
 
-                Ok(CodegenValue {
-                    value: value_val.value,
-                    type_info: value_val.type_info,
-                })
+                Ok(CodegenValue::new(
+                    value_val.value()?,
+                    value_val.unwrap_concrete()?.type_info().clone(),
+                ))
             }
             _ => Err(CodegenError::LLVMBuild {
                 message: format!("Unsupported assignment operator: {:?}", self.op),
@@ -192,7 +192,7 @@ impl Visit for TypedAssignTarget {
                     other => {
                         return Err(CodegenError::LLVMBuild {
                             message: format!("deref target read: expected pointer, got {other:?}"),
-                        })
+                        });
                     }
                 };
                 let symbols = context.symbols();
@@ -202,10 +202,7 @@ impl Visit for TypedAssignTarget {
                 context
                     .builder()
                     .build_load(llvm_pointee, loaded_ptr, "deref_read_val")
-                    .map(|val| CodegenValue {
-                        value: val,
-                        type_info: pointee_type,
-                    })
+                    .map(|val| CodegenValue::new(val, pointee_type))
                     .map_err(CodegenError::from)
             }
         }

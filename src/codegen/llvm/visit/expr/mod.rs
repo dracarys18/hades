@@ -1,14 +1,14 @@
 use crate::ast::Types;
+use crate::codegen::VisitOptions;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
-use crate::codegen::VisitOptions;
 use crate::tokens::Op;
 use crate::typed_ast::{
     TypedArrayIndex, TypedAssignExpr, TypedBinaryExpr, TypedExpr, TypedFieldAccess,
 };
-use inkwell::values::PointerValue;
 use inkwell::AddressSpace;
+use inkwell::values::PointerValue;
 
 pub mod assign;
 pub mod binary;
@@ -38,17 +38,17 @@ impl<'ctx> LLVMContext<'ctx> {
         {
             let ptr_val = inner.visit(self)?;
             return ptr_val
-                .value
+                .value()?
                 .try_into()
                 .map_err(|_| CodegenError::LLVMBuild {
                     message: "deref get_ptr: expected pointer value".to_string(),
                 });
         }
         expr.visit(self).and_then(|val| {
-            val.value.try_into().or_else(|_| {
+            val.value()?.try_into().or_else(|_| {
                 let symbols = self.symbols();
                 self.type_converter()
-                    .to_llvm_type(&val.type_info, symbols)
+                    .to_llvm_type(&val.unwrap_concrete()?.type_info(), symbols)
                     .and_then(|t| {
                         self.builder().build_alloca(t, "tmp_ptr").map_err(|e| {
                             CodegenError::LLVMBuild {
@@ -58,7 +58,7 @@ impl<'ctx> LLVMContext<'ctx> {
                     })
                     .and_then(|ptr| {
                         self.builder()
-                            .build_store(ptr, val.value)
+                            .build_store(ptr, val.value()?)
                             .map_err(|e| CodegenError::LLVMBuild {
                                 message: e.to_string(),
                             })
@@ -110,10 +110,7 @@ impl Visit for TypedExpr {
                     .context()
                     .ptr_type(AddressSpace::default())
                     .const_null();
-                Ok(CodegenValue {
-                    value: ptr.into(),
-                    type_info: typ.clone(),
-                })
+                Ok(CodegenValue::new(ptr.into(), typ.clone()))
             }
         }
     }
@@ -143,7 +140,7 @@ impl Visit for TypedArrayIndex {
             context.builder().build_in_bounds_gep(
                 array_type,
                 array_ptr,
-                &[zero, index_value.value.into_int_value()],
+                &[zero, index_value.value()?.into_int_value()],
                 "array_elem_ptr",
             )?
         };
@@ -151,10 +148,7 @@ impl Visit for TypedArrayIndex {
         context
             .builder()
             .build_load(elem_type, elem_ptr, "array_elem")
-            .map(|val| CodegenValue {
-                value: val,
-                type_info: self.typ.get_array_elem_type(),
-            })
+            .map(|val| CodegenValue::new(val, self.typ.get_array_elem_type()))
             .map_err(CodegenError::from)
     }
 }
@@ -208,10 +202,7 @@ impl Visit for TypedFieldAccess {
         context
             .builder()
             .build_load(field_llvm_type, field_ptr, "field_access")
-            .map(|val| CodegenValue {
-                value: val,
-                type_info: self.field_type.clone(),
-            })
+            .map(|val| CodegenValue::new(val, self.field_type.clone()))
             .map_err(CodegenError::from)
     }
 }

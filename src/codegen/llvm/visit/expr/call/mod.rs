@@ -4,9 +4,9 @@ pub mod method;
 pub use func::FunctionCall;
 pub use method::MethodCall;
 
+use crate::codegen::BuiltinRegistar;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
-use crate::codegen::BuiltinRegistar;
 use inkwell::values::BasicMetadataValueEnum;
 
 pub fn build_call<'ctx>(
@@ -40,11 +40,8 @@ pub fn build_call<'ctx>(
             message: format!("Failed to generate function call to {name}"),
         })?;
 
-    let value = match call_site.try_as_basic_value().basic() {
-        Some(v) => v,
-        // void call — produce a sentinel i64 0 that callers must not use
-        None => context.context().i64_type().const_zero().into(),
-    };
-
-    Ok(CodegenValue::new(value, return_type))
+    Ok(match call_site.try_as_basic_value().basic() {
+        Some(v) => CodegenValue::new(v, return_type),
+        None => CodegenValue::Void,
+    })
 }

@@ -21,7 +21,7 @@ impl Visit for MethodCall<'_> {
             .chain(
                 self.args
                     .iter()
-                    .map(|a| a.visit(context).map(|v| v.value.into())),
+                    .flat_map(|a| a.visit(context).map(|v| v.value().map(|v| v.into()))),
             )
             .collect::<CodegenResult<Vec<BasicMetadataValueEnum>>>()?;
         build_call(self.name, &arg_values, context)

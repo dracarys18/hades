@@ -22,6 +22,39 @@ impl<'a> Visit for UnaryOp<'a> {
     type Output<'ctx> = CodegenValue<'ctx>;
 
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
+        // Address-of (&expr) must NOT load the operand — it needs the raw pointer.
+        if self.op == &Op::Ref {
+            let ptr = context.get_ptr(self.operand)?;
+            let operand_type = self.operand.get_type();
+            let ptr_type = Types::Pointer(Box::new(operand_type));
+            return Ok(CodegenValue::new(ptr.into(), ptr_type));
+        }
+
+        // Deref (*expr): evaluate operand to get the pointer value, then load through it.
+        if self.op == &Op::Deref {
+            let ptr_val = self.operand.visit(context)?;
+            let pointee_type = match &ptr_val.type_info {
+                Types::Pointer(inner) => *inner.clone(),
+                other => {
+                    return Err(CodegenError::TypeMismatch {
+                        expected: "pointer type".to_string(),
+                        actual: other.to_string(),
+                    });
+                }
+            };
+            let symbols = context.symbols();
+            let llvm_type = context
+                .type_converter()
+                .to_llvm_type(&pointee_type, symbols)?;
+            let loaded = context
+                .builder()
+                .build_load(llvm_type, ptr_val.value.into_pointer_value(), "deref")
+                .map_err(|e| CodegenError::LLVMBuild {
+                    message: e.to_string(),
+                })?;
+            return Ok(CodegenValue::new(loaded, pointee_type));
+        }
+
         let operand_val = self.operand.visit(context)?;
 
         let result_type = context

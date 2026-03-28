@@ -51,6 +51,7 @@ pub enum Expr {
     Assign(AssignExpr),
     FieldAccess(FieldAccessExpr),
     Call(CallKind),
+    Null,
 }
 
 impl Expr {

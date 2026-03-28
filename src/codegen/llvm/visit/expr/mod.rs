@@ -1,10 +1,13 @@
+use crate::ast::Types;
 use crate::codegen::VisitOptions;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
+use crate::tokens::Op;
 use crate::typed_ast::{
     TypedArrayIndex, TypedAssignExpr, TypedBinaryExpr, TypedExpr, TypedFieldAccess,
 };
+use inkwell::AddressSpace;
 use inkwell::values::PointerValue;
 
 pub mod assign;
@@ -25,6 +28,21 @@ impl<'ctx> LLVMContext<'ctx> {
     pub(super) fn get_ptr(&mut self, expr: &TypedExpr) -> CodegenResult<PointerValue<'ctx>> {
         if let TypedExpr::Ident { ident, .. } = expr {
             return self.get_variable(ident).map(|v| v.value());
+        }
+        // *ptr as lvalue: evaluate the pointer expression and return the loaded pointer value.
+        if let TypedExpr::Unary {
+            op: Op::Deref,
+            expr: inner,
+            ..
+        } = expr
+        {
+            let ptr_val = inner.visit(self)?;
+            return ptr_val
+                .value
+                .try_into()
+                .map_err(|_| CodegenError::LLVMBuild {
+                    message: "deref get_ptr: expected pointer value".to_string(),
+                });
         }
         expr.visit(self).and_then(|val| {
             val.value.try_into().or_else(|_| {
@@ -87,6 +105,16 @@ impl Visit for TypedExpr {
             Self::Assign(assign) => assign.visit(context),
             Self::FieldAccess(field) => field.visit(context),
             Self::ArrayIndex(index) => index.visit(context),
+            Self::Null => {
+                let ptr = context
+                    .context()
+                    .ptr_type(AddressSpace::default())
+                    .const_null();
+                Ok(CodegenValue {
+                    value: ptr.into(),
+                    type_info: Types::Pointer(Box::new(Types::Void)),
+                })
+            }
         }
     }
 }

@@ -19,7 +19,10 @@ impl WalkAst for Let {
 
         let final_type = match declared_type {
             Some(declared) => {
-                if declared != &inferred_type {
+                let compatible = declared == &inferred_type
+                    || (matches!(declared, Types::Pointer(_))
+                        && inferred_type == Types::Pointer(Box::new(Types::Void)));
+                if !compatible {
                     return Err(SemanticError::type_mismatch(
                         declared.to_string(),
                         inferred_type.to_string(),

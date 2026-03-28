@@ -169,7 +169,10 @@ impl CompilerContext {
                 )),
             },
             Op::Assign => {
-                if left == right {
+                let null_ptr = Types::Pointer(Box::new(Types::Void));
+                let compatible =
+                    left == right || (matches!(left, Types::Pointer(_)) && right == &null_ptr);
+                if compatible {
                     Ok(left.clone())
                 } else {
                     Err(SemanticError::invalid_binary_operation(
@@ -233,6 +236,15 @@ impl CompilerContext {
             },
             Op::BitNot => match operand {
                 Types::Int => Ok(Types::Int),
+                _ => Err(SemanticError::invalid_unary_operation(
+                    format!("{op:?}"),
+                    operand.to_string(),
+                    span,
+                )),
+            },
+            Op::Ref => Ok(Types::Pointer(Box::new(operand.clone()))),
+            Op::Deref => match operand {
+                Types::Pointer(inner) => Ok(*inner.clone()),
                 _ => Err(SemanticError::invalid_unary_operation(
                     format!("{op:?}"),
                     operand.to_string(),

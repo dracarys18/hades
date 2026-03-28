@@ -76,6 +76,7 @@ impl<'ctx> TypeConverter<'ctx> {
                     to: "LLVM type".to_string(),
                 });
             }
+            Types::Pointer(_) => self.ptr_type().into(),
         };
 
         Ok(llvm_type)

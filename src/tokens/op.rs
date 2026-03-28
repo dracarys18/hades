@@ -49,6 +49,8 @@ pub enum Op {
     Sub,
     Mul,
     Div,
+    Ref,
+    Deref,
 }
 
 impl Op {

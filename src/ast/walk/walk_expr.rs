@@ -33,7 +33,12 @@ impl WalkAst for Expr {
                             )
                         })?;
                         let typed = field_expr.walk(ctx, span.clone())?;
-                        (typed.get_type() == expected.get_type())
+                        let typed_type = typed.get_type();
+                        let expected_type = expected.get_type();
+                        let compatible = typed_type == expected_type
+                            || (matches!(expected_type, Types::Pointer(_))
+                                && typed_type == Types::Pointer(Box::new(Types::Void)));
+                        compatible
                             .then(|| (field_name.clone(), typed.clone()))
                             .ok_or_else(|| {
                                 SemanticError::type_mismatch(
@@ -61,6 +66,7 @@ impl WalkAst for Expr {
                     })
             }
             Expr::Assign(assign) => assign.walk(ctx, span).map(TypedExpr::Assign),
+            Expr::Null => Ok(TypedExpr::Null),
             Expr::Call(kind) => match kind {
                 CallKind::Function(call) => call.walk(ctx, span),
                 CallKind::Method(call) => call.walk(ctx, span),

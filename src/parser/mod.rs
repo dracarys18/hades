@@ -222,7 +222,7 @@ impl Parser {
                 }
                 TokenKind::Ident(name) => Ok(Types::from_str(name)),
                 TokenKind::Self_ => Ok(Types::Self_),
-                TokenKind::BoleanAnd | TokenKind::And => {
+                TokenKind::BooleanAnd | TokenKind::And => {
                     let inner = self.expect_type()?;
                     Ok(Types::Pointer(Box::new(inner)))
                 }
@@ -727,7 +727,7 @@ impl Parser {
                     expr: Box::new(expr),
                 })
             }
-            tok if tok.is_some_and(|token| token_matches!(token, TokenKind::BoleanAnd)) => {
+            tok if tok.is_some_and(|token| token_matches!(token, TokenKind::BooleanAnd)) => {
                 self.next();
                 let expr = self.parse_unary_with_flags(allow_struct_literals)?;
                 Ok(Expr::Unary {

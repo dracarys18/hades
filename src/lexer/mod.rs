@@ -365,7 +365,7 @@ impl Lexer {
                     } else {
                         self.push_token(tok!(
                             &self.source_id,
-                            TokenKind::BoleanAnd,
+                            TokenKind::BooleanAnd,
                             start_pos,
                             self.pos
                         ));

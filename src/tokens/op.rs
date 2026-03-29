@@ -103,7 +103,7 @@ impl Op {
             TokenKind::LessEqual => Some(Op::LessEqual),
             TokenKind::And => Some(Op::And),
             TokenKind::Or => Some(Op::Or),
-            TokenKind::BoleanAnd => Some(Op::BoleanAnd),
+            TokenKind::BooleanAnd => Some(Op::BoleanAnd),
             TokenKind::BooleanOr => Some(Op::BooleanOr),
             TokenKind::Bang => Some(Op::Not),
             _ => None,

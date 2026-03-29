@@ -79,7 +79,7 @@ pub enum TokenKind {
     Float(f64),
     // Keywords.
     And,
-    BoleanAnd,
+    BooleanAnd,
     Struct,
     Else,
     False,
@@ -137,7 +137,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Number(n) => write!(f, "{n}"),
             TokenKind::Float(n) => write!(f, "{n}"),
             TokenKind::And => write!(f, "and"),
-            TokenKind::BoleanAnd => write!(f, "&&"),
+            TokenKind::BooleanAnd => write!(f, "&&"),
             TokenKind::Struct => write!(f, "struct"),
             TokenKind::Else => write!(f, "else"),
             TokenKind::False => write!(f, "false"),

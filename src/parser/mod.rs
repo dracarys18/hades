@@ -222,13 +222,9 @@ impl Parser {
                 }
                 TokenKind::Ident(name) => Ok(Types::from_str(name)),
                 TokenKind::Self_ => Ok(Types::Self_),
-                TokenKind::BoleanAnd => {
+                TokenKind::BoleanAnd | TokenKind::And => {
                     let inner = self.expect_type()?;
                     Ok(Types::Pointer(Box::new(inner)))
-                }
-                TokenKind::And => {
-                    let inner = self.expect_type()?;
-                    Ok(Types::Pointer(Box::new(Types::Pointer(Box::new(inner)))))
                 }
                 _ => {
                     let span = tok.span().into_range();

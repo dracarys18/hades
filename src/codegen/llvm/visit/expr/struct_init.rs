@@ -34,14 +34,19 @@ impl<'a> Visit for StructInit<'a> {
                 message: format!("Failed to alloca struct: {e}"),
             })?;
 
-        // Iterate over fields
-        for (i, (_, field_expr)) in self.fields.iter().enumerate() {
+        // Iterate over fields using definition order indices
+        for (field_name, field_expr) in self.fields.iter() {
             let field_val = field_expr.visit(context)?;
             let llvm_val = field_val.value()?;
 
+            let field_index = context
+                .symbols()
+                .structs()
+                .field_index(self.name, field_name);
+
             let field_ptr = context
                 .builder()
-                .build_struct_gep(struct_type, struct_ptr, i as u32, "field_ptr")
+                .build_struct_gep(struct_type, struct_ptr, field_index as u32, "field_ptr")
                 .map_err(|e| CodegenError::LLVMBuild {
                     message: format!("Failed to get struct field ptr: {e}"),
                 })?;

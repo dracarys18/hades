@@ -1009,6 +1009,25 @@ impl Parser {
                         index: Box::new(index_expr),
                     });
                 }
+                Some(tok) if token_matches!(tok, TokenKind::LeftParen) => {
+                    if let Expr::Ident(func_name) = expr {
+                        self.next(); // consume '('
+                        let args = self.parse_comma_separated(
+                            |parser| parser.parse_assignment(),
+                            &TokenKind::RightParen,
+                        )?;
+                        self.expect(&TokenKind::RightParen)?;
+                        expr = Expr::Call(CallKind::Function(FunctionCall {
+                            func: FunctionName::new(
+                                func_name.inner().to_string(),
+                                func_name.span().clone(),
+                            ),
+                            args,
+                        }));
+                    } else {
+                        break;
+                    }
+                }
                 _ => break,
             }
         }

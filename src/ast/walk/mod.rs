@@ -16,7 +16,7 @@ pub mod walk_structdef;
 mod walk_value;
 mod walk_while;
 
-use crate::ast::{Expr, NullExpr, Types};
+use crate::ast::{Expr, NullExpr, Types, Value};
 use crate::error::{SemanticError, Span};
 use crate::typed_ast::*;
 
@@ -25,18 +25,22 @@ pub trait WalkAst {
     fn walk(&self, ctx: &mut CompilerContext, span: Span) -> Result<Self::Output, SemanticError>;
 }
 
-/// Walk an expression that may be `null`, supplying the expected pointer type.
-/// If `expr` is `Expr::Null`, delegates to `NullExpr` with the given hint.
-/// Otherwise falls through to the normal walk.
 pub(super) fn walk_possibly_null(
     expr: &Expr,
     expected: Option<Types>,
     ctx: &mut CompilerContext,
     span: Span,
 ) -> Result<TypedExpr, SemanticError> {
-    if let Expr::Null = expr {
-        NullExpr::new(expected).walk(ctx, span)
-    } else {
-        expr.walk(ctx, span)
+    match expr {
+        Expr::Null => NullExpr::new(expected).walk(ctx, span),
+        Expr::Value(Value::Array(arr)) => {
+            let elem_hint = match &expected {
+                Some(t @ Types::Array(_)) => Some(t.get_array_elem_type()),
+                _ => None,
+            };
+            walk_value::walk_array_with_hint(arr, elem_hint, ctx, span)
+                .map(|a| TypedExpr::Value(TypedValue::Array(a)))
+        }
+        _ => expr.walk(ctx, span),
     }
 }

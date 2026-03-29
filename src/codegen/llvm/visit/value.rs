@@ -35,7 +35,11 @@ impl Visit for TypedArrayLiteral {
         for (i, element) in self.elements.iter().enumerate() {
             let elem_value = element.visit(context)?;
             let actual_value = match (&elem_type, elem_value.value()?) {
+                // Pointer-typed arrays: the element IS the pointer value — store it directly.
+                (Types::Pointer(_), val) => val,
+                // String elements are pointers but represent the string value — store as-is.
                 (Types::String, val) => val,
+                // Other pointer values (e.g. alloca for a struct element) — load through.
                 (_, BasicValueEnum::PointerValue(ptr)) => {
                     context.builder().build_load(llvm_elem_type, ptr, "elem")?
                 }

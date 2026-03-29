@@ -6,6 +6,8 @@ use crate::error::SemanticError;
 use crate::error::Span;
 use crate::typed_ast::{CompilerContext, TypedArrayLiteral, TypedValue};
 
+use super::walk_possibly_null;
+
 impl WalkAst for Value {
     type Output = TypedValue;
     fn walk(&self, ctx: &mut CompilerContext, span: Span) -> Result<Self::Output, SemanticError> {
@@ -19,35 +21,47 @@ impl WalkAst for Value {
     }
 }
 
+/// Walk an array literal, optionally providing an expected element type hint.
+/// When `elem_hint` is `Some(T)`, each `null` element is resolved to type `T`
+/// instead of producing a "null requires explicit type" error.
+pub(super) fn walk_array_with_hint(
+    arr: &ArrayLiteral,
+    elem_hint: Option<Types>,
+    ctx: &mut CompilerContext,
+    span: Span,
+) -> Result<TypedArrayLiteral, SemanticError> {
+    let typed_expr = arr
+        .elem
+        .iter()
+        .map(|e| walk_possibly_null(e, elem_hint.clone(), ctx, span.clone()))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let expected_type = typed_expr
+        .first()
+        .expect("Empty arrays are not supported yet")
+        .get_type();
+
+    for expr in &typed_expr {
+        if !expr.get_type().eq(&expected_type) {
+            return Err(SemanticError::type_mismatch(
+                expected_type.to_string(),
+                expr.get_type().to_string(),
+                span,
+            ));
+        }
+    }
+
+    Ok(TypedArrayLiteral {
+        elements: typed_expr,
+        size: arr.size,
+        elem_typ: Types::Array(expected_type.array_type(arr.size)),
+    })
+}
+
 impl WalkAst for ArrayLiteral {
     type Output = TypedArrayLiteral;
 
     fn walk(&self, ctx: &mut CompilerContext, span: Span) -> Result<Self::Output, SemanticError> {
-        let typed_expr = self
-            .elem
-            .iter()
-            .map(|e| e.walk(ctx, span.clone()))
-            .collect::<Result<Vec<_>, _>>()?;
-
-        let expected_type = typed_expr
-            .first()
-            .expect("Empty arrays are not supported yet")
-            .get_type();
-
-        for expr in &typed_expr {
-            if !expr.get_type().eq(&expected_type) {
-                return Err(SemanticError::type_mismatch(
-                    expected_type.to_string(),
-                    expr.get_type().to_string(),
-                    span,
-                ));
-            }
-        }
-
-        Ok(TypedArrayLiteral {
-            elements: typed_expr,
-            size: self.size,
-            elem_typ: Types::Array(expected_type.array_type(self.size)),
-        })
+        walk_array_with_hint(self, None, ctx, span)
     }
 }

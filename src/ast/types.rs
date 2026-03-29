@@ -8,6 +8,7 @@ pub enum ArrayType {
     StringArray(usize),
     BoolArray(usize),
     StructArray(usize, Ident),
+    PointerArray(usize, Box<Types>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -40,6 +41,7 @@ impl std::fmt::Display for Types {
                 ArrayType::StringArray(size) => write!(f, "string[{size}]"),
                 ArrayType::BoolArray(size) => write!(f, "bool[{size}]"),
                 ArrayType::StructArray(size, name) => write!(f, "struct {name}[{size}]"),
+                ArrayType::PointerArray(size, inner) => write!(f, "&{inner}[{size}]"),
             },
             Types::Self_ => write!(f, "self"),
             Types::Pointer(inner) => write!(f, "&{inner}"),
@@ -69,6 +71,7 @@ impl Types {
             Self::String => ArrayType::StringArray(size),
             Self::Bool => ArrayType::BoolArray(size),
             Self::Struct(name) => ArrayType::StructArray(size, name.to_owned()),
+            Self::Pointer(_) => ArrayType::PointerArray(size, Box::new(self.clone())),
             _ => unimplemented!("Array type for {:?} is not implemented yet", self),
         }
     }
@@ -81,6 +84,7 @@ impl Types {
                 ArrayType::StringArray(size) => *size,
                 ArrayType::BoolArray(size) => *size,
                 ArrayType::StructArray(size, _) => *size,
+                ArrayType::PointerArray(size, _) => *size,
             }
         } else {
             panic!("Expected an Array type")
@@ -95,6 +99,7 @@ impl Types {
                 ArrayType::StringArray(_) => Types::String,
                 ArrayType::BoolArray(_) => Types::Bool,
                 ArrayType::StructArray(_, name) => Types::Struct(name.to_owned()),
+                ArrayType::PointerArray(_, inner) => *inner.clone(),
             }
         } else {
             panic!("Expected an Array type")

@@ -3,12 +3,12 @@ use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::error::Span;
 use crate::tokens::{Ident, ParamKind};
 use crate::typed_ast::{CompilerContext, FunctionSignature, TypedFieldKind};
-use inkwell::AddressSpace;
 use inkwell::context::Context;
 use inkwell::types::{
     AnyTypeEnum, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FloatType, FunctionType, IntType,
     StructType,
 };
+use inkwell::AddressSpace;
 
 pub struct TypeConverter<'ctx> {
     context: &'ctx Context,
@@ -66,6 +66,11 @@ impl<'ctx> TypeConverter<'ctx> {
                 ArrayType::StructArray(size, name) => {
                     let struct_type = self.convert_struct_type(name, compiler_ctx)?;
                     let array_type = struct_type.array_type(*size as u32);
+                    array_type.into()
+                }
+                ArrayType::PointerArray(size, _) => {
+                    let elem_type = self.context.ptr_type(AddressSpace::default());
+                    let array_type = elem_type.array_type(*size as u32);
                     array_type.into()
                 }
             },

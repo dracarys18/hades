@@ -3,6 +3,7 @@ use crate::ast::{
     FieldAccessExpr, NullExpr, Types, WalkAst,
 };
 use crate::error::{SemanticError, Span};
+use crate::tokens::Ident;
 use crate::typed_ast::{
     CompilerContext, TypedArrayIndex, TypedAssignExpr, TypedAssignTarget, TypedBinaryExpr,
     TypedExpr, TypedExprAst, TypedFieldAccess,
@@ -36,12 +37,14 @@ impl WalkAst for Expr {
                             )
                         })?;
                         let expected_type = expected.get_type();
+
                         let typed = walk_possibly_null(
                             field_expr,
                             Some(expected_type.clone()),
                             ctx,
                             span.clone(),
                         )?;
+
                         let typed_type = typed.get_type();
                         if typed_type != expected_type {
                             return Err(SemanticError::type_mismatch(
@@ -205,27 +208,39 @@ impl WalkAst for FieldAccessExpr {
         let typed_expr = self.expr.walk(ctx, span.clone())?;
         let strc = typed_expr.get_type();
 
+        let walk_struct = |struct_name: &Ident| {
+            ctx.get_struct_type(struct_name, span.clone())
+                .and_then(|field_map| {
+                    field_map
+                        .get(&self.field)
+                        .ok_or_else(|| {
+                            SemanticError::unknown_field(
+                                struct_name.clone(),
+                                self.field.clone(),
+                                span.clone(),
+                            )
+                        })
+                        .map(|field_type| TypedFieldAccess {
+                            expr: Box::new(typed_expr.clone()),
+                            field: self.field.clone(),
+                            struct_type: Types::Struct(struct_name.clone()),
+                            field_type: field_type.get_type().clone(),
+                        })
+                })
+        };
         match &strc {
             Types::Struct(struct_name) | Types::Array(ArrayType::StructArray(_, struct_name)) => {
-                ctx.get_struct_type(struct_name, span.clone())
-                    .and_then(|field_map| {
-                        field_map
-                            .get(&self.field)
-                            .ok_or_else(|| {
-                                SemanticError::unknown_field(
-                                    struct_name.clone(),
-                                    self.field.clone(),
-                                    span.clone(),
-                                )
-                            })
-                            .map(|field_type| TypedFieldAccess {
-                                expr: Box::new(typed_expr.clone()),
-                                field: self.field.clone(),
-                                struct_type: strc.clone(),
-                                field_type: field_type.get_type().clone(),
-                            })
-                    })
+                walk_struct(struct_name)
             }
+            Types::Pointer(inner) => match inner.as_ref() {
+                Types::Struct(struct_name)
+                | Types::Array(ArrayType::StructArray(_, struct_name)) => walk_struct(struct_name),
+                other => Err(SemanticError::type_mismatch(
+                    "Struct or pointer to struct".to_string(),
+                    other.to_string(),
+                    span,
+                )),
+            },
             _ => Err(SemanticError::type_mismatch(
                 "Struct".to_string(),
                 strc.to_string(),

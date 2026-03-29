@@ -1,14 +1,14 @@
 use crate::ast::Types;
-use crate::codegen::VisitOptions;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
+use crate::codegen::VisitOptions;
 use crate::tokens::Op;
 use crate::typed_ast::{
     TypedArrayIndex, TypedAssignExpr, TypedBinaryExpr, TypedExpr, TypedFieldAccess,
 };
-use inkwell::AddressSpace;
 use inkwell::values::PointerValue;
+use inkwell::AddressSpace;
 
 pub mod assign;
 pub mod binary;
@@ -25,11 +25,29 @@ pub use unary::UnaryOp;
 pub use variable::VariableAccess;
 
 impl<'ctx> LLVMContext<'ctx> {
+    pub(crate) fn deref_if_pointer(
+        &mut self,
+        raw_ptr: PointerValue<'ctx>,
+        expr_type: &Types,
+    ) -> CodegenResult<PointerValue<'ctx>> {
+        if let Types::Pointer(_) = expr_type {
+            self.builder()
+                .build_load(
+                    self.context().ptr_type(AddressSpace::default()),
+                    raw_ptr,
+                    "deref_for_field",
+                )
+                .map_err(CodegenError::from)
+                .map(|v| v.into_pointer_value())
+        } else {
+            Ok(raw_ptr)
+        }
+    }
+
     pub(super) fn get_ptr(&mut self, expr: &TypedExpr) -> CodegenResult<PointerValue<'ctx>> {
         if let TypedExpr::Ident { ident, .. } = expr {
             return self.get_variable(ident).map(|v| v.value());
         }
-        // *ptr as lvalue: evaluate the pointer expression and return the loaded pointer value.
         if let TypedExpr::Unary {
             op: Op::Deref,
             expr: inner,
@@ -43,6 +61,53 @@ impl<'ctx> LLVMContext<'ctx> {
                 .map_err(|_| CodegenError::LLVMBuild {
                     message: "deref get_ptr: expected pointer value".to_string(),
                 });
+        }
+        if let TypedExpr::FieldAccess(field) = expr {
+            let raw_ptr = self.get_ptr(field.expr.as_ref())?;
+            let struct_ptr = self.deref_if_pointer(raw_ptr, &field.expr.get_type())?;
+            let symbols = self.symbols();
+            let struct_type = self
+                .type_converter()
+                .to_llvm_type(&field.struct_type, symbols)?;
+            let struct_name = field.struct_type.unwrap_struct_name();
+            let field_index = self
+                .symbols()
+                .structs()
+                .field_index(struct_name, &field.field);
+            let zero = self.context().i32_type().const_zero();
+            let field_index_val = self
+                .context()
+                .i32_type()
+                .const_int(field_index as u64, false);
+            return unsafe {
+                self.builder().build_in_bounds_gep(
+                    struct_type,
+                    struct_ptr,
+                    &[zero, field_index_val],
+                    "field_lval_ptr",
+                )
+            }
+            .map_err(|_| CodegenError::LLVMBuild {
+                message: "Failed to create struct field lval pointer".to_string(),
+            });
+        }
+        if let TypedExpr::ArrayIndex(index) = expr {
+            let array_ptr = self.get_ptr(&index.expr)?;
+            let index_value = index.index.visit(self)?;
+            let symbols = self.symbols();
+            let array_type = self.type_converter().to_llvm_type(&index.typ, symbols)?;
+            let zero = self.context().i32_type().const_zero();
+            return unsafe {
+                self.builder().build_in_bounds_gep(
+                    array_type,
+                    array_ptr,
+                    &[zero, index_value.value()?.into_int_value()],
+                    "array_elem_ptr",
+                )
+            }
+            .map_err(|_| CodegenError::LLVMBuild {
+                message: "Failed to create array element lval pointer".to_string(),
+            });
         }
         expr.visit(self).and_then(|val| {
             val.value()?.try_into().or_else(|_| {
@@ -164,7 +229,9 @@ impl Visit for TypedFieldAccess {
     type Output<'ctx> = CodegenValue<'ctx>;
 
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
-        let struct_ptr = context.get_ptr(self.expr.as_ref())?;
+        let raw_ptr = context.get_ptr(self.expr.as_ref())?;
+        let struct_ptr = context.deref_if_pointer(raw_ptr, &self.expr.get_type())?;
+
         let compiler_context = context.symbols();
 
         let struct_type = context

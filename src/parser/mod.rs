@@ -222,7 +222,7 @@ impl Parser {
                 }
                 TokenKind::Ident(name) => Ok(Types::from_str(name)),
                 TokenKind::Self_ => Ok(Types::Self_),
-                TokenKind::BoleanAnd => {
+                TokenKind::BoleanAnd | TokenKind::And => {
                     let inner = self.expect_type()?;
                     Ok(Types::Pointer(Box::new(inner)))
                 }
@@ -779,7 +779,7 @@ impl Parser {
 
     fn parse_array_index(&mut self, name: Ident) -> ParseResult<Expr> {
         self.expect(&TokenKind::LeftBracket)?;
-        let index_expr = self.parse_primary_with_flags(false)?;
+        let index_expr = self.parse_assignment()?;
         self.expect(&TokenKind::RightBracket)?;
 
         Ok(Expr::ArrayIndex(ArrayIndexExpr {
@@ -1002,12 +1002,31 @@ impl Parser {
                 }
                 Some(tok) if token_matches!(tok, TokenKind::LeftBracket) => {
                     self.next();
-                    let index_expr = self.parse_primary_with_flags(false)?;
+                    let index_expr = self.parse_assignment()?;
                     self.expect(&TokenKind::RightBracket)?;
                     expr = Expr::ArrayIndex(ArrayIndexExpr {
                         expr: Box::new(expr),
                         index: Box::new(index_expr),
                     });
+                }
+                Some(tok) if token_matches!(tok, TokenKind::LeftParen) => {
+                    if let Expr::Ident(func_name) = expr {
+                        self.next(); // consume '('
+                        let args = self.parse_comma_separated(
+                            |parser| parser.parse_assignment(),
+                            &TokenKind::RightParen,
+                        )?;
+                        self.expect(&TokenKind::RightParen)?;
+                        expr = Expr::Call(CallKind::Function(FunctionCall {
+                            func: FunctionName::new(
+                                func_name.inner().to_string(),
+                                func_name.span().clone(),
+                            ),
+                            args,
+                        }));
+                    } else {
+                        break;
+                    }
                 }
                 _ => break,
             }

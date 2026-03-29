@@ -19,6 +19,7 @@ impl Visit for MethodCall<'_> {
         let raw_ptr = context.get_ptr(self.receiver)?;
         let receiver_type = self.receiver.get_type();
         let self_ptr = context.deref_if_pointer(raw_ptr, &receiver_type)?;
+
         let arg_values = std::iter::once(Ok(self_ptr.into()))
             .chain(
                 self.args

@@ -142,16 +142,7 @@ impl WalkAst for AssignExpr {
             }
             AssignTarget::Deref(ref inner_expr) => {
                 let typed_inner = inner_expr.walk(ctx, span.clone())?;
-                let pointee_type = match typed_inner.get_type() {
-                    Types::Pointer(inner) => *inner,
-                    other => {
-                        return Err(SemanticError::type_mismatch(
-                            "&T".to_string(),
-                            other.to_string(),
-                            span,
-                        ));
-                    }
-                };
+                let pointee_type = typed_inner.get_deref_type(span.clone())?;
                 let value =
                     walk_possibly_null(&self.value, Some(pointee_type.clone()), ctx, span.clone())?;
                 ctx.infer_binary_type(&pointee_type, &self.op, &value.get_type(), span)

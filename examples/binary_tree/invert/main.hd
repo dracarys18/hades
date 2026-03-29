@@ -1,0 +1,62 @@
+struct BinaryTree {
+    left: &BinaryTree,
+    right: &BinaryTree,
+    val: int,
+
+    fn insert(self: &Self, node: &BinaryTree) {
+        if (node.val < self.val) {
+            if (self.left == null) {
+                self.left = node;
+            } else {
+                self.left.insert(node);
+            }
+        } else {
+            if (self.right == null) {
+                self.right = node;
+            } else {
+                self.right.insert(node);
+            }
+        }
+    }
+
+    fn inorder(self: &Self) {
+        if (self == null) {
+            return;
+        }
+        self.left.inorder();
+        printf("%d\n", self.val);
+        self.right.inorder();
+    }
+
+    fn invert(self: &Self) {
+        if (self == null) {
+            return;
+        }
+        self.left.invert();
+        self.right.invert();
+        let temp = self.left;
+        self.left = self.right;
+        self.right = temp;
+    }
+}
+
+fn main(): int {
+    let root = BinaryTree { left: null, right: null, val: 5 };
+    let n1 = BinaryTree { left: null, right: null, val: 3 };
+    let n2 = BinaryTree { left: null, right: null, val: 7 };
+    let n3 = BinaryTree { left: null, right: null, val: 1 };
+    let n4 = BinaryTree { left: null, right: null, val: 4 };
+    let n5 = BinaryTree { left: null, right: null, val: 6 };
+    let n6 = BinaryTree { left: null, right: null, val: 9 };
+
+    root.insert(&n1);
+    root.insert(&n2);
+    root.insert(&n3);
+    root.insert(&n4);
+    root.insert(&n5);
+    root.insert(&n6);
+
+    root.inorder();
+
+    return 0;
+}

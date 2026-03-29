@@ -1,6 +1,9 @@
 mod assign;
 
-use crate::ast::Types;
+use crate::{
+    ast::Types,
+    error::{SemanticError, Span},
+};
 pub use assign::*;
 use indexmap::IndexMap;
 
@@ -74,6 +77,15 @@ impl TypedExpr {
             TypedExpr::FieldAccess(TypedFieldAccess { field_type, .. }) => field_type.clone(),
             TypedExpr::ArrayIndex(TypedArrayIndex { typ, .. }) => typ.get_array_elem_type(),
             TypedExpr::Null(typ) => typ.clone(),
+        }
+    }
+
+    pub fn get_deref_type(&self, span: Span) -> Result<Types, SemanticError> {
+        let typ = self.get_type();
+        if let Types::Pointer(inner) = typ {
+            Ok(*inner)
+        } else {
+            Err(SemanticError::invalid_dereference(typ.to_string(), span))
         }
     }
 }

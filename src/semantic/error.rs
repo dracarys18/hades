@@ -165,6 +165,13 @@ impl SemanticError {
         }
     }
 
+    pub fn invalid_dereference(typ: String, span: Span) -> Self {
+        Self {
+            message: format!("Cannot dereference type {}", typ),
+            span,
+        }
+    }
+
     pub fn into_error(self) -> Error {
         Error::new_with_span(self.message, self.span)
     }

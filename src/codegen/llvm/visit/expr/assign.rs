@@ -26,12 +26,14 @@ impl<'a> Assignment<'a> {
             TypedAssignTarget::FieldAccess(field) => {
                 let symbols = ctx.symbols();
 
-                let struct_ptr = match field.expr.as_ref() {
+                let raw_ptr = match field.expr.as_ref() {
                     crate::typed_ast::TypedExpr::Ident { ident, .. } => {
                         ctx.get_variable(ident)?.value()
                     }
                     other => ctx.get_ptr(other)?,
                 };
+
+                let struct_ptr = ctx.deref_if_pointer(raw_ptr, &field.expr.get_type())?;
 
                 let struct_type = ctx
                     .type_converter()

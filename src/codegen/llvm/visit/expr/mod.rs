@@ -25,7 +25,7 @@ pub use unary::UnaryOp;
 pub use variable::VariableAccess;
 
 impl<'ctx> LLVMContext<'ctx> {
-    fn deref_if_pointer(
+    pub(crate) fn deref_if_pointer(
         &mut self,
         raw_ptr: PointerValue<'ctx>,
         expr_type: &Types,
@@ -89,6 +89,24 @@ impl<'ctx> LLVMContext<'ctx> {
             }
             .map_err(|_| CodegenError::LLVMBuild {
                 message: "Failed to create struct field lval pointer".to_string(),
+            });
+        }
+        if let TypedExpr::ArrayIndex(index) = expr {
+            let array_ptr = self.get_ptr(&index.expr)?;
+            let index_value = index.index.visit(self)?;
+            let symbols = self.symbols();
+            let array_type = self.type_converter().to_llvm_type(&index.typ, symbols)?;
+            let zero = self.context().i32_type().const_zero();
+            return unsafe {
+                self.builder().build_in_bounds_gep(
+                    array_type,
+                    array_ptr,
+                    &[zero, index_value.value()?.into_int_value()],
+                    "array_elem_ptr",
+                )
+            }
+            .map_err(|_| CodegenError::LLVMBuild {
+                message: "Failed to create array element lval pointer".to_string(),
             });
         }
         expr.visit(self).and_then(|val| {

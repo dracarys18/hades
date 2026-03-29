@@ -226,6 +226,10 @@ impl Parser {
                     let inner = self.expect_type()?;
                     Ok(Types::Pointer(Box::new(inner)))
                 }
+                TokenKind::And => {
+                    let inner = self.expect_type()?;
+                    Ok(Types::Pointer(Box::new(Types::Pointer(Box::new(inner)))))
+                }
                 _ => {
                     let span = tok.span().into_range();
                     Err(ParseError::unexpected_token(
@@ -779,7 +783,7 @@ impl Parser {
 
     fn parse_array_index(&mut self, name: Ident) -> ParseResult<Expr> {
         self.expect(&TokenKind::LeftBracket)?;
-        let index_expr = self.parse_primary_with_flags(false)?;
+        let index_expr = self.parse_assignment()?;
         self.expect(&TokenKind::RightBracket)?;
 
         Ok(Expr::ArrayIndex(ArrayIndexExpr {
@@ -1002,7 +1006,7 @@ impl Parser {
                 }
                 Some(tok) if token_matches!(tok, TokenKind::LeftBracket) => {
                     self.next();
-                    let index_expr = self.parse_primary_with_flags(false)?;
+                    let index_expr = self.parse_assignment()?;
                     self.expect(&TokenKind::RightBracket)?;
                     expr = Expr::ArrayIndex(ArrayIndexExpr {
                         expr: Box::new(expr),

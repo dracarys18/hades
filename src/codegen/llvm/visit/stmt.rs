@@ -227,8 +227,13 @@ impl Visit for TypedFuncDef {
                 crate::tokens::ParamKind::Self_(_) => {
                     let typ = signature
                         .receiver()
-                        .expect("Self_ param but no receiver on signature");
-                    context.declare_variable(name, param_val.into_pointer_value(), typ)?;
+                        .expect("Self_ param but no receiver on signature")
+                        .typ;
+                    let symbols = context.symbols();
+                    let llvm_type = context.type_converter().to_llvm_type(&typ, symbols)?;
+                    let alloca = context.create_alloca(name.inner(), llvm_type)?;
+                    context.create_store(alloca, param_val)?;
+                    context.declare_variable(name, alloca, typ)?;
                 }
                 crate::tokens::ParamKind::Ident(_) => {
                     let typ = declared_type.clone();

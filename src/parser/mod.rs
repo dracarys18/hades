@@ -300,7 +300,7 @@ impl Parser {
 
         Ok(Stmt::FuncDef(FuncDef {
             name,
-            parent_struct: None,
+            receiver: None,
             params,
             return_type,
             body: Block::new(body.into(), span.clone()),
@@ -577,7 +577,21 @@ impl Parser {
             match field.kind() {
                 TokenKind::Fn => {
                     let mut func = self.parse_function_def()?.unwrap_func_def();
-                    func.parent_struct = Some(struct_name.clone());
+                    let kind = func
+                        .params
+                        .iter()
+                        .find(|(k, _)| matches!(k, ParamKind::Self_(_)))
+                        .map_or(ReceiverKind::Value, |(_, t)| {
+                            if matches!(t, Types::Pointer(_)) {
+                                ReceiverKind::Pointer
+                            } else {
+                                ReceiverKind::Value
+                            }
+                        });
+                    func.receiver = Some(Receiver {
+                        struct_name: struct_name.clone(),
+                        kind,
+                    });
                     let key = func.name.to_ident();
                     fields.insert(key, FieldKind::Func(func));
                 }

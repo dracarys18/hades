@@ -11,6 +11,18 @@ use indexmap::IndexMap;
 
 use super::expr::Expr;
 
+#[derive(Clone, PartialEq, Debug)]
+pub enum ReceiverKind {
+    Value,
+    Pointer,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct Receiver {
+    pub struct_name: Ident,
+    pub kind: ReceiverKind,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Block {
     pub stmts: Program,
@@ -84,7 +96,7 @@ pub enum FieldKind {
 #[derive(Clone, PartialEq, Debug)]
 pub struct FuncDef {
     pub name: FunctionName,
-    pub parent_struct: Option<Ident>,
+    pub receiver: Option<Receiver>,
     pub params: Vec<(ParamKind, Types)>,
     pub return_type: Types,
     pub body: Block,

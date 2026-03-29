@@ -114,6 +114,7 @@ impl Types {
         match self {
             Types::Struct(name) => name,
             Types::Array(ArrayType::StructArray(_, name)) => name,
+            Types::Pointer(inner) => inner.unwrap_struct_name(),
             _ => panic!("Expected a Struct type"),
         }
     }

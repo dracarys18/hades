@@ -1,0 +1,38 @@
+struct List {
+    item: int,
+    next: &List,
+
+    fn get_next(self: &Self): &List {
+        return self.next;
+    }
+
+    fn insert(self: &Self, new: &List) {
+        let cur: &List = self;
+        while (cur.get_next() != null) {
+            cur = cur.get_next();
+        }
+        cur.next = new;
+    }
+
+    fn print(self: &Self) {
+        let cur: &List = self;
+        while (cur.get_next() != null) {
+            printf("%d ", cur.item);
+            cur = cur.get_next();
+        }
+        printf("%d\n", cur.item);
+    }
+}
+
+fn main(): int {
+    let head = List {item: 0, next: null};
+    let new1 = List {item: 1, next: null};
+    let new2 = List {item: 2, next: null};
+
+    head.insert(&new1);
+    head.insert(&new2);
+
+    head.print();
+
+    return 0;
+}

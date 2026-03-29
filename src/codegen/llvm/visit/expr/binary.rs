@@ -5,9 +5,9 @@ use crate::codegen::traits::Visit;
 use crate::error::Span;
 use crate::tokens::Op;
 use crate::typed_ast::TypedExpr;
-use inkwell::values::{BasicValueEnum, FloatValue, IntValue};
 use inkwell::FloatPredicate;
 use inkwell::IntPredicate;
+use inkwell::values::{BasicValueEnum, FloatValue, IntValue};
 
 pub struct BinaryOp<'a> {
     pub left: &'a TypedExpr,
@@ -58,6 +58,45 @@ impl<'a> Visit for BinaryOp<'a> {
                 right_val.value()?.into_int_value(),
                 context,
             )?,
+            (Types::Pointer(_), Types::Pointer(_)) => {
+                let i64_type = context.context().i64_type();
+                let lhs_int = context
+                    .builder()
+                    .build_ptr_to_int(
+                        left_val.value()?.into_pointer_value(),
+                        i64_type,
+                        "ptr_to_int_l",
+                    )
+                    .map_err(|e| CodegenError::LLVMBuild {
+                        message: format!("ptr_to_int left failed: {:?}", e),
+                    })?;
+                let rhs_int = context
+                    .builder()
+                    .build_ptr_to_int(
+                        right_val.value()?.into_pointer_value(),
+                        i64_type,
+                        "ptr_to_int_r",
+                    )
+                    .map_err(|e| CodegenError::LLVMBuild {
+                        message: format!("ptr_to_int right failed: {:?}", e),
+                    })?;
+                let pred = match self.op {
+                    Op::Eq | Op::EqualEqual => IntPredicate::EQ,
+                    Op::Ne | Op::BangEqual => IntPredicate::NE,
+                    _ => {
+                        return Err(CodegenError::LLVMBuild {
+                            message: format!("Unsupported pointer comparison op: {:?}", self.op),
+                        });
+                    }
+                };
+                context
+                    .builder()
+                    .build_int_compare(pred, lhs_int, rhs_int, "ptrcmp")
+                    .map_err(|e| CodegenError::LLVMBuild {
+                        message: format!("pointer compare failed: {:?}", e),
+                    })?
+                    .into()
+            }
             _ => {
                 return Err(CodegenError::TypeMismatch {
                     expected: format!("{:?}", left_typ),

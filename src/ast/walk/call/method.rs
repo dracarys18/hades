@@ -9,9 +9,8 @@ impl WalkAst for MethodCall {
 
     fn walk(&self, ctx: &mut CompilerContext, span: Span) -> Result<Self::Output, SemanticError> {
         let typed_receiver = self.receiver.walk(ctx, span.clone())?;
-        let mangled = self
-            .func
-            .mangle(typed_receiver.get_type().unwrap_struct_name());
+        let receiver_type = typed_receiver.get_type();
+        let mangled = self.func.mangle(receiver_type.unwrap_struct_name());
         let resolved = ctx
             .module_name()
             .map(|m| mangled.full_name(m))

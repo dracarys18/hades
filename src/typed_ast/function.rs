@@ -1,9 +1,16 @@
 use super::builtins::BUILTIN_FUNCTIONS;
-use crate::ast::Types;
+use crate::ast::{ReceiverKind, Types};
 use crate::consts::MAX_FUNCTION_PARAMS;
 use crate::error::SemanticError;
 use crate::tokens::{FunctionName, Ident, ParamKind};
 use indexmap::IndexMap;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedReceiver {
+    pub struct_name: Ident,
+    pub kind: ReceiverKind,
+    pub typ: Types,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Params {
@@ -50,7 +57,7 @@ impl Params {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionSignature {
-    pub receiver: Option<Types>,
+    pub receiver: Option<TypedReceiver>,
     pub params: Params,
     pub return_type: Types,
 }
@@ -59,7 +66,7 @@ impl FunctionSignature {
     pub fn new(
         params: IndexMap<ParamKind, Types>,
         return_type: Types,
-        receiver: Option<Types>,
+        receiver: Option<TypedReceiver>,
     ) -> Self {
         Self {
             params: Params::Fixed(params),
@@ -108,7 +115,7 @@ impl FunctionSignature {
         &self.return_type
     }
 
-    pub fn receiver(&self) -> Option<Types> {
+    pub fn receiver(&self) -> Option<TypedReceiver> {
         self.receiver.clone()
     }
 }

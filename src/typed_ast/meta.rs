@@ -1,11 +1,11 @@
 use crate::error::SemanticError;
 use crate::module::ModulePath;
 use crate::typed_ast::{
+    TypedFieldKind,
     function::{FunctionSignature, Functions},
     ident::IdentMap,
     signatures::ModuleSignatures,
     struc::{Field, Structs},
-    TypedFieldKind,
 };
 
 use crate::ast::Types;
@@ -161,6 +161,11 @@ impl CompilerContext {
                 | (Types::String, Types::String)
                 | (Types::Bool, Types::Bool) => Ok(Types::Bool),
                 (Types::Int, Types::Float) | (Types::Float, Types::Int) => Ok(Types::Bool),
+                (Types::Pointer(_), Types::Pointer(_))
+                    if matches!(op, Op::Eq | Op::Ne | Op::EqualEqual | Op::BangEqual) =>
+                {
+                    Ok(Types::Bool)
+                }
                 _ => Err(SemanticError::invalid_binary_operation(
                     left.to_string().to_string(),
                     format!("{op:?}"),

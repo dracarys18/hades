@@ -48,8 +48,6 @@ impl WalkAst for StructDef {
             .map(|(k, v)| Ok((k.clone(), v.walk(ctx, span.clone())?)))
             .collect::<Result<IndexMap<_, _>, _>>()?;
 
-        ctx.insert_struct(name.clone(), fields.clone());
-
         Ok(TypedStructDef {
             name,
             fields,

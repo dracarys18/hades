@@ -1,14 +1,14 @@
 use crate::ast::Types;
+use crate::codegen::VisitOptions;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
-use crate::codegen::VisitOptions;
 use crate::tokens::Op;
 use crate::typed_ast::{
     TypedArrayIndex, TypedAssignExpr, TypedBinaryExpr, TypedExpr, TypedFieldAccess,
 };
-use inkwell::values::PointerValue;
 use inkwell::AddressSpace;
+use inkwell::values::PointerValue;
 
 pub mod assign;
 pub mod binary;

@@ -13,7 +13,7 @@ pub use expr::{
     TypedArrayIndex, TypedAssignExpr, TypedAssignTarget, TypedBinaryExpr, TypedExpr,
     TypedFieldAccess,
 };
-pub use function::{FunctionSignature, Params};
+pub use function::{FunctionSignature, Params, TypedReceiver};
 pub use meta::CompilerContext;
 pub use signatures::ModuleSignatures;
 pub use value::{TypedArrayLiteral, TypedValue};

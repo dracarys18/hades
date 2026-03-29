@@ -191,7 +191,7 @@ impl WalkAst for BinaryExpr {
     type Output = TypedBinaryExpr;
     fn walk(&self, ctx: &mut CompilerContext, span: Span) -> Result<Self::Output, SemanticError> {
         let left = self.left.walk(ctx, span.clone())?;
-        let right = self.right.walk(ctx, span.clone())?;
+        let right = walk_possibly_null(&self.right, Some(left.get_type()), ctx, span.clone())?;
         ctx.infer_binary_type(&left.get_type(), &self.op, &right.get_type(), span)
             .map(|typ| TypedBinaryExpr {
                 left: Box::new(left),

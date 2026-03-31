@@ -15,6 +15,7 @@ impl Visit for TypedValue {
             TypedValue::Float(val) => generate_float_value(*val, context),
             TypedValue::Boolean(val) => generate_bool_value(*val, context),
             TypedValue::String(val) => generate_string_value(val, context),
+            TypedValue::Char(val) => generate_int_value(*val as i64, context),
             TypedValue::Array(val) => val.visit(context),
         }
     }

@@ -7,6 +7,7 @@ pub enum TypedValue {
     Float(f64),
     Boolean(bool),
     String(String),
+    Char(char),
     Array(TypedArrayLiteral),
 }
 
@@ -17,6 +18,7 @@ impl TypedValue {
             Self::Float(_) => Types::Float,
             Self::Boolean(_) => Types::Bool,
             Self::String(_) => Types::String,
+            Self::Char(_) => Types::Char,
             Self::Array(arr) => arr.elem_typ.clone(),
         }
     }

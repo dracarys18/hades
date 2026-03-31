@@ -17,6 +17,7 @@ impl WalkAst for Value {
             Self::String(s) => TypedValue::String(s.clone()),
             Self::Boolean(b) => TypedValue::Boolean(*b),
             Self::Array(a) => TypedValue::Array(a.walk(ctx, span)?),
+            Self::Char(c) => TypedValue::Char(*c),
         })
     }
 }

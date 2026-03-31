@@ -9,6 +9,7 @@ pub enum ArrayType {
     BoolArray(usize),
     StructArray(usize, Ident),
     PointerArray(usize, Box<Types>),
+    CharArray(usize),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -17,6 +18,7 @@ pub enum Types {
     Float,
     Bool,
     String,
+    Char,
     Void,
     Generic(Vec<Types>),
     Array(ArrayType),
@@ -42,7 +44,9 @@ impl std::fmt::Display for Types {
                 ArrayType::BoolArray(size) => write!(f, "bool[{size}]"),
                 ArrayType::StructArray(size, name) => write!(f, "struct {name}[{size}]"),
                 ArrayType::PointerArray(size, inner) => write!(f, "&{inner}[{size}]"),
+                ArrayType::CharArray(size) => write!(f, "char[{size}]"),
             },
+            Types::Char => write!(f, "char"),
             Types::Self_ => write!(f, "self"),
             Types::Pointer(inner) => write!(f, "&{inner}"),
         }
@@ -57,9 +61,12 @@ impl Types {
             "bool" => Types::Bool,
             "string" => Types::String,
             "void" => Types::Void,
+            "char" => Types::Char,
             "[]int" => Types::Array(ArrayType::IntArray(0)),
             "[]float" => Types::Array(ArrayType::FloatArray(0)),
             "[]string" => Types::Array(ArrayType::FloatArray(0)),
+            "[]char" => Types::Array(ArrayType::CharArray(0)),
+            "[]bool" => Types::Array(ArrayType::BoolArray(0)),
             _ => Types::Struct(type_str.to_owned()),
         }
     }
@@ -72,6 +79,7 @@ impl Types {
             Self::Bool => ArrayType::BoolArray(size),
             Self::Struct(name) => ArrayType::StructArray(size, name.to_owned()),
             Self::Pointer(_) => ArrayType::PointerArray(size, Box::new(self.clone())),
+            Self::Char => ArrayType::CharArray(size),
             _ => unimplemented!("Array type for {:?} is not implemented yet", self),
         }
     }
@@ -85,6 +93,7 @@ impl Types {
                 ArrayType::BoolArray(size) => *size,
                 ArrayType::StructArray(size, _) => *size,
                 ArrayType::PointerArray(size, _) => *size,
+                ArrayType::CharArray(size) => *size,
             }
         } else {
             panic!("Expected an Array type")
@@ -100,6 +109,7 @@ impl Types {
                 ArrayType::BoolArray(_) => Types::Bool,
                 ArrayType::StructArray(_, name) => Types::Struct(name.to_owned()),
                 ArrayType::PointerArray(_, inner) => *inner.clone(),
+                ArrayType::CharArray(_) => Types::Char,
             }
         } else {
             panic!("Expected an Array type")

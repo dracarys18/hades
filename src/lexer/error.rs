@@ -59,6 +59,15 @@ impl LexError {
             .with_help("Use valid escape sequences like \\n, \\t, \\\\, or \\\"".to_string()),
         ))
     }
+    pub fn unterminated_char(span: Range<usize>, source_id: String) -> Self {
+        Self(Box::new(
+            Error::new_with_span(
+                "Unterminated character literal".to_string(),
+                Span::new(PathBuf::from(source_id), span.start, span.end),
+            )
+            .with_help("Add a closing quote '\\'' to complete the character literal".to_string()),
+        ))
+    }
 }
 
 impl std::ops::Deref for LexError {

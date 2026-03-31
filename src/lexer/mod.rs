@@ -124,6 +124,68 @@ impl Lexer {
         }
     }
 
+    fn parse_char(&mut self) -> LexResult<()> {
+        if self.peek_and_check(b'\'') {
+            let start_pos = self.pos;
+            self.move_next();
+
+            let ch = match self.peek() {
+                Some(ch) if ch.eq(&b'\\') => {
+                    self.move_next();
+                    match self.peek() {
+                        Some(ch) if ch.eq(&b'n') => {
+                            self.move_next();
+                            '\n'
+                        }
+                        Some(ch) if ch.eq(&b't') => {
+                            self.move_next();
+                            '\t'
+                        }
+                        Some(ch) if ch.eq(&b'\'') => {
+                            self.move_next();
+                            '\''
+                        }
+                        Some(ch) if ch.eq(&b'\\') => {
+                            self.move_next();
+                            '\\'
+                        }
+                        Some(ch) => {
+                            self.move_next();
+                            ch.as_char()
+                        }
+                        None => {
+                            let span = start_pos..self.pos;
+                            return Err(LexError::unterminated_char(span, self.source_id.clone()));
+                        }
+                    }
+                }
+                Some(c) => {
+                    self.move_next();
+                    c.as_char()
+                }
+                None => {
+                    let span = start_pos..self.pos;
+                    return Err(LexError::unterminated_char(span, self.source_id.clone()));
+                }
+            };
+
+            if !self.peek_and_check(b'\'') {
+                let span = start_pos..self.pos;
+                return Err(LexError::unterminated_char(span, self.source_id.clone()));
+            }
+
+            self.move_next();
+
+            self.push_token(tok!(
+                &self.source_id,
+                TokenKind::Char(ch),
+                start_pos,
+                self.pos
+            ));
+        }
+        Ok(())
+    }
+
     fn parse_string(&mut self) -> LexResult<()> {
         if self.peek_and_check(b'"') {
             let start_pos = self.pos;
@@ -532,6 +594,7 @@ impl Lexer {
                 ch if ch.is_punctuation() => self.parse_punctuation(),
                 ch if ch.is_whitespace() => self.move_next(),
                 ch if ch.is_string_start() => self.parse_string()?,
+                ch if ch.is_char_start() => self.parse_char()?,
                 _ => {
                     let span = self.pos..self.pos + 1;
                     return Err(LexError::unexpected_character(

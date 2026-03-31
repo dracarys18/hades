@@ -130,35 +130,6 @@ impl Lexer {
             self.move_next();
 
             let ch = match self.peek() {
-                Some(ch) if ch.eq(&b'\\') => {
-                    self.move_next();
-                    match self.peek() {
-                        Some(ch) if ch.eq(&b'n') => {
-                            self.move_next();
-                            '\n'
-                        }
-                        Some(ch) if ch.eq(&b't') => {
-                            self.move_next();
-                            '\t'
-                        }
-                        Some(ch) if ch.eq(&b'\'') => {
-                            self.move_next();
-                            '\''
-                        }
-                        Some(ch) if ch.eq(&b'\\') => {
-                            self.move_next();
-                            '\\'
-                        }
-                        Some(ch) => {
-                            self.move_next();
-                            ch.as_char()
-                        }
-                        None => {
-                            let span = start_pos..self.pos;
-                            return Err(LexError::unterminated_char(span, self.source_id.clone()));
-                        }
-                    }
-                }
                 Some(c) => {
                     self.move_next();
                     c.as_char()

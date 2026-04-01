@@ -1,0 +1,8 @@
+a.val: 10
+b.val: 20
+c.val: 30
+(*pa).val: 10
+(*pb).val: 20
+(*pc).val: 10
+(*pa).val after write: 99
+self-referential struct test passed

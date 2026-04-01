@@ -1,0 +1,7 @@
+*p = 42
+*q = 42
+*r = 100
+*s = 42
+after *p = 99, *p = 99
+after *p += 1, *p = 100
+pointer test passed

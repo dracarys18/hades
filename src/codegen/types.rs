@@ -29,6 +29,7 @@ impl<'ctx> TypeConverter<'ctx> {
             Types::Float => self.context.f64_type().into(),
             Types::Bool => self.context.bool_type().into(),
             Types::String => self.context.ptr_type(AddressSpace::default()).into(),
+            Types::Char => self.context.i8_type().into(),
             Types::Struct(name) => self.convert_struct_type(name, compiler_ctx)?.into(),
             Types::Void => {
                 return Err(CodegenError::TypeConversion {
@@ -55,6 +56,11 @@ impl<'ctx> TypeConverter<'ctx> {
                 }
                 ArrayType::BoolArray(size) => {
                     let elem_type = self.context.bool_type();
+                    let array_type = elem_type.array_type(*size as u32);
+                    array_type.into()
+                }
+                ArrayType::CharArray(size) => {
+                    let elem_type = self.context.i8_type();
                     let array_type = elem_type.array_type(*size as u32);
                     array_type.into()
                 }

@@ -16,6 +16,7 @@ pub static BUILTIN_FUNCTIONS: Lazy<IndexMap<Ident, FunctionSignature>> = Lazy::n
                     Types::Array(ArrayType::FloatArray(0)),
                     Types::Array(ArrayType::StringArray(0)),
                     Types::Array(ArrayType::BoolArray(0)),
+                    Types::Array(ArrayType::CharArray(0)),
                 ]),
             },
             Types::Int,

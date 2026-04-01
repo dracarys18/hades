@@ -75,6 +75,7 @@ pub enum TokenKind {
     // Literals.
     Ident(Ident),
     String(String),
+    Char(char),
     Number(i64),
     Float(f64),
     // Keywords.
@@ -158,6 +159,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Self_ => write!(f, "self"),
             TokenKind::DoubleColon => write!(f, "::"),
             TokenKind::Null => write!(f, "null"),
+            TokenKind::Char(c) => write!(f, "'{c}'"),
         }
     }
 }

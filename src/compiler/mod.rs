@@ -114,7 +114,7 @@ impl<'a> Compiler {
         let mut lexer = lexer::Lexer::new(source_trimmed.as_bytes(), filename.to_string());
         lexer
             .tokenize()
-            .map_err(|err| eprintln!("{err}"))
+            .map_err(|err| eprintln!("{err:?}"))
             .expect("Tokenizing failed");
 
         let mut parser = parser::Parser::new(lexer.into_tokens(), filename.to_string());

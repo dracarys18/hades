@@ -131,6 +131,10 @@ impl Byte {
     pub fn is_string_start(&self) -> bool {
         self.needle == b'"'
     }
+
+    pub fn is_char_start(&self) -> bool {
+        self.needle == b'\''
+    }
 }
 
 #[repr(transparent)]

@@ -6,6 +6,7 @@ pub enum Value {
     Float(f64),
     Boolean(bool),
     String(String),
+    Char(char),
     Array(ArrayLiteral),
 }
 

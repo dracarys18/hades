@@ -811,6 +811,7 @@ impl Parser {
                 TokenKind::Number(n) => Ok(Expr::Value(Value::Number(*n))),
                 TokenKind::Float(f) => Ok(Expr::Value(Value::Float(*f))),
                 TokenKind::String(s) => Ok(Expr::Value(Value::String(s.clone()))),
+                TokenKind::Char(c) => Ok(Expr::Value(Value::Char(*c))),
                 TokenKind::True => Ok(Expr::Value(Value::Boolean(true))),
                 TokenKind::False => Ok(Expr::Value(Value::Boolean(false))),
                 TokenKind::Null => Ok(Expr::Null),

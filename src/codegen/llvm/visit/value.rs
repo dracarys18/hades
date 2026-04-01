@@ -15,7 +15,7 @@ impl Visit for TypedValue {
             TypedValue::Float(val) => generate_float_value(*val, context),
             TypedValue::Boolean(val) => generate_bool_value(*val, context),
             TypedValue::String(val) => generate_string_value(val, context),
-            TypedValue::Char(val) => generate_int_value(*val as i64, context),
+            TypedValue::Char(val) => generate_single_byte_value(*val as u8, context),
             TypedValue::Array(val) => val.visit(context),
         }
     }
@@ -116,6 +116,14 @@ fn generate_int_value<'ctx>(
 ) -> CodegenResult<CodegenValue<'ctx>> {
     let llvm_val = context.context().i64_type().const_int(val as u64, false);
     Ok(CodegenValue::new(llvm_val.into(), Types::Int))
+}
+
+fn generate_single_byte_value<'ctx>(
+    val: u8,
+    context: &mut LLVMContext<'ctx>,
+) -> CodegenResult<CodegenValue<'ctx>> {
+    let llvm_val = context.context().i8_type().const_int(val as u64, false);
+    Ok(CodegenValue::new(llvm_val.into(), Types::Char))
 }
 
 fn generate_float_value<'ctx>(

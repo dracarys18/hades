@@ -80,6 +80,7 @@ impl WalkAst for Expr {
             },
             Expr::FieldAccess(field) => field.walk(ctx, span).map(TypedExpr::FieldAccess),
             Expr::ArrayIndex(index) => index.walk(ctx, span).map(TypedExpr::ArrayIndex),
+            Expr::As(as_expr) => as_expr.walk(ctx, span).map(TypedExpr::As),
         }
     }
 }

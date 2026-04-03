@@ -10,6 +10,7 @@ use crate::typed_ast::{
 use inkwell::AddressSpace;
 use inkwell::values::PointerValue;
 
+pub mod asexpr;
 pub mod assign;
 pub mod binary;
 pub mod call;
@@ -177,6 +178,7 @@ impl Visit for TypedExpr {
                     .const_null();
                 Ok(CodegenValue::new(ptr.into(), typ.clone()))
             }
+            Self::As(as_expr) => as_expr.visit(context),
         }
     }
 }

@@ -1,7 +1,7 @@
 use crate::codegen::VisitOptions;
 use crate::tokens::Ident;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ArrayType {
     IntArray(usize),
     FloatArray(usize),
@@ -12,7 +12,7 @@ pub enum ArrayType {
     CharArray(usize),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Types {
     Int,
     Float,

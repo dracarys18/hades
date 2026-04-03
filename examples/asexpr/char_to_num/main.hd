@@ -1,0 +1,10 @@
+fn main(): int {
+    let c: char = 'A';
+    let i = c as int;
+    printf("%d\n", i);
+
+    let f = c as float;
+    printf("%f\n", f);
+
+    return 0;
+}

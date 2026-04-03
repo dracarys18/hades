@@ -706,6 +706,18 @@ impl Parser {
             });
         }
 
+        if self
+            .peek()
+            .is_some_and(|tok| token_matches!(tok, TokenKind::As))
+        {
+            self.next();
+            let target_type = self.expect_type()?;
+            left = Expr::As(AsExpression {
+                expr: Box::new(left),
+                target_type,
+            });
+        }
+
         Ok(left)
     }
 

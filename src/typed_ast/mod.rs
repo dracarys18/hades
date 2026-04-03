@@ -10,8 +10,8 @@ mod value;
 
 pub use ast::*;
 pub use expr::{
-    TypedArrayIndex, TypedAssignExpr, TypedAssignTarget, TypedBinaryExpr, TypedExpr,
-    TypedFieldAccess,
+    TypedArrayIndex, TypedAsExpression, TypedAssignExpr, TypedAssignTarget, TypedBinaryExpr,
+    TypedExpr, TypedFieldAccess,
 };
 pub use function::{FunctionSignature, Params, TypedReceiver};
 pub use meta::CompilerContext;

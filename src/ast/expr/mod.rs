@@ -49,6 +49,12 @@ pub enum CallKind {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct AsExpression {
+    pub expr: Box<Expr>,
+    pub target_type: Types,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Value(Value),
     Ident(Ident),
@@ -63,6 +69,7 @@ pub enum Expr {
         expr: Box<Expr>,
     },
     Assign(AssignExpr),
+    As(AsExpression),
     FieldAccess(FieldAccessExpr),
     Call(CallKind),
     Null,

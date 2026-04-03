@@ -30,6 +30,7 @@ static KEYWORDS: phf::Map<&'static str, TokenKind> = phf_map! {
     "std" => TokenKind::Std,
     "self" => TokenKind::Self_,
     "null" => TokenKind::Null,
+    "as" => TokenKind::As,
 };
 
 pub struct Lexer {

@@ -175,6 +175,13 @@ impl SemanticError {
     pub fn into_error(self) -> Error {
         Error::new_with_span(self.message, self.span)
     }
+
+    pub fn invalid_type_cast(source: String, target: String, span: Span) -> Self {
+        Self {
+            message: format!("Cannot cast type {} to {}", source, target),
+            span,
+        }
+    }
 }
 
 impl std::fmt::Display for SemanticError {

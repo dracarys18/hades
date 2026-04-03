@@ -31,6 +31,7 @@ pub enum TypedExpr {
     FieldAccess(TypedFieldAccess),
     ArrayIndex(TypedArrayIndex),
     Assign(TypedAssignExpr),
+    As(TypedAsExpression),
     Call {
         func: FunctionName,
         args: Vec<TypedExpr>,
@@ -64,6 +65,12 @@ pub struct TypedArrayIndex {
     pub typ: Types,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedAsExpression {
+    pub expr: Box<TypedExpr>,
+    pub target_type: Types,
+}
+
 impl TypedExpr {
     pub fn get_type(&self) -> Types {
         match self {
@@ -76,6 +83,7 @@ impl TypedExpr {
             TypedExpr::Call { typ, .. } => typ.clone(),
             TypedExpr::FieldAccess(TypedFieldAccess { field_type, .. }) => field_type.clone(),
             TypedExpr::ArrayIndex(TypedArrayIndex { typ, .. }) => typ.get_array_elem_type(),
+            TypedExpr::As(TypedAsExpression { target_type, .. }) => target_type.clone(),
             TypedExpr::Null(typ) => typ.clone(),
         }
     }

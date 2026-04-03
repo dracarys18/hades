@@ -1,0 +1,5 @@
+fn main(): int {
+    let i: int = 65;
+    let c = i as char;
+    return 0;
+}

@@ -101,6 +101,7 @@ pub enum TokenKind {
     Self_,
     DoubleColon,
     Null,
+    As,
 }
 
 impl std::fmt::Display for TokenKind {
@@ -160,6 +161,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::DoubleColon => write!(f, "::"),
             TokenKind::Null => write!(f, "null"),
             TokenKind::Char(c) => write!(f, "'{c}'"),
+            TokenKind::As => write!(f, "as"),
         }
     }
 }

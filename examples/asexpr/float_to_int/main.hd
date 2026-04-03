@@ -1,0 +1,10 @@
+fn main(): int {
+    let f: float = 3.7;
+    let i = f as int;
+    printf("%d\n", i);
+
+    let truncated = 9.99 as int;
+    printf("%d\n", truncated);
+
+    return 0;
+}

@@ -13,6 +13,7 @@
   "import"
   "module"
   "struct"
+  "as"
 ] @keyword
 
 ; self as keyword (in parameter position)
@@ -38,8 +39,13 @@
   "bool"
   "void"
   "string"
+  "char"
   "Self"
 ] @type.builtin
+
+; Cast target type in as_expression
+(as_expression
+  target_type: _ @type.builtin)
 
 ; Array type — size literal inside [N]
 (array_type (number) @number)

@@ -14,6 +14,12 @@ export default grammar({
     /\s/,
     $.comment
   ],
+  conflicts: $ => [
+    [$._call_arg, $.expression],
+    [$.as_expression, $.expression],
+    [$._expr_value, $.expression],
+    [$.unary_expression, $.deref_expr],
+  ],
   rules: {
     source_file: $ => repeat($._definition),
 
@@ -79,6 +85,7 @@ export default grammar({
     ),
 
     _expr_value: $ => choice(
+      $.as_expression,
       $.expression,
       $.array_index,
       $.field_access,
@@ -89,6 +96,22 @@ export default grammar({
       $.value_literal,
       $.structInit,
       $.deref_expr
+    ),
+
+    as_expression: $ => seq(
+      field('expr', choice(
+        $.expression,
+        $.array_index,
+        $.field_access,
+        $.method_call_expr,
+        $.qualified_call_expr,
+        $.function_call_expr,
+        $.identifier,
+        $.value_literal,
+        $.deref_expr
+      )),
+      'as',
+      field('target_type', $._base_type)
     ),
 
     parameter_list: $ => seq(
@@ -161,6 +184,7 @@ export default grammar({
       'float',
       'void',
       'string',
+      'char',
       'Self',
       $.identifier
     ),
@@ -178,6 +202,7 @@ export default grammar({
     ),
 
     _call_arg: $ => choice(
+      $.as_expression,
       $.expression,
       $.array_index,
       $.field_access,

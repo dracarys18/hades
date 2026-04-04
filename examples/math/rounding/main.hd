@@ -1,0 +1,10 @@
+fn main(): void {
+    let fl: float = floor(2.9);
+    let ce: float = ceil(2.1);
+    let tr: float = trunc(2.9);
+    let ro: float = round(2.5);
+    printf("%f\n", fl);
+    printf("%f\n", ce);
+    printf("%f\n", tr);
+    printf("%f\n", ro);
+}

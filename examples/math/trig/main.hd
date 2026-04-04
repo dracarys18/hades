@@ -1,0 +1,6 @@
+fn main(): void {
+    let s: float = sin(1.0);
+    let c: float = cos(0.0);
+    printf("%f\n", s);
+    printf("%f\n", c);
+}

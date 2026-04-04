@@ -1,0 +1,6 @@
+fn main(): void {
+    let p: float = pow(2.0, 10.0);
+    let pi: float = powi(2.0, 10);
+    printf("%f\n", p);
+    printf("%f\n", pi);
+}

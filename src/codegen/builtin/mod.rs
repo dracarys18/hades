@@ -1,5 +1,6 @@
 mod len;
 mod printf;
+mod trignometry;
 
 use super::context::LLVMContext;
 use super::error::CodegenResult as CResult;

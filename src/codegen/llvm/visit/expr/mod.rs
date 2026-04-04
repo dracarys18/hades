@@ -110,28 +110,20 @@ impl<'ctx> LLVMContext<'ctx> {
                 message: "Failed to create array element lval pointer".to_string(),
             });
         }
-        expr.visit(self).and_then(|val| {
-            val.value()?.try_into().or_else(|_| {
-                let symbols = self.symbols();
-                self.type_converter()
-                    .to_llvm_type(&val.unwrap_concrete()?.type_info(), symbols)
-                    .and_then(|t| {
-                        self.builder().build_alloca(t, "tmp_ptr").map_err(|e| {
-                            CodegenError::LLVMBuild {
-                                message: e.to_string(),
-                            }
-                        })
-                    })
-                    .and_then(|ptr| {
-                        self.builder()
-                            .build_store(ptr, val.value()?)
-                            .map_err(|e| CodegenError::LLVMBuild {
-                                message: e.to_string(),
-                            })
-                            .map(|_| ptr)
-                    })
-            })
-        })
+        let val = expr.visit(self)?;
+        if let Ok(ptr) = val.value()?.try_into() {
+            return Ok(ptr);
+        }
+        let type_info = val.unwrap_concrete()?.type_info();
+        let symbols = self.symbols();
+        let t = self.type_converter().to_llvm_type(&type_info, symbols)?;
+        let ptr = self.create_alloca("tmp_ptr", t)?;
+        self.builder()
+            .build_store(ptr, val.value()?)
+            .map_err(|e| CodegenError::LLVMBuild {
+                message: e.to_string(),
+            })?;
+        Ok(ptr)
     }
 }
 

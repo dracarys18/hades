@@ -126,13 +126,21 @@ impl<'ctx> LLVMContext<'ctx> {
         name: &str,
         ty: inkwell::types::BasicTypeEnum<'ctx>,
     ) -> CodegenResult<PointerValue<'ctx>> {
-        let alloca = self
-            .builder
-            .build_alloca(ty, name)
+        let func = self
+            .current_function()
+            .ok_or(CodegenError::AllocaOutsideFunction)?;
+        let entry_block = func
+            .get_first_basic_block()
+            .expect("function has no entry block");
+        let bx = self.context.create_builder();
+        match entry_block.get_first_instruction() {
+            Some(instr) => bx.position_before(&instr),
+            None => bx.position_at_end(entry_block),
+        }
+        bx.build_alloca(ty, name)
             .map_err(|_| CodegenError::LLVMBuild {
                 message: format!("Failed to create alloca for {}", name),
-            })?;
-        Ok(alloca)
+            })
     }
 
     pub fn create_load(

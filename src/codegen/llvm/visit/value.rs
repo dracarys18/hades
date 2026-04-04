@@ -31,7 +31,7 @@ impl Visit for TypedArrayLiteral {
         let elem_type = self.elem_typ.get_array_elem_type();
         let llvm_elem_type = context.type_converter().to_llvm_type(&elem_type, symbols)?;
 
-        let array_ptr = context.builder().build_alloca(array_type, "array")?;
+        let array_ptr = context.create_alloca("array", array_type)?;
 
         for (i, element) in self.elements.iter().enumerate() {
             let elem_value = element.visit(context)?;

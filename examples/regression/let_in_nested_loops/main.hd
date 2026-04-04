@@ -1,0 +1,11 @@
+fn main(): int {
+    let sum = 0;
+    for let i = 0; i < 100; i += 1 {
+        for let j = 0; j < 100; j += 1 {
+            let x = i + j;
+            sum = sum + x;
+        }
+    }
+    printf("%d\n", sum);
+    return 0;
+}

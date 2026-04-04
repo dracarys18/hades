@@ -1,0 +1,14 @@
+struct Point {
+    x: int,
+    y: int
+}
+
+fn main(): int {
+    let sum = 0;
+    for let i = 0; i < 1000; i += 1 {
+        let p = Point {x: i, y: i};
+        sum = sum + p.x;
+    }
+    printf("%d\n", sum);
+    return 0;
+}

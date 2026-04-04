@@ -33,6 +33,9 @@ pub enum CodegenError {
 
     #[error("Invalid struct field: {field} in struct {struct_name}")]
     InvalidField { field: String, struct_name: String },
+
+    #[error("Allocation not allowed outside a function")]
+    AllocaOutsideFunction,
 }
 
 impl From<BuilderError> for CodegenError {

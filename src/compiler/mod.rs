@@ -5,7 +5,7 @@ use ariadne::{Cache, Source};
 use inkwell::context::Context;
 use std::path::PathBuf;
 use std::{
-    collections::{HashMap, hash_map::Entry},
+    collections::{hash_map::Entry, HashMap},
     fmt, fs,
     path::Path,
 };
@@ -210,7 +210,7 @@ impl<'a> Compiler {
         for obj in &obj_paths {
             cmd.arg(obj);
         }
-        cmd.arg("-o").arg(output_path).arg("-lc");
+        cmd.arg("-o").arg(output_path).arg("-lc").arg("-lm");
 
         let status = match cmd.status() {
             Ok(s) => s,

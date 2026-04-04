@@ -3,7 +3,7 @@ use crate::ast::Types;
 use crate::error::Span;
 use crate::tokens::{Ident, ParamKind};
 use crate::typed_ast::function::FunctionSignature;
-use indexmap::{indexmap, IndexMap};
+use indexmap::{IndexMap, indexmap};
 use once_cell::sync::Lazy;
 
 pub static BUILTIN_FUNCTIONS: Lazy<IndexMap<Ident, FunctionSignature>> = Lazy::new(|| {

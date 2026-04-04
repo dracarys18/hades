@@ -6,10 +6,10 @@ use super::context::LLVMContext;
 use super::error::CodegenResult as CResult;
 use super::error::{CodegenResult, CodegenValue};
 use crate::typed_ast::TypedExpr;
-use indexmap::{indexmap, IndexMap};
+use indexmap::{IndexMap, indexmap};
 use inkwell::values::{AnyValueEnum, BasicMetadataValueEnum, FunctionValue};
 pub use len::Len;
-use math::{Ceil, Cos, Exp, Exp2, Floor, Log, Log10, Log2, Pow, Powi, Round, Sin, Sqrt, Trunc};
+use math::{Ceil, Cos, Exp, Exp2, Floor, Log, Log2, Log10, Pow, Powi, Round, Sin, Sqrt, Trunc};
 use once_cell::sync::Lazy;
 pub use printf::Printf;
 

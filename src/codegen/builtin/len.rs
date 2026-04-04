@@ -1,8 +1,8 @@
 use super::{CodegenValue, CompileTimeBuiltin};
 use crate::ast::Types;
 use crate::codegen::{
-    error::{CodegenError, CodegenResult},
     LLVMContext,
+    error::{CodegenError, CodegenResult},
 };
 use crate::typed_ast::TypedExpr;
 

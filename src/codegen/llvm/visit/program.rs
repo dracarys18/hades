@@ -3,8 +3,8 @@ use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::codegen::traits::{CodegenVisitor, Visit};
 use crate::typed_ast::{ModuleSignatures, TypedModule, TypedProgram};
 use inkwell::{
-    OptimizationLevel,
     targets::{CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine},
+    OptimizationLevel,
 };
 
 impl Visit for TypedProgram {

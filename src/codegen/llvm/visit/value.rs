@@ -2,9 +2,8 @@ use crate::ast::Types;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
-use crate::typed_ast::{TypedArrayLiteral, TypedValue};
+use crate::typed_ast::TypedValue;
 use inkwell::module::Linkage;
-use inkwell::values::BasicValueEnum;
 
 impl Visit for TypedValue {
     type Output<'ctx> = CodegenValue<'ctx>;
@@ -18,54 +17,6 @@ impl Visit for TypedValue {
             TypedValue::Char(val) => generate_single_byte_value(*val as u8, context),
             TypedValue::Array(val) => val.visit(context),
         }
-    }
-}
-
-impl Visit for TypedArrayLiteral {
-    type Output<'ctx> = CodegenValue<'ctx>;
-    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
-        let symbols = context.symbols();
-        let array_type = context
-            .type_converter()
-            .to_llvm_type(&self.elem_typ, symbols)?;
-        let elem_type = self.elem_typ.get_array_elem_type();
-        let llvm_elem_type = context.type_converter().to_llvm_type(&elem_type, symbols)?;
-
-        let array_ptr = context.create_alloca("array", array_type)?;
-
-        for (i, element) in self.elements.iter().enumerate() {
-            let elem_value = element.visit(context)?;
-            let actual_value = match (&elem_type, elem_value.value()?) {
-                // Pointer-typed arrays: the element IS the pointer value — store it directly.
-                (Types::Pointer(_), val) => val,
-                // String elements are pointers but represent the string value — store as-is.
-                (Types::String, val) => val,
-                // Other pointer values (e.g. alloca for a struct element) — load through.
-                (_, BasicValueEnum::PointerValue(ptr)) => {
-                    context.builder().build_load(llvm_elem_type, ptr, "elem")?
-                }
-                (_, val) => val,
-            };
-
-            let zero = context.context().i32_type().const_zero();
-            let index = context.context().i32_type().const_int(i as u64, false);
-            let elem_ptr = unsafe {
-                context.builder().build_in_bounds_gep(
-                    array_type,
-                    array_ptr,
-                    &[zero, index],
-                    "elem_ptr",
-                )?
-            };
-            context.builder().build_store(elem_ptr, actual_value)?;
-        }
-
-        Ok(CodegenValue::new(
-            context
-                .builder()
-                .build_load(array_type, array_ptr, "array_val")?,
-            self.elem_typ.clone(),
-        ))
     }
 }
 

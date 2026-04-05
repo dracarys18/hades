@@ -930,8 +930,9 @@ impl Parser {
                 }
             };
             self.expect(&TokenKind::RightBracket)?;
-            let elem = std::iter::repeat(first).take(count).collect::<Vec<_>>();
-            return Ok(Expr::Value(Value::Array(ArrayLiteral::new(elem))));
+            return Ok(Expr::Value(Value::Array(ArrayLiteral::new_fill(
+                first, count,
+            ))));
         }
 
         let mut elem = vec![first];

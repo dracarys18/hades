@@ -17,11 +17,16 @@ fn main(): int {
     };
 
     let arr = [p];
+    let arr2 = [Point {x: 1, y: 2}];
+    let arr3 = [p, Point {x: 5, y: 6}];
 
     io::printf("Basic field access: %d, %d\n", p.x, p.y);
     io::printf("Struct init field access: %d\n", Point {x: 42, y: 84}.y);
     io::printf("Nested field access: %d, %d\n", line.start.x, line.end.y);
     io::printf("Array struct field access: %d\n", arr[0].x);
+    io::printf("Array literal struct: %d, %d\n", arr2[0].x, arr2[0].y);
+    io::printf("Mixed array elem 0: %d, %d\n", arr3[0].x, arr3[0].y);
+    io::printf("Mixed array elem 1: %d, %d\n", arr3[1].x, arr3[1].y);
 
     return 0;
 }

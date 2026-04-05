@@ -272,7 +272,7 @@ impl Visit for TypedFuncDef {
                                         .type_converter()
                                         .to_llvm_type(&typed_receiver.typ, symbols)?;
                                     let alloca = context.create_alloca(name.inner(), llvm_type)?;
-                                    context.create_store(alloca, param_val)?;
+                                    context.create_store(alloca, param_val, &typed_receiver.typ)?;
                                     context.declare_variable(name, alloca, typed_receiver.typ)?;
                                 }
                                 crate::ast::ReceiverKind::Value => {
@@ -289,7 +289,7 @@ impl Visit for TypedFuncDef {
                             let symbols = context.symbols();
                             let llvm_type = context.type_converter().to_llvm_type(&typ, symbols)?;
                             let alloca = context.create_alloca(name.inner(), llvm_type)?;
-                            context.create_store(alloca, param_val)?;
+                            context.create_store(alloca, param_val, &typ)?;
                             context.declare_variable(name, alloca, typ)?;
                         }
                     }

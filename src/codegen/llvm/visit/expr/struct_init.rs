@@ -26,10 +26,8 @@ impl<'a> Visit for StructInit<'a> {
             .type_converter()
             .convert_struct_type(self.name, symbols)?;
 
-        // Allocate space for struct
         let struct_ptr = context.create_alloca("struct_tmp", struct_type.into())?;
 
-        // Iterate over fields using definition order indices
         for (field_name, field_expr) in self.fields.iter() {
             let field_val = field_expr.visit(context)?;
             let llvm_val = field_val.value()?;

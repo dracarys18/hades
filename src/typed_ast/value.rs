@@ -29,4 +29,5 @@ pub struct TypedArrayLiteral {
     pub elements: Vec<TypedExpr>,
     pub size: usize,
     pub elem_typ: Types,
+    pub fill: Option<Box<TypedExpr>>,
 }

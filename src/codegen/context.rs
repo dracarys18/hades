@@ -192,11 +192,29 @@ impl<'ctx> LLVMContext<'ctx> {
 
     pub fn create_store(
         &self,
-        ptr: PointerValue<'ctx>,
+        dest: PointerValue<'ctx>,
         value: BasicValueEnum<'ctx>,
+        typ: &Types,
     ) -> CodegenResult<()> {
+        if let Types::Array(_) = typ {
+            if let BasicValueEnum::PointerValue(src_ptr) = value {
+                let llvm_type = self.type_converter.to_llvm_type(typ, self.symbols)?;
+                let size_bytes = llvm_type.size_of().ok_or(CodegenError::LLVMBuild {
+                    message: "Could not compute aggregate size".to_string(),
+                })?;
+                let align = llvm_type
+                    .size_of()
+                    .and_then(|s| s.get_zero_extended_constant())
+                    .map(|s| (s as u32).min(8).next_power_of_two())
+                    .unwrap_or(8);
+                self.builder
+                    .build_memcpy(dest, align, src_ptr, align, size_bytes)
+                    .map_err(CodegenError::from)?;
+                return Ok(());
+            }
+        }
         self.builder
-            .build_store(ptr, value)
+            .build_store(dest, value)
             .map_err(|_| CodegenError::LLVMBuild {
                 message: "Failed to store value".to_string(),
             })?;

@@ -52,10 +52,18 @@ pub(super) fn walk_array_with_hint(
         }
     }
 
+    let typed_fill = arr
+        .fill
+        .as_deref()
+        .map(|f| walk_possibly_null(f, elem_hint.clone(), ctx, span.clone()))
+        .transpose()?
+        .map(Box::new);
+
     Ok(TypedArrayLiteral {
         elements: typed_expr,
         size: arr.size,
         elem_typ: Types::Array(expected_type.array_type(arr.size)),
+        fill: typed_fill,
     })
 }
 

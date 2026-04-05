@@ -21,6 +21,13 @@ impl FunctionName {
         }
     }
 
+    pub fn from_key(key: &str, span: Span) -> Self {
+        match key.rsplit_once("__") {
+            Some((module, name)) => Self::build(Some(module.to_string()), name.to_string(), span),
+            None => Self::new(key.to_string(), span),
+        }
+    }
+
     fn build(module: Option<String>, name: String, span: Span) -> Self {
         let key = match &module {
             Some(m) => format!("{}__{}", m, name),

@@ -14,16 +14,15 @@ pub fn build_call<'ctx>(
     context: &mut LLVMContext<'ctx>,
 ) -> CodegenResult<CodegenValue<'ctx>> {
     let name_fn = crate::tokens::FunctionName::new(name.to_string(), Default::default());
-    let return_type = context
+    let sig = context
         .symbols()
         .get_function_signature(&name_fn)
         .map_err(|_| CodegenError::FunctionNotFound {
             name: name.to_string(),
         })?
-        .return_type()
         .clone();
 
-    let function = context.get_function(name)?;
+    let function = context.get_function(name, &sig)?;
     let call_site = context
         .builder()
         .build_call(function, arg_values, "call")
@@ -32,7 +31,7 @@ pub fn build_call<'ctx>(
         })?;
 
     Ok(match call_site.try_as_basic_value().basic() {
-        Some(v) => CodegenValue::new(v, return_type),
+        Some(v) => CodegenValue::new(v, sig.return_type().clone()),
         None => CodegenValue::Void,
     })
 }

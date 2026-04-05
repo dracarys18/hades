@@ -2,15 +2,14 @@ use crate::ast::Types;
 use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::codegen::symbols::{CodegenSymbols, LLVMVariable};
 use crate::codegen::types::TypeConverter;
-use crate::tokens::Ident;
-use crate::typed_ast::{CompilerContext, FuncKind, ModuleSignatures};
+use crate::tokens::{FunctionName, Ident};
+use crate::typed_ast::{CompilerContext, FuncKind, FunctionSignature, ModuleSignatures};
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::module::{Linkage, Module};
 use inkwell::types::{BasicType, BasicTypeEnum, FunctionType};
 use inkwell::values::{BasicValueEnum, FunctionValue, PointerValue};
-use std::collections::HashMap;
 
 pub struct LoopContext<'ctx> {
     pub continue_block: BasicBlock<'ctx>,
@@ -26,7 +25,6 @@ pub struct LLVMContext<'ctx> {
     type_converter: TypeConverter<'ctx>,
     current_function: Option<FunctionValue<'ctx>>,
     loop_stack: Vec<LoopContext<'ctx>>,
-    function_aliases: HashMap<String, FunctionValue<'ctx>>,
 }
 
 impl<'ctx> LLVMContext<'ctx> {
@@ -48,7 +46,6 @@ impl<'ctx> LLVMContext<'ctx> {
             type_converter,
             current_function: None,
             loop_stack: Vec::new(),
-            function_aliases: HashMap::new(),
         }
     }
 
@@ -68,8 +65,8 @@ impl<'ctx> LLVMContext<'ctx> {
         &self.module
     }
 
-    pub fn type_converter(&mut self) -> &mut TypeConverter<'ctx> {
-        &mut self.type_converter
+    pub fn type_converter(&self) -> &TypeConverter<'ctx> {
+        &self.type_converter
     }
 
     pub fn declare_variable(
@@ -85,19 +82,46 @@ impl<'ctx> LLVMContext<'ctx> {
         self.codegen_symbols.get_variable(name)
     }
 
-    pub fn get_function(&self, name: &str) -> CodegenResult<FunctionValue<'ctx>> {
-        if let Some(&func) = self.function_aliases.get(name) {
-            return Ok(func);
+    pub fn get_function(
+        &self,
+        name: &str,
+        sig: &FunctionSignature,
+    ) -> CodegenResult<FunctionValue<'ctx>> {
+        match &sig.kind {
+            FuncKind::Normal => {
+                self.module()
+                    .get_function(name)
+                    .ok_or(CodegenError::FunctionNotFound {
+                        name: name.to_string(),
+                    })
+            }
+            FuncKind::Extern { .. } => {
+                let link_name = FunctionName::from_key(name, Default::default());
+                self.module().get_function(link_name.link_name()).ok_or(
+                    CodegenError::FunctionNotFound {
+                        name: name.to_string(),
+                    },
+                )
+            }
+            FuncKind::Intrinsic(llvm_name) => {
+                let symbols = self.symbols();
+                let param_types = self.type_converter.params_to_llvm_types(sig, symbols)?;
+                let type_slice: Vec<BasicTypeEnum> = param_types
+                    .iter()
+                    .map(|t| BasicTypeEnum::try_from(*t).expect("param is not a basic type"))
+                    .collect();
+                let intrinsic = inkwell::intrinsics::Intrinsic::find(llvm_name).ok_or(
+                    CodegenError::LLVMBuild {
+                        message: format!("LLVM intrinsic '{}' not found", llvm_name),
+                    },
+                )?;
+                intrinsic.get_declaration(self.module(), &type_slice).ok_or(
+                    CodegenError::LLVMBuild {
+                        message: format!("Failed to get declaration for '{}'", llvm_name),
+                    },
+                )
+            }
         }
-        self.module()
-            .get_function(name)
-            .ok_or(CodegenError::FunctionNotFound {
-                name: name.to_string(),
-            })
-    }
-
-    pub fn register_function_alias(&mut self, name: String, func: FunctionValue<'ctx>) {
-        self.function_aliases.insert(name, func);
     }
 
     pub fn lookup_variable(&self, name: &Ident) -> Option<LLVMVariable<'ctx>> {
@@ -254,7 +278,7 @@ impl<'ctx> LLVMContext<'ctx> {
     }
 
     pub fn build_fn_type(
-        &mut self,
+        &self,
         return_type: &Types,
         param_types: &[inkwell::types::BasicMetadataTypeEnum<'ctx>],
         variadic: bool,
@@ -274,9 +298,6 @@ impl<'ctx> LLVMContext<'ctx> {
     pub fn declare_imports(&mut self, sigs: &[&ModuleSignatures]) -> CodegenResult<()> {
         for sig in sigs {
             for (name, fn_sig) in &sig.functions {
-                if self.get_function(name.inner()).is_ok() {
-                    continue;
-                }
                 match &fn_sig.kind {
                     FuncKind::Intrinsic(llvm_name) => {
                         let llvm_name = llvm_name.clone();
@@ -294,14 +315,17 @@ impl<'ctx> LLVMContext<'ctx> {
                             .ok_or_else(|| CodegenError::LLVMBuild {
                                 message: format!("LLVM intrinsic '{}' not found", llvm_name),
                             })?;
-                        let func = intrinsic
+                        intrinsic
                             .get_declaration(self.module(), &type_slice)
                             .ok_or_else(|| CodegenError::LLVMBuild {
                                 message: format!("Failed to get declaration for '{}'", llvm_name),
                             })?;
-                        self.function_aliases.insert(name.inner().to_string(), func);
                     }
                     FuncKind::Extern { variadic } => {
+                        let link_name = name.link_name().to_string();
+                        if self.module().get_function(&link_name).is_some() {
+                            continue;
+                        }
                         let variadic = *variadic;
                         let symbols = self.symbols();
                         let param_types = self
@@ -312,15 +336,13 @@ impl<'ctx> LLVMContext<'ctx> {
                             &param_types,
                             variadic,
                         )?;
-                        let function = self.module().add_function(
-                            name.link_name(),
-                            fn_type,
-                            Some(Linkage::External),
-                        );
-                        self.function_aliases
-                            .insert(name.inner().to_string(), function);
+                        self.module()
+                            .add_function(&link_name, fn_type, Some(Linkage::External));
                     }
                     FuncKind::Normal => {
+                        if self.module().get_function(name.inner()).is_some() {
+                            continue;
+                        }
                         let symbols = self.symbols();
                         let param_types = self
                             .type_converter()

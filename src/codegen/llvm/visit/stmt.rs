@@ -219,7 +219,6 @@ impl Visit for TypedFuncDef {
                     fn_type,
                     Some(inkwell::module::Linkage::External),
                 );
-                context.register_function_alias(self.name.inner().to_string(), function);
                 Ok(function)
             }
             FuncKind::Intrinsic(llvm_name) => {
@@ -241,7 +240,6 @@ impl Visit for TypedFuncDef {
                     .ok_or_else(|| CodegenError::LLVMBuild {
                         message: format!("Failed to get declaration for '{}'", llvm_name),
                     })?;
-                context.register_function_alias(self.name.inner().to_string(), function);
                 Ok(function)
             }
             FuncKind::Normal => {

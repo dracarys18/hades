@@ -1,3 +1,4 @@
+import std::io
 fn main(): int {
     let sum = 0;
     for let i = 0; i < 100; i += 1 {
@@ -6,6 +7,6 @@ fn main(): int {
             sum = sum + x;
         }
     }
-    printf("%d\n", sum);
+    io::printf("%d\n", sum);
     return 0;
 }

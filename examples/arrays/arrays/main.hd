@@ -1,7 +1,8 @@
+import std::io
 fn main():int {
     let a = [1,2,3,4,5,7,8,9,10,11,12];
     let b = ["Foo", "Bar", "Queen"];
-    printf("Array value %d\n", a[10]);
-    printf("String array value %s\n", b[2]);
+    io::printf("Array value %d\n", a[10]);
+    io::printf("String array value %s\n", b[2]);
     return 0;
 }

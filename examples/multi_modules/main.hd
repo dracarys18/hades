@@ -1,3 +1,4 @@
+import std::io
 import self::math_ops
 import self::helpers
 
@@ -6,6 +7,6 @@ fn main(): int {
     let sq: int = math_ops::square(x);
     let dbl: int = helpers::double(x);
     let result: int = sq + dbl;
-    printf("%d\n", result);
+    io::printf("%d\n", result);
     return 0;
 }

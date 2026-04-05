@@ -10,7 +10,7 @@ use crate::{
 use derive_more::Debug;
 use indexmap::IndexMap;
 
-use super::{TypedProgram, expr::TypedExpr};
+use super::{expr::TypedExpr, TypedProgram};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypedBlock {
@@ -35,7 +35,7 @@ pub struct TypedContinue {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub struct TypedBreak{
+pub struct TypedBreak {
     #[debug(skip)]
     pub span: Span,
 }
@@ -105,7 +105,7 @@ pub enum TypedFieldKind {
 pub struct TypedFuncDef {
     pub name: FunctionName,
     pub signature: FunctionSignature,
-    pub body: TypedBlock,
+    pub body: Option<TypedBlock>,
     pub span: Span,
 }
 

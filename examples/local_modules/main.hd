@@ -1,3 +1,4 @@
+import std::io
 import self::utils
 
 fn main(): int {
@@ -6,6 +7,6 @@ fn main(): int {
     let sum: int = utils::add(a, b);
     let product: int = utils::multiply(a, b);
     let result: int = sum + product;
-    printf("%d\n", result);
+    io::printf("%d\n", result);
     return 0;
 }

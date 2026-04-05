@@ -34,7 +34,7 @@ impl Analyzer<Unprepared> {
 
         for module in modules {
             let mut ctx = CompilerContext::new();
-            ctx.set_module_name(module.path.name().to_string());
+            ctx.set_module_path(module.path.clone());
 
             for dep_path in &module.imports {
                 if let Some(sigs) = sig_cache.get(dep_path) {

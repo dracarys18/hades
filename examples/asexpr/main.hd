@@ -1,5 +1,6 @@
+import std::io
 fn main():int {
     let i = (1 + 2) as float;
-    printf("float value %f", i);
+    io::printf("float value %f", i);
     return 0;
 }

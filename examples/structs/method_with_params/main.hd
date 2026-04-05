@@ -1,3 +1,4 @@
+import std::io
 struct Point {
     x: int,
     y: int,
@@ -17,6 +18,6 @@ fn main(): int {
     let p = Point { x: 10, y: 20 };
     let t = p.translate(5, 3);
     let s = p.scale(2);
-    printf("translate=%d scale=%d\n", t, s);
+    io::printf("translate=%d scale=%d\n", t, s);
     return 0;
 }

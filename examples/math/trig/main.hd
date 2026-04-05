@@ -1,6 +1,8 @@
+import std::io
+import std::math
 fn main(): void {
-    let s: float = sin(1.0);
-    let c: float = cos(0.0);
-    printf("%f\n", s);
-    printf("%f\n", c);
+    let s: float = math::sin(1.0);
+    let c: float = math::cos(0.0);
+    io::printf("%f\n", s);
+    io::printf("%f\n", c);
 }

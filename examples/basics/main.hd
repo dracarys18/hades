@@ -1,4 +1,5 @@
+import std::io
 fn main():int {
-    printf("Hello world");
+    io::printf("Hello world");
     return 0;
 }

@@ -1,6 +1,7 @@
+import std::io
 fn main():int {
     for let i=10;i>0;i-=1 {
-      printf("%d\n", i);
+      io::printf("%d\n", i);
     }
     return 0;
 }

@@ -1,3 +1,18 @@
+intrinsic fn sin(x: float): float = "llvm.sin";
+intrinsic fn cos(x: float): float = "llvm.cos";
+intrinsic fn sqrt(x: float): float = "llvm.sqrt";
+intrinsic fn exp(x: float): float = "llvm.exp";
+intrinsic fn exp2(x: float): float = "llvm.exp2";
+intrinsic fn log(x: float): float = "llvm.log";
+intrinsic fn log10(x: float): float = "llvm.log10";
+intrinsic fn log2(x: float): float = "llvm.log2";
+intrinsic fn floor(x: float): float = "llvm.floor";
+intrinsic fn ceil(x: float): float = "llvm.ceil";
+intrinsic fn trunc(x: float): float = "llvm.trunc";
+intrinsic fn round(x: float): float = "llvm.round";
+intrinsic fn pow(x: float, y: float): float = "llvm.pow";
+intrinsic fn powi(x: float, n: int): float = "llvm.powi";
+
 fn min(a: int, b: int): int {
     if a < b {
         return a;

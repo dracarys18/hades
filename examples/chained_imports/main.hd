@@ -1,3 +1,4 @@
+import std::io
 import self::intermediate
 
 fn main(): int {
@@ -5,6 +6,6 @@ fn main(): int {
     let y: int = 10;
     let z: int = 15;
     let result: int = intermediate::add_three(x, y, z);
-    printf("%d\n", result);
+    io::printf("%d\n", result);
     return 0;
 }

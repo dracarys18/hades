@@ -1,4 +1,5 @@
+import std::io
 fn describe(r: int): int {
-    printf("circle with radius %d\n", r);
+    io::printf("circle with radius %d\n", r);
     return 0;
 }

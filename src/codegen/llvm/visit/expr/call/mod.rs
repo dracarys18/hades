@@ -4,7 +4,6 @@ pub mod method;
 pub use func::FunctionCall;
 pub use method::MethodCall;
 
-use crate::codegen::BuiltinRegistar;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use inkwell::values::BasicMetadataValueEnum;
@@ -23,14 +22,6 @@ pub fn build_call<'ctx>(
         })?
         .return_type()
         .clone();
-
-    if BuiltinRegistar::is_builtin_function(name) {
-        return BuiltinRegistar::handle(name, context, arg_values)
-            .map(|v| CodegenValue::new(v.try_into().unwrap(), return_type))
-            .map_err(|_| CodegenError::LLVMBuild {
-                message: format!("Failed to generate builtin call to {name}"),
-            });
-    }
 
     let function = context.get_function(name)?;
     let call_site = context

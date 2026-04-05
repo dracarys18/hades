@@ -1,3 +1,4 @@
+import std::io
 fn early_return():int {
     while(true) {
         return 7;
@@ -7,5 +8,5 @@ fn early_return():int {
 
 fn main(): int {
     let f = early_return();
-    printf("%d", f);
+    io::printf("%d", f);
 }

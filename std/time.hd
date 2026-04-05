@@ -1,0 +1,3 @@
+extern fn sleep(seconds: int): int;
+extern fn clock(): int;
+extern fn time(t: int): int;

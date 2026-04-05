@@ -1,6 +1,5 @@
 use super::builtins::BUILTIN_FUNCTIONS;
 use crate::ast::{ReceiverKind, Types};
-use crate::consts::MAX_FUNCTION_PARAMS;
 use crate::error::SemanticError;
 use crate::tokens::{FunctionName, Ident, ParamKind};
 use indexmap::IndexMap;
@@ -14,45 +13,60 @@ pub struct TypedReceiver {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Params {
-    Variadic,
     Fixed(IndexMap<ParamKind, Types>),
+    Variadic(IndexMap<ParamKind, Types>),
 }
 
 impl Params {
-    pub fn type_at(&self, num: usize) -> Option<&Types> {
+    fn map(&self) -> &IndexMap<ParamKind, Types> {
         match self {
-            Params::Variadic => None,
-            Params::Fixed(map) => map
-                .iter()
-                .filter(|(k, _)| !matches!(k, ParamKind::Self_(_)))
-                .map(|(_, v)| v)
-                .nth(num),
+            Params::Fixed(m) | Params::Variadic(m) => m,
         }
+    }
+
+    pub fn type_at(&self, num: usize) -> Option<&Types> {
+        self.map()
+            .iter()
+            .filter(|(k, _)| !matches!(k, ParamKind::Self_(_)))
+            .map(|(_, v)| v)
+            .nth(num)
     }
 
     pub fn type_match(&self, num: usize, other_type: &Types) -> bool {
-        match self {
-            Params::Variadic => true,
-            Params::Fixed(map) => {
-                let expected_type = map
-                    .iter()
-                    .filter(|(k, _)| !matches!(k, ParamKind::Self_(_)))
-                    .map(|(_, v)| v)
-                    .nth(num)
-                    .expect("Parameter not found");
+        let entry = self
+            .map()
+            .iter()
+            .filter(|(k, _)| !matches!(k, ParamKind::Self_(_)))
+            .map(|(_, v)| v)
+            .nth(num);
 
-                match expected_type {
-                    Types::Generic(typs) => typs.iter().any(|t| match (t, other_type) {
-                        (Types::Array(_), Types::Array(_)) => {
-                            t.get_array_elem_type() == other_type.get_array_elem_type()
-                        }
-                        _ => t == other_type,
-                    }),
-                    _ => other_type == expected_type,
-                }
-            }
+        match entry {
+            None => matches!(self, Params::Variadic(_)),
+            Some(expected) => match expected {
+                Types::Generic(typs) => typs.iter().any(|t| match (t, other_type) {
+                    (Types::Array(_), Types::Array(_)) => {
+                        t.get_array_elem_type() == other_type.get_array_elem_type()
+                    }
+                    _ => t == other_type,
+                }),
+                _ => other_type == expected,
+            },
         }
     }
+
+    pub fn named_count(&self) -> usize {
+        self.map()
+            .keys()
+            .filter(|p| !matches!(p, ParamKind::Self_(_)))
+            .count()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum FuncKind {
+    Normal,
+    Extern { variadic: bool },
+    Intrinsic(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -60,6 +74,7 @@ pub struct FunctionSignature {
     pub receiver: Option<TypedReceiver>,
     pub params: Params,
     pub return_type: Types,
+    pub kind: FuncKind,
 }
 
 impl FunctionSignature {
@@ -72,31 +87,48 @@ impl FunctionSignature {
             params: Params::Fixed(params),
             return_type,
             receiver,
+            kind: FuncKind::Normal,
         }
     }
 
-    pub fn new_variadic(return_type: Types) -> Self {
+    pub fn new_extern(
+        params: IndexMap<ParamKind, Types>,
+        return_type: Types,
+        variadic: bool,
+    ) -> Self {
         Self {
-            params: Params::Variadic,
-            receiver: None,
+            params: if variadic {
+                Params::Variadic(params)
+            } else {
+                Params::Fixed(params)
+            },
             return_type,
+            receiver: None,
+            kind: FuncKind::Extern { variadic },
+        }
+    }
+
+    pub fn new_intrinsic(
+        params: IndexMap<ParamKind, Types>,
+        return_type: Types,
+        llvm_name: String,
+    ) -> Self {
+        Self {
+            params: Params::Fixed(params),
+            return_type,
+            receiver: None,
+            kind: FuncKind::Intrinsic(llvm_name),
         }
     }
 
     pub fn param_count(&self) -> usize {
-        match &self.params {
-            Params::Variadic => MAX_FUNCTION_PARAMS,
-            Params::Fixed(map) => map
-                .keys()
-                .filter(|p| !matches!(p, ParamKind::Self_(_)))
-                .count(),
-        }
+        self.params.named_count()
     }
 
     pub fn check_arg_count(&self, provided: usize) -> bool {
-        match &self.params {
-            Params::Variadic => provided <= self.param_count(),
-            Params::Fixed(_) => provided == self.param_count(),
+        match &self.kind {
+            FuncKind::Extern { variadic: true } => provided >= self.params.named_count(),
+            _ => provided == self.params.named_count(),
         }
     }
 
@@ -105,10 +137,7 @@ impl FunctionSignature {
     }
 
     pub fn to_fixed_params(&self) -> IndexMap<ParamKind, Types> {
-        match &self.params {
-            Params::Variadic => panic!("Variadic functions are not supported yet"),
-            Params::Fixed(map) => map.clone(),
-        }
+        self.params.map().clone()
     }
 
     pub fn return_type(&self) -> &Types {
@@ -143,6 +172,9 @@ impl Functions {
         sig: FunctionSignature,
     ) -> Result<(), SemanticError> {
         if self.inner.contains_key(&name) {
+            if matches!(sig.kind, FuncKind::Extern { .. } | FuncKind::Intrinsic(_)) {
+                return Ok(());
+            }
             let ident = name.to_ident();
             return Err(SemanticError::redefined_function(
                 ident.clone(),

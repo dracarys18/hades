@@ -8,6 +8,8 @@ impl Library {
     pub fn new() -> Self {
         let mut modules = HashMap::new();
         modules.insert("math".to_string(), include_str!("../std/math.hd"));
+        modules.insert("io".to_string(), include_str!("../std/io.hd"));
+        modules.insert("time".to_string(), include_str!("../std/time.hd"));
         Self { modules }
     }
 

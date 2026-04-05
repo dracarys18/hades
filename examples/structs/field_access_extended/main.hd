@@ -1,3 +1,4 @@
+import std::io
 struct Point {
     x: int,
     y: int
@@ -17,10 +18,10 @@ fn main(): int {
 
     let arr = [p];
 
-    printf("Basic field access: %d, %d\n", p.x, p.y);
-    printf("Struct init field access: %d\n", Point {x: 42, y: 84}.y);
-    printf("Nested field access: %d, %d\n", line.start.x, line.end.y);
-    printf("Array struct field access: %d\n", arr[0].x);
+    io::printf("Basic field access: %d, %d\n", p.x, p.y);
+    io::printf("Struct init field access: %d\n", Point {x: 42, y: 84}.y);
+    io::printf("Nested field access: %d, %d\n", line.start.x, line.end.y);
+    io::printf("Array struct field access: %d\n", arr[0].x);
 
     return 0;
 }

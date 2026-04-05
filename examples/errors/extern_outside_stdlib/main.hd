@@ -1,0 +1,6 @@
+extern fn printf(fmt: string, ...): int;
+
+fn main(): int {
+    printf("hello\n");
+    return 0;
+}

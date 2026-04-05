@@ -1,4 +1,3 @@
-use crate::codegen::builtin::BuiltinRegistar;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenResult, CodegenValue};
 use inkwell::values::FunctionValue;
@@ -20,19 +19,9 @@ impl CodegenVisitor {
         program: &crate::typed_ast::TypedProgram,
         context: &mut LLVMContext<'ctx>,
     ) -> CodegenResult<()> {
-        self.visit_builtin_function(context)?;
-
         for stmt in program.iter() {
             self.visit_stmt(stmt, context)?;
         }
-        Ok(())
-    }
-
-    pub fn visit_builtin_function<'ctx>(
-        &self,
-        context: &mut LLVMContext<'ctx>,
-    ) -> CodegenResult<()> {
-        BuiltinRegistar::declare_all(context)?;
         Ok(())
     }
 

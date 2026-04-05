@@ -102,6 +102,9 @@ pub enum TokenKind {
     DoubleColon,
     Null,
     As,
+    Extern,
+    Intrinsic,
+    Ellipsis,
 }
 
 impl std::fmt::Display for TokenKind {
@@ -162,6 +165,9 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Null => write!(f, "null"),
             TokenKind::Char(c) => write!(f, "'{c}'"),
             TokenKind::As => write!(f, "as"),
+            TokenKind::Extern => write!(f, "extern"),
+            TokenKind::Intrinsic => write!(f, "intrinsic"),
+            TokenKind::Ellipsis => write!(f, "..."),
         }
     }
 }

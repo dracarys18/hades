@@ -1,18 +1,19 @@
+import std::io
 fn main():int {
     let a = 2;
     let b = 1;
     let c = a==b;
 
     if(!c) {
-        printf("Voila\n");
+        io::printf("Voila\n");
     } else {
-        printf("OOf\n");
+        io::printf("OOf\n");
     }
 
     if(c) {
-        printf("OOf\n");
+        io::printf("OOf\n");
     } else {
-        printf("Voila\n");
+        io::printf("Voila\n");
     }
     return 0;
 }

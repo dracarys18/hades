@@ -1,3 +1,4 @@
+import std::io
 fn identity_ptr(p: &int): &int {
     return p;
 }
@@ -17,17 +18,17 @@ fn main(): int {
     let s: &int = pass_through(p);
 
     let val: int = *p;
-    printf("*p = %d\n", val);
-    printf("*q = %d\n", *q);
-    printf("*r = %d\n", *r);
-    printf("*s = %d\n", *s);
+    io::printf("*p = %d\n", val);
+    io::printf("*q = %d\n", *q);
+    io::printf("*r = %d\n", *r);
+    io::printf("*s = %d\n", *s);
 
     *p = 99;
-    printf("after *p = 99, *p = %d\n", *p);
+    io::printf("after *p = 99, *p = %d\n", *p);
 
     *p += 1;
-    printf("after *p += 1, *p = %d\n", *p);
+    io::printf("after *p += 1, *p = %d\n", *p);
 
-    printf("pointer test passed\n");
+    io::printf("pointer test passed\n");
     return 0;
 }

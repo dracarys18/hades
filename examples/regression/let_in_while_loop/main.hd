@@ -1,9 +1,10 @@
+import std::io
 fn main(): int {
     let i = 0;
     while (i < 1000) {
         let x = i;
         i = x + 1;
     }
-    printf("done\n");
+    io::printf("done\n");
     return 0;
 }

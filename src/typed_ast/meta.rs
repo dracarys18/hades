@@ -1,11 +1,11 @@
 use crate::error::SemanticError;
 use crate::module::ModulePath;
 use crate::typed_ast::{
-    TypedFieldKind,
     function::{FunctionSignature, Functions},
     ident::IdentMap,
     signatures::ModuleSignatures,
     struc::{Field, Structs},
+    TypedFieldKind,
 };
 
 use crate::ast::Types;
@@ -19,7 +19,7 @@ pub struct CompilerContext {
     functions: Functions,
     structs: Structs,
     current_function: Option<(FunctionName, Types)>,
-    module_name: Option<String>,
+    module_path: Option<ModulePath>,
 }
 
 impl CompilerContext {
@@ -29,16 +29,20 @@ impl CompilerContext {
             functions: Functions::new(),
             structs: Structs::new(),
             current_function: None,
-            module_name: None,
+            module_path: None,
         }
     }
 
-    pub fn set_module_name(&mut self, name: String) {
-        self.module_name = Some(name);
+    pub fn set_module_path(&mut self, path: ModulePath) {
+        self.module_path = Some(path);
     }
 
     pub fn module_name(&self) -> Option<&str> {
-        self.module_name.as_deref()
+        self.module_path.as_ref().map(|p| p.name())
+    }
+
+    pub fn is_stdlib(&self) -> bool {
+        matches!(self.module_path, Some(ModulePath::Std(_)))
     }
 
     pub fn structs(&self) -> &Structs {

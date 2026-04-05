@@ -1,3 +1,4 @@
+import std::io
 import std::math
 import self::calculator
 
@@ -7,6 +8,6 @@ fn main(): int {
     let result: int = calculator::calculate(x, y);
     let max_val: int = math::max(x, y);
     let final: int = result + max_val;
-    printf("%d\n", final);
+    io::printf("%d\n", final);
     return 0;
 }

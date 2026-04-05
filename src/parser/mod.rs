@@ -56,6 +56,8 @@ impl Parser {
                             | TokenKind::RightBrace
                             | TokenKind::Let
                             | TokenKind::Fn
+                            | TokenKind::Extern
+                            | TokenKind::Intrinsic
                             | TokenKind::Struct
                             | TokenKind::If
                             | TokenKind::While
@@ -261,6 +263,8 @@ impl Parser {
         match self.peek() {
             Some(tok) if token_matches!(tok, TokenKind::Struct) => self.parse_struct_def(),
             Some(tok) if token_matches!(tok, TokenKind::Fn) => self.parse_function_def(),
+            Some(tok) if token_matches!(tok, TokenKind::Extern) => self.parse_extern_fn(),
+            Some(tok) if token_matches!(tok, TokenKind::Intrinsic) => self.parse_intrinsic_fn(),
             Some(tok) if token_matches!(tok, TokenKind::Let) => self.parse_let_stmt(),
             Some(tok) if token_matches!(tok, TokenKind::If) => self.parse_if_stmt(),
             Some(tok) if token_matches!(tok, TokenKind::While) => self.parse_while_stmt(),
@@ -304,7 +308,81 @@ impl Parser {
             receiver: None,
             params,
             return_type,
-            body: Block::new(body.into(), span.clone()),
+            body: FuncBody::Block(Block::new(body.into(), span.clone())),
+            span,
+        }))
+    }
+
+    fn parse_extern_fn(&mut self) -> ParseResult<Stmt> {
+        let start_tok = self.current_span();
+        self.expect(&TokenKind::Extern)?;
+        self.expect(&TokenKind::Fn)?;
+        let name_ident = self.expect_identifier()?;
+        let name = FunctionName::new(name_ident.inner().to_string(), name_ident.span().clone());
+        let (params, variadic) = self.parse_parameter_list_with_variadic()?;
+        let return_type = self.parse_optional_return_type()?;
+        self.expect(&TokenKind::Semicolon)?;
+        let end = self.prev_span();
+        let span = start_tok.to(end);
+
+        Ok(Stmt::FuncDef(FuncDef {
+            name,
+            receiver: None,
+            params,
+            return_type,
+            body: FuncBody::Extern { variadic },
+            span,
+        }))
+    }
+
+    fn expect_string_literal(&mut self) -> ParseResult<String> {
+        let source_id = self.source_id.clone();
+        let token = self.next();
+        match token {
+            Some(tok) => match tok.kind() {
+                TokenKind::String(s) => Ok(s.clone()),
+                _ => {
+                    let span = tok.span().into_range();
+                    Err(ParseError::unexpected_token(
+                        Some(tok),
+                        "string literal",
+                        span,
+                        source_id,
+                    ))
+                }
+            },
+            None => {
+                let span = self.eof_span().into_range();
+                Err(ParseError::unexpected_token(
+                    None,
+                    "string literal",
+                    span,
+                    source_id,
+                ))
+            }
+        }
+    }
+
+    fn parse_intrinsic_fn(&mut self) -> ParseResult<Stmt> {
+        let start_tok = self.current_span();
+        self.expect(&TokenKind::Intrinsic)?;
+        self.expect(&TokenKind::Fn)?;
+        let name_ident = self.expect_identifier()?;
+        let name = FunctionName::new(name_ident.inner().to_string(), name_ident.span().clone());
+        let params = self.parse_parameter_list()?;
+        let return_type = self.parse_optional_return_type()?;
+        self.expect(&TokenKind::Assign)?;
+        let llvm_name = self.expect_string_literal()?;
+        self.expect(&TokenKind::Semicolon)?;
+        let end = self.prev_span();
+        let span = start_tok.to(end);
+
+        Ok(Stmt::FuncDef(FuncDef {
+            name,
+            receiver: None,
+            params,
+            return_type,
+            body: FuncBody::Intrinsic(llvm_name),
             span,
         }))
     }
@@ -566,6 +644,60 @@ impl Parser {
 
         self.expect(&TokenKind::RightParen)?;
         Ok(params)
+    }
+
+    fn parse_parameter_list_with_variadic(
+        &mut self,
+    ) -> ParseResult<(Vec<(ParamKind, Types)>, bool)> {
+        self.expect(&TokenKind::LeftParen)?;
+
+        let mut params = Vec::new();
+        let mut variadic = false;
+
+        let mut rest = self.parse_comma_separated_with_variadic(
+            |parser| {
+                let name = parser.expect_identifier()?;
+                parser.expect(&TokenKind::Colon)?;
+                let param_type = parser.expect_type()?;
+                Ok((ParamKind::Ident(name), param_type))
+            },
+            &mut variadic,
+        )?;
+        params.append(&mut rest);
+
+        self.expect(&TokenKind::RightParen)?;
+        Ok((params, variadic))
+    }
+
+    fn parse_comma_separated_with_variadic<T, F>(
+        &mut self,
+        mut parse_item: F,
+        variadic: &mut bool,
+    ) -> ParseResult<Vec<T>>
+    where
+        F: FnMut(&mut Self) -> ParseResult<T>,
+    {
+        let mut items = Vec::new();
+
+        while !self
+            .peek()
+            .is_some_and(|tok| tok.kind() == &TokenKind::RightParen)
+        {
+            if self
+                .peek()
+                .is_some_and(|tok| tok.kind() == &TokenKind::Ellipsis)
+            {
+                self.next();
+                *variadic = true;
+                break;
+            }
+            items.push(parse_item(self)?);
+            if !self.consume_if(&TokenKind::Comma) {
+                break;
+            }
+        }
+
+        Ok(items)
     }
 
     fn parse_field_list(&mut self, struct_name: Ident) -> ParseResult<IndexMap<Ident, FieldKind>> {

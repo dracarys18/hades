@@ -1,0 +1,7 @@
+fn log(msg: string, ...): void {
+    return;
+}
+
+fn main(): int {
+    return 0;
+}

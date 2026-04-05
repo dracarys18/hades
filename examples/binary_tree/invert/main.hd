@@ -1,3 +1,4 @@
+import std::io
 struct BinaryTree {
     left: &BinaryTree,
     right: &BinaryTree,
@@ -24,7 +25,7 @@ struct BinaryTree {
             return;
         }
         self.left.inorder();
-        printf("%d\n", self.val);
+        io::printf("%d\n", self.val);
         self.right.inorder();
     }
 

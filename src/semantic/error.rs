@@ -176,6 +176,26 @@ impl SemanticError {
         Error::new_with_span(self.message, self.span)
     }
 
+    pub fn intrinsic_outside_stdlib(name: String, span: Span) -> Self {
+        Self {
+            message: format!(
+                "'intrinsic fn {}' is only allowed in standard library modules",
+                name
+            ),
+            span,
+        }
+    }
+
+    pub fn extern_outside_stdlib(name: String, span: Span) -> Self {
+        Self {
+            message: format!(
+                "'extern fn {}' is only allowed in standard library modules",
+                name
+            ),
+            span,
+        }
+    }
+
     pub fn invalid_type_cast(source: String, target: String, span: Span) -> Self {
         Self {
             message: format!("Cannot cast type {} to {}", source, target),

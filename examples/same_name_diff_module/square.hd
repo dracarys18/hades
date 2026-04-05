@@ -1,4 +1,5 @@
+import std::io
 fn describe(side: int): int {
-    printf("square with side %d\n", side);
+    io::printf("square with side %d\n", side);
     return 0;
 }

@@ -1,9 +1,10 @@
+import std::io
 fn main(): int {
     let count = 0;
     for let i = 0; i < 1000; i += 1 {
         let a = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
         count = count + a[0];
     }
-    printf("%d\n", count);
+    io::printf("%d\n", count);
     return 0;
 }

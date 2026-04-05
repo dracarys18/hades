@@ -100,12 +100,19 @@ pub enum FieldKind {
 }
 
 #[derive(Clone, PartialEq, Debug)]
+pub enum FuncBody {
+    Block(Block),
+    Extern { variadic: bool },
+    Intrinsic(String),
+}
+
+#[derive(Clone, PartialEq, Debug)]
 pub struct FuncDef {
     pub name: FunctionName,
     pub receiver: Option<Receiver>,
     pub params: Vec<(ParamKind, Types)>,
     pub return_type: Types,
-    pub body: Block,
+    pub body: FuncBody,
     pub span: Span,
 }
 

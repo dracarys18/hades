@@ -1,14 +1,16 @@
+import std::io
+import std::math
 fn main(): void {
-    let s: float = sqrt(4.0);
-    let e: float = exp(1.0);
-    let e2: float = exp2(3.0);
-    let l: float = log(1.0);
-    let l10: float = log10(100.0);
-    let l2: float = log2(8.0);
-    printf("%f\n", s);
-    printf("%f\n", e);
-    printf("%f\n", e2);
-    printf("%f\n", l);
-    printf("%f\n", l10);
-    printf("%f\n", l2);
+    let s: float = math::sqrt(4.0);
+    let e: float = math::exp(1.0);
+    let e2: float = math::exp2(3.0);
+    let l: float = math::log(1.0);
+    let l10: float = math::log10(100.0);
+    let l2: float = math::log2(8.0);
+    io::printf("%f\n", s);
+    io::printf("%f\n", e);
+    io::printf("%f\n", e2);
+    io::printf("%f\n", l);
+    io::printf("%f\n", l10);
+    io::printf("%f\n", l2);
 }

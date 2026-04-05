@@ -1,8 +1,8 @@
-use crate::ast::{FuncDef, ReceiverKind, Types, WalkAst};
+use crate::ast::{FuncBody, FuncDef, ReceiverKind, Types, WalkAst};
 use crate::consts::ENTRY_POINT;
 use crate::error::SemanticError;
 use crate::tokens::{FunctionName, ParamKind};
-use crate::typed_ast::{CompilerContext, FunctionSignature, TypedFuncDef, TypedReceiver};
+use crate::typed_ast::{CompilerContext, FuncKind, FunctionSignature, TypedFuncDef, TypedReceiver};
 use indexmap::IndexMap;
 
 impl FuncDef {
@@ -23,7 +23,19 @@ impl FuncDef {
                 }
             },
         });
-        let sig = FunctionSignature::new(params_map, self.return_type.clone(), receiver);
+        let sig = match &self.body {
+            FuncBody::Extern { variadic } => {
+                FunctionSignature::new_extern(params_map, self.return_type.clone(), *variadic)
+            }
+            FuncBody::Intrinsic(llvm_name) => FunctionSignature::new_intrinsic(
+                params_map,
+                self.return_type.clone(),
+                llvm_name.clone(),
+            ),
+            FuncBody::Block(_) => {
+                FunctionSignature::new(params_map, self.return_type.clone(), receiver)
+            }
+        };
         ctx.register_function(name, sig)
     }
 
@@ -53,28 +65,63 @@ impl WalkAst for FuncDef {
         }
 
         let sig = ctx.get_function_signature(&name)?.clone();
-        ctx.set_current_function(name.clone(), self.return_type.clone());
 
-        for (param, declared_type) in &self.params {
-            let resolved_type = match param {
-                ParamKind::Self_(_) => {
-                    sig.receiver()
-                        .ok_or_else(|| SemanticError::self_outside_method(param.span().clone()))?
-                        .typ
+        match &self.body {
+            FuncBody::Extern { .. } => {
+                if !ctx.is_stdlib() {
+                    return Err(SemanticError::extern_outside_stdlib(
+                        self.name.inner().to_string(),
+                        self.span.clone(),
+                    ));
                 }
-                ParamKind::Ident(_) => declared_type.clone(),
-            };
-            ctx.insert_variable(param.name(), resolved_type);
+                return Ok(TypedFuncDef {
+                    name,
+                    signature: sig,
+                    body: None,
+                    span: self.span.clone(),
+                });
+            }
+            FuncBody::Intrinsic(_) => {
+                if !ctx.is_stdlib() {
+                    return Err(SemanticError::intrinsic_outside_stdlib(
+                        self.name.inner().to_string(),
+                        self.span.clone(),
+                    ));
+                }
+                return Ok(TypedFuncDef {
+                    name,
+                    signature: sig,
+                    body: None,
+                    span: self.span.clone(),
+                });
+            }
+            FuncBody::Block(block) => {
+                ctx.set_current_function(name.clone(), self.return_type.clone());
+
+                for (param, declared_type) in &self.params {
+                    let resolved_type = match param {
+                        ParamKind::Self_(_) => {
+                            sig.receiver()
+                                .ok_or_else(|| {
+                                    SemanticError::self_outside_method(param.span().clone())
+                                })?
+                                .typ
+                        }
+                        ParamKind::Ident(_) => declared_type.clone(),
+                    };
+                    ctx.insert_variable(param.name(), resolved_type);
+                }
+
+                let typed_body = block.walk(ctx, self.span.clone())?;
+                ctx.exit_function();
+
+                Ok(TypedFuncDef {
+                    name,
+                    signature: sig,
+                    body: Some(typed_body),
+                    span: self.span.clone(),
+                })
+            }
         }
-
-        let typed_body = self.body.walk(ctx, self.span.clone())?;
-        ctx.exit_function();
-
-        Ok(TypedFuncDef {
-            name,
-            signature: sig,
-            body: typed_body,
-            span: self.span.clone(),
-        })
     }
 }

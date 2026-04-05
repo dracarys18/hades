@@ -1,3 +1,4 @@
+import std::io
 struct Point {
     x: int,
     y: int
@@ -9,6 +10,6 @@ fn main(): int {
         let p = Point {x: i, y: i};
         sum = sum + p.x;
     }
-    printf("%d\n", sum);
+    io::printf("%d\n", sum);
     return 0;
 }

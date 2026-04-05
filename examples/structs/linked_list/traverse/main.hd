@@ -1,3 +1,4 @@
+import std::io
 struct List {
     item: int,
     next: &List,
@@ -17,10 +18,10 @@ struct List {
     fn print(self: &Self) {
         let cur: &List = self;
         while (cur.get_next() != null) {
-            printf("%d ", cur.item);
+            io::printf("%d ", cur.item);
             cur = cur.get_next();
         }
-        printf("%d\n", cur.item);
+        io::printf("%d\n", cur.item);
     }
 }
 

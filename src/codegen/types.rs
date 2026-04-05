@@ -3,12 +3,12 @@ use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::error::Span;
 use crate::tokens::{Ident, ParamKind};
 use crate::typed_ast::{CompilerContext, FunctionSignature, TypedFieldKind};
-use inkwell::AddressSpace;
 use inkwell::context::Context;
 use inkwell::types::{
     AnyTypeEnum, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FloatType, FunctionType, IntType,
     StructType,
 };
+use inkwell::AddressSpace;
 
 pub struct TypeConverter<'ctx> {
     context: &'ctx Context,
@@ -20,7 +20,7 @@ impl<'ctx> TypeConverter<'ctx> {
     }
 
     pub fn to_llvm_type(
-        &mut self,
+        &self,
         ty: &Types,
         compiler_ctx: &CompilerContext,
     ) -> CodegenResult<BasicTypeEnum<'ctx>> {
@@ -94,7 +94,7 @@ impl<'ctx> TypeConverter<'ctx> {
     }
 
     pub fn convert_struct_type(
-        &mut self,
+        &self,
         name: &Ident,
         compiler_ctx: &CompilerContext,
     ) -> CodegenResult<StructType<'ctx>> {
@@ -114,7 +114,7 @@ impl<'ctx> TypeConverter<'ctx> {
         Ok(struct_type)
     }
 
-    pub fn fn_type(&mut self, typ: &AnyTypeEnum<'ctx>) -> FunctionType<'ctx> {
+    pub fn fn_type(&self, typ: &AnyTypeEnum<'ctx>) -> FunctionType<'ctx> {
         match typ {
             AnyTypeEnum::FunctionType(ft) => *ft,
             AnyTypeEnum::IntType(it) => it.fn_type(&[], false),
@@ -190,7 +190,7 @@ impl<'ctx> TypeConverter<'ctx> {
     }
 
     pub fn params_to_llvm_types(
-        &mut self,
+        &self,
         sig: &FunctionSignature,
         compiler_ctx: &CompilerContext,
     ) -> CodegenResult<Vec<BasicMetadataTypeEnum<'ctx>>> {

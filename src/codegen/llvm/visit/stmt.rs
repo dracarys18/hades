@@ -1,11 +1,9 @@
-use inkwell::types::{BasicType, FunctionType};
-
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::codegen::traits::Visit;
 use crate::typed_ast::{
-    TypedBlock, TypedBreak, TypedContinue, TypedFieldKind, TypedFor, TypedFuncDef, TypedIf,
-    TypedReturn, TypedStmt, TypedStructDef, TypedWhile,
+    FuncKind, TypedBlock, TypedBreak, TypedContinue, TypedFieldKind, TypedFor, TypedFuncDef,
+    TypedIf, TypedReturn, TypedStmt, TypedStructDef, TypedWhile,
 };
 
 impl Visit for TypedStmt {
@@ -212,95 +210,125 @@ impl Visit for TypedFuncDef {
             .type_converter()
             .params_to_llvm_types(&signature, symbols)?;
 
-        let fn_type: FunctionType = if signature.return_type == crate::ast::Types::Void {
-            context
-                .type_converter()
-                .void_type()
-                .fn_type(&param_types, false)
-        } else {
-            let symbols = context.symbols();
-            let return_type = context
-                .type_converter()
-                .to_llvm_type(&signature.return_type, symbols)?;
-            return_type.fn_type(&param_types, false)
-        };
+        match &signature.kind {
+            FuncKind::Extern { variadic } => {
+                let fn_type =
+                    context.build_fn_type(&signature.return_type, &param_types, *variadic)?;
+                let function = context.module().add_function(
+                    self.name.link_name(),
+                    fn_type,
+                    Some(inkwell::module::Linkage::External),
+                );
+                Ok(function)
+            }
+            FuncKind::Intrinsic(llvm_name) => {
+                let type_slice: Vec<inkwell::types::BasicTypeEnum> = param_types
+                    .iter()
+                    .map(|t| {
+                        inkwell::types::BasicTypeEnum::try_from(*t)
+                            .expect("param type is not a basic type")
+                    })
+                    .collect();
+                let intrinsic =
+                    inkwell::intrinsics::Intrinsic::find(llvm_name).ok_or_else(|| {
+                        CodegenError::LLVMBuild {
+                            message: format!("LLVM intrinsic '{}' not found", llvm_name),
+                        }
+                    })?;
+                let function = intrinsic
+                    .get_declaration(context.module(), &type_slice)
+                    .ok_or_else(|| CodegenError::LLVMBuild {
+                        message: format!("Failed to get declaration for '{}'", llvm_name),
+                    })?;
+                Ok(function)
+            }
+            FuncKind::Normal => {
+                let fn_type = context.build_fn_type(&signature.return_type, &param_types, false)?;
 
-        let function = context
-            .module()
-            .add_function(self.name.inner(), fn_type, None);
+                let function = context
+                    .module()
+                    .add_function(self.name.inner(), fn_type, None);
 
-        context.set_current_function(function);
+                context.set_current_function(function);
 
-        let entry_block = context.create_basic_block("entry");
-        context.position_at_end(entry_block);
+                let entry_block = context.create_basic_block("entry");
+                context.position_at_end(entry_block);
 
-        let params = signature.to_fixed_params();
-        for (i, (param, declared_type)) in params.iter().enumerate() {
-            let param_val = function.get_nth_param(i as u32).unwrap();
-            let name = param.name();
-            param_val.set_name(name.inner());
+                let params = signature.to_fixed_params();
+                for (i, (param, declared_type)) in params.iter().enumerate() {
+                    let param_val = function.get_nth_param(i as u32).unwrap();
+                    let name = param.name();
+                    param_val.set_name(name.inner());
 
-            match param {
-                crate::tokens::ParamKind::Self_(_) => {
-                    let typed_receiver = signature
-                        .receiver()
-                        .expect("Self_ param but no receiver on signature");
-                    match typed_receiver.kind {
-                        crate::ast::ReceiverKind::Pointer => {
+                    match param {
+                        crate::tokens::ParamKind::Self_(_) => {
+                            let typed_receiver = signature
+                                .receiver()
+                                .expect("Self_ param but no receiver on signature");
+                            match typed_receiver.kind {
+                                crate::ast::ReceiverKind::Pointer => {
+                                    let symbols = context.symbols();
+                                    let llvm_type = context
+                                        .type_converter()
+                                        .to_llvm_type(&typed_receiver.typ, symbols)?;
+                                    let alloca = context.create_alloca(name.inner(), llvm_type)?;
+                                    context.create_store(alloca, param_val)?;
+                                    context.declare_variable(name, alloca, typed_receiver.typ)?;
+                                }
+                                crate::ast::ReceiverKind::Value => {
+                                    context.declare_variable(
+                                        name,
+                                        param_val.into_pointer_value(),
+                                        typed_receiver.typ,
+                                    )?;
+                                }
+                            }
+                        }
+                        crate::tokens::ParamKind::Ident(_) => {
+                            let typ = declared_type.clone();
                             let symbols = context.symbols();
-                            let llvm_type = context
-                                .type_converter()
-                                .to_llvm_type(&typed_receiver.typ, symbols)?;
+                            let llvm_type = context.type_converter().to_llvm_type(&typ, symbols)?;
                             let alloca = context.create_alloca(name.inner(), llvm_type)?;
                             context.create_store(alloca, param_val)?;
-                            context.declare_variable(name, alloca, typed_receiver.typ)?;
-                        }
-                        crate::ast::ReceiverKind::Value => {
-                            context.declare_variable(
-                                name,
-                                param_val.into_pointer_value(),
-                                typed_receiver.typ,
-                            )?;
+                            context.declare_variable(name, alloca, typ)?;
                         }
                     }
                 }
-                crate::tokens::ParamKind::Ident(_) => {
-                    let typ = declared_type.clone();
-                    let symbols = context.symbols();
-                    let llvm_type = context.type_converter().to_llvm_type(&typ, symbols)?;
-                    let alloca = context.create_alloca(name.inner(), llvm_type)?;
-                    context.create_store(alloca, param_val)?;
-                    context.declare_variable(name, alloca, typ)?;
-                }
-            }
-        }
 
-        self.body.visit(context)?;
+                let body = self.body.as_ref().expect("Normal function has no body");
+                body.visit(context)?;
 
-        if !context.is_block_terminated() {
-            if self.signature.return_type == crate::ast::Types::Void {
-                context.build_return(None)?;
-            } else {
-                let default_val = match self.signature.return_type {
-                    crate::ast::Types::Int => context.context().i64_type().const_zero().into(),
-                    crate::ast::Types::Float => context.context().f64_type().const_zero().into(),
-                    crate::ast::Types::Bool => context.context().bool_type().const_zero().into(),
-                    _ => {
-                        return Err(CodegenError::LLVMBuild {
-                            message: format!(
-                                "Cannot generate default return value for type {:?}",
-                                self.signature.return_type
-                            ),
-                        });
+                if !context.is_block_terminated() {
+                    if self.signature.return_type == crate::ast::Types::Void {
+                        context.build_return(None)?;
+                    } else {
+                        let default_val = match self.signature.return_type {
+                            crate::ast::Types::Int => {
+                                context.context().i64_type().const_zero().into()
+                            }
+                            crate::ast::Types::Float => {
+                                context.context().f64_type().const_zero().into()
+                            }
+                            crate::ast::Types::Bool => {
+                                context.context().bool_type().const_zero().into()
+                            }
+                            _ => {
+                                return Err(CodegenError::LLVMBuild {
+                                    message: format!(
+                                        "Cannot generate default return value for type {:?}",
+                                        self.signature.return_type
+                                    ),
+                                });
+                            }
+                        };
+                        context.build_return(Some(default_val))?;
                     }
-                };
-                context.build_return(Some(default_val))?;
+                }
+
+                context.clear_current_function();
+                Ok(function)
             }
         }
-
-        context.clear_current_function();
-
-        Ok(function)
     }
 }
 

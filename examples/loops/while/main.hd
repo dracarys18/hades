@@ -1,8 +1,9 @@
+import std::io
 fn main():int {
     let a = 8;
 
     while(a!=0) {
-        printf("A is %d\n", a);
+        io::printf("A is %d\n", a);
         a=a-1;
     }
     return 0;

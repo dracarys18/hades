@@ -1,6 +1,7 @@
+import std::io
 fn main(): int {
     let c = 'k';
 
-    printf("Char %c is awesome", c);
+    io::printf("Char %c is awesome", c);
     return 0;
 }

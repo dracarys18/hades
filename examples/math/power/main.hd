@@ -1,6 +1,8 @@
+import std::io
+import std::math
 fn main(): void {
-    let p: float = pow(2.0, 10.0);
-    let pi: float = powi(2.0, 10);
-    printf("%f\n", p);
-    printf("%f\n", pi);
+    let p: float = math::pow(2.0, 10.0);
+    let pi: float = math::powi(2.0, 10);
+    io::printf("%f\n", p);
+    io::printf("%f\n", pi);
 }

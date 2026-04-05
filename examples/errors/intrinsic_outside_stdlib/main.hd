@@ -1,0 +1,6 @@
+intrinsic fn sin(x: float): float = "llvm.sin";
+
+fn main(): int {
+    let x: float = sin(1.0);
+    return 0;
+}

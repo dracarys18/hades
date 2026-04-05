@@ -1,8 +1,9 @@
+import std::io
 fn main(): int {
     let c = ['k', 'l', 'm', 'n', 'o', 'p'];
 
     for let i=0; i<len(c); i+=1 {
-        printf("Char %c is awesome\n", c[i]);
+        io::printf("Char %c is awesome\n", c[i]);
     }
     return 0;
 }

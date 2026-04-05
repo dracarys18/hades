@@ -68,6 +68,12 @@ impl WalkAst for FuncDef {
 
         match &self.body {
             FuncBody::Extern { .. } => {
+                if !ctx.is_stdlib() {
+                    return Err(SemanticError::extern_outside_stdlib(
+                        self.name.inner().to_string(),
+                        self.span.clone(),
+                    ));
+                }
                 return Ok(TypedFuncDef {
                     name,
                     signature: sig,

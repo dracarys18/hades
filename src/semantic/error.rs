@@ -186,6 +186,16 @@ impl SemanticError {
         }
     }
 
+    pub fn extern_outside_stdlib(name: String, span: Span) -> Self {
+        Self {
+            message: format!(
+                "'extern fn {}' is only allowed in standard library modules",
+                name
+            ),
+            span,
+        }
+    }
+
     pub fn invalid_type_cast(source: String, target: String, span: Span) -> Self {
         Self {
             message: format!("Cannot cast type {} to {}", source, target),

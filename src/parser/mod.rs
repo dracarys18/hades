@@ -267,6 +267,7 @@ impl Parser {
             Some(tok) if token_matches!(tok, TokenKind::For) => self.parse_for_stmt(),
             Some(tok) if token_matches!(tok, TokenKind::Return) => self.parse_return_stmt(),
             Some(tok) if token_matches!(tok, TokenKind::Continue) => self.parse_continue_stmt(),
+            Some(tok) if token_matches!(tok, TokenKind::Break) => self.parse_break_stmt(),
             Some(tok) if token_matches!(tok, TokenKind::Module) => self.parse_module(),
             Some(tok) if token_matches!(tok, TokenKind::Import) => self.parse_import(),
             _ => self.parse_expr_stmt(),
@@ -474,6 +475,16 @@ impl Parser {
         self.expect(&TokenKind::Semicolon)?;
         let end = self.prev_span();
         Ok(Stmt::Continue(Continue {
+            span: start_tok.to(end),
+        }))
+    }
+
+    fn parse_break_stmt(&mut self) -> ParseResult<Stmt> {
+        let start_tok = self.current_span();
+        self.expect(&TokenKind::Break)?;
+        self.expect(&TokenKind::Semicolon)?;
+        let end = self.prev_span();
+        Ok(Stmt::Break(Break {
             span: start_tok.to(end),
         }))
     }

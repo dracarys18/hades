@@ -249,8 +249,14 @@ export default grammar({
       $.call_parameter_list
     ),
 
+    continue_statement: $ => seq('continue', ';'),
+
+    break_statement: $ => seq('break', ';'),
+
     _statement: $ => choice(
       $.return_statement,
+      $.continue_statement,
+      $.break_statement,
       $.var_decl,
       $.function_call,
       $.method_call,

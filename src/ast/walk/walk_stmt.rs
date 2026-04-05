@@ -23,6 +23,7 @@ impl WalkAst for Stmt {
             Stmt::Return(ret) => ret.walk(ctx, span).map(TypedStmt::Return),
             Stmt::ModuleDecl(m) => m.walk(ctx, span).map(TypedStmt::ModuleDecl),
             Stmt::Import(import) => import.walk(ctx, span).map(TypedStmt::Import),
+            Stmt::Break(b) => b.walk(ctx, span).map(TypedStmt::Break),
         }
     }
 }

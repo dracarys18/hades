@@ -404,7 +404,15 @@
           "named": true
         },
         {
+          "type": "break_statement",
+          "named": true
+        },
+        {
           "type": "compound_assignment",
+          "named": true
+        },
+        {
+          "type": "continue_statement",
           "named": true
         },
         {
@@ -460,6 +468,11 @@
   },
   {
     "type": "boolean",
+    "named": true,
+    "fields": {}
+  },
+  {
+    "type": "break_statement",
     "named": true,
     "fields": {}
   },
@@ -601,6 +614,11 @@
         }
       ]
     }
+  },
+  {
+    "type": "continue_statement",
+    "named": true,
+    "fields": {}
   },
   {
     "type": "deref_expr",
@@ -1895,6 +1913,10 @@
     "named": false
   },
   {
+    "type": "break",
+    "named": false
+  },
+  {
     "type": "char",
     "named": false
   },
@@ -1902,6 +1924,10 @@
     "type": "comment",
     "named": true,
     "extra": true
+  },
+  {
+    "type": "continue",
+    "named": false
   },
   {
     "type": "else",

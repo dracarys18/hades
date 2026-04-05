@@ -4,8 +4,8 @@ use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::codegen::traits::Visit;
 use crate::typed_ast::{
-    TypedBlock, TypedContinue, TypedFieldKind, TypedFor, TypedFuncDef, TypedIf, TypedReturn,
-    TypedStmt, TypedStructDef, TypedWhile,
+    TypedBlock, TypedBreak, TypedContinue, TypedFieldKind, TypedFor, TypedFuncDef, TypedIf,
+    TypedReturn, TypedStmt, TypedStructDef, TypedWhile,
 };
 
 impl Visit for TypedStmt {
@@ -26,6 +26,7 @@ impl Visit for TypedStmt {
                 Ok(())
             }
             Self::StructDef(struct_def) => struct_def.visit(context),
+            Self::Break(break_stmt) => break_stmt.visit(context),
             Self::ModuleDecl(_) => Ok(()),
             Self::Import(_) => Ok(()),
         }
@@ -180,6 +181,22 @@ impl Visit for TypedContinue {
 
         let continue_block = loop_ctx.continue_block;
         context.build_unconditional_branch(continue_block)?;
+        Ok(())
+    }
+}
+
+impl Visit for TypedBreak {
+    type Output<'ctx> = ();
+
+    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
+        let loop_ctx = context
+            .current_loop()
+            .ok_or_else(|| CodegenError::LLVMBuild {
+                message: "Break statement outside of loop".to_string(),
+            })?;
+
+        let break_block = loop_ctx.break_block;
+        context.build_unconditional_branch(break_block)?;
         Ok(())
     }
 }

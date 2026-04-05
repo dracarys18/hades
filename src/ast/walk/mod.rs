@@ -1,6 +1,7 @@
 pub mod call;
 mod walk_as;
 mod walk_block;
+mod walk_break;
 mod walk_continue;
 mod walk_expr;
 mod walk_for;

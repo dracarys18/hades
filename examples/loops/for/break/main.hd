@@ -1,0 +1,11 @@
+fn main():int {
+    let count = 0;
+    for let i=10;i>0;i-=1 {
+        if(count == 3) {
+            break;
+        }
+        count+=1;
+    }
+    printf("%d", count);
+    return 0;
+}

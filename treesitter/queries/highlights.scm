@@ -14,6 +14,8 @@
   "module"
   "struct"
   "as"
+  "break"
+  "continue"
 ] @keyword
 
 ; self as keyword (in parameter position)

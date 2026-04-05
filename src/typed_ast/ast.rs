@@ -35,6 +35,12 @@ pub struct TypedContinue {
 }
 
 #[derive(Clone, PartialEq, Debug)]
+pub struct TypedBreak{
+    #[debug(skip)]
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
 pub struct TypedImport {
     pub module: String,
     pub prefix: ImportPrefix,
@@ -119,6 +125,7 @@ pub struct TypedModuleDecl {
 pub enum TypedStmt {
     Let(TypedLet),
     Continue(TypedContinue),
+    Break(TypedBreak),
     TypedExpr(TypedExprAst),
     If(TypedIf),
     While(TypedWhile),

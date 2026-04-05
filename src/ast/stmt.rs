@@ -51,6 +51,12 @@ pub struct Continue {
 }
 
 #[derive(Clone, PartialEq, Debug)]
+pub struct Break {
+    #[debug(skip)]
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
 pub struct ExprAst {
     pub expr: Expr,
     pub span: Span,
@@ -142,10 +148,12 @@ pub enum Stmt {
     Import(Import),
     Block(Block),
     Return(Return),
+    Break(Break),
 }
 
 impl_span!(Let);
 impl_span!(Continue);
+impl_span!(Break);
 impl_span!(ExprAst);
 impl_span!(If);
 impl_span!(While);
@@ -188,6 +196,7 @@ impl Stmt {
             Stmt::Return(r) => r.span(),
             Stmt::ModuleDecl(m) => m.span(),
             Stmt::Import(i) => i.span(),
+            Stmt::Break(b) => b.span(),
         }
     }
 }

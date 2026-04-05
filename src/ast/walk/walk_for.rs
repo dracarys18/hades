@@ -2,8 +2,6 @@ use crate::ast::Types;
 use crate::ast::{For, WalkAst};
 use crate::typed_ast::TypedFor;
 
-const ALLOWED_FOR_TYPES: [Types; 2] = [Types::Int, Types::Float];
-
 impl WalkAst for For {
     type Output = TypedFor;
     fn walk(
@@ -15,13 +13,6 @@ impl WalkAst for For {
         let typed_init = self.init.walk(ctx, self.span.clone())?;
         let typed_cond = self.cond.walk(ctx, self.span.clone())?;
         let typed_update = self.update.walk(ctx, self.span.clone())?;
-
-        if !ALLOWED_FOR_TYPES.contains(&typed_init.typ) {
-            return Err(crate::error::SemanticError::invalid_type(
-                typed_init.name.clone(),
-                self.span.clone(),
-            ));
-        }
 
         let typed_body = self.body.walk(ctx, self.span.clone())?;
         ctx.exit_scope();

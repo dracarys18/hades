@@ -1,0 +1,13 @@
+import std::io
+
+struct C {
+    a: int
+}
+
+fn main():int {
+    for let i = C {a: 1};i.a<10;i.a+=1 {
+      io::printf("%d\n", i);
+    }
+    return 0;
+}
+

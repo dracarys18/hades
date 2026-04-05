@@ -3,7 +3,7 @@ mod len;
 use super::context::LLVMContext;
 use super::error::{CodegenResult, CodegenValue};
 use crate::typed_ast::TypedExpr;
-use indexmap::{indexmap, IndexMap};
+use indexmap::{IndexMap, indexmap};
 pub use len::Len;
 use once_cell::sync::Lazy;
 

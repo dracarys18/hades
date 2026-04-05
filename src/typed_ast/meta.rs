@@ -1,11 +1,11 @@
 use crate::error::SemanticError;
 use crate::module::ModulePath;
 use crate::typed_ast::{
+    TypedFieldKind,
     function::{FunctionSignature, Functions},
     ident::IdentMap,
     signatures::ModuleSignatures,
     struc::{Field, Structs},
-    TypedFieldKind,
 };
 
 use crate::ast::Types;

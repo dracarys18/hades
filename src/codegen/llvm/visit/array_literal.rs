@@ -123,7 +123,7 @@ fn build_primitive_array<'ctx>(
         _ => {
             return Err(CodegenError::LLVMBuild {
                 message: format!("Unsupported element type for array literal: {llvm_elem_type:?}"),
-            })
+            });
         }
     };
 

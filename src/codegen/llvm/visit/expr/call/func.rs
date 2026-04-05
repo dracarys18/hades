@@ -1,7 +1,7 @@
+use crate::codegen::BuiltinRegistar;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
-use crate::codegen::BuiltinRegistar;
 use crate::typed_ast::TypedExpr;
 use inkwell::values::BasicMetadataValueEnum;
 

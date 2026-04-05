@@ -1,5 +1,5 @@
 # Hades Programming Language
-Hades is a fast, performant programming language with a strong type system.
+Hades is a fast, type-safe programming language designed for performance and ease of use.
 
 ## Project Status
 > [!WARNING]

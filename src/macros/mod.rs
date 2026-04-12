@@ -26,3 +26,14 @@ macro_rules! token_matches {
         matches!($token.kind(), $($pattern)|+)
     };
 }
+
+#[macro_export]
+macro_rules! token_matches_opt {
+($token:expr, $($pattern:pat_param)|+) => {
+    if let Some(t) = $token {
+        token_matches!(t, $($pattern)|+)
+    } else {
+        false
+    }
+};
+}

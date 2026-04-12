@@ -1,1 +1,19 @@
+[31mError:[0m Expected identifier, but found "..."
+   [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m examples/errors/variadic_in_normal_fn/main.hd:1:21 [38;5;246m][0m
+   [38;5;246m│[0m
+ [38;5;246m1 │[0m [38;5;249mf[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249ml[0m[38;5;249mo[0m[38;5;249mg[0m[38;5;249m([0m[38;5;249mm[0m[38;5;249ms[0m[38;5;249mg[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mi[0m[38;5;249mn[0m[38;5;249mg[0m[38;5;249m,[0m[38;5;249m [0m[31m.[0m[31m.[0m[31m.[0m[38;5;249m)[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249mv[0m[38;5;249mo[0m[38;5;249mi[0m[38;5;249md[0m[38;5;249m [0m[38;5;249m{[0m
+ [38;5;240m  │[0m                     [31m─[0m[31m┬[0m[31m─[0m  
+ [38;5;240m  │[0m                      [31m╰[0m[31m─[0m[31m─[0m[31m─[0m Expected identifier, but found "..."
+ [38;5;240m  │[0m 
+ [38;5;240m  │[0m [38;5;115mHelp[0m: Try adding a identifier
+[38;5;246m───╯[0m
+[31mError:[0m Expected expression, but found "}"
+   [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m examples/errors/variadic_in_normal_fn/main.hd:3:1 [38;5;246m][0m
+   [38;5;246m│[0m
+ [38;5;246m3 │[0m [31m}[0m
+ [38;5;240m  │[0m [31m┬[0m  
+ [38;5;240m  │[0m [31m╰[0m[31m─[0m[31m─[0m Expected expression, but found "}"
+ [38;5;240m  │[0m 
+ [38;5;240m  │[0m [38;5;115mHelp[0m: Try adding a expression
+[38;5;246m───╯[0m
 Failed to load modules: Parse error in module self::main: Parse error

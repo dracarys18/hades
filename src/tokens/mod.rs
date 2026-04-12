@@ -16,7 +16,7 @@ use crate::error::Span;
 
 #[derive(Clone, PartialEq)]
 pub struct Token {
-    kind: TokenKind,
+    pub kind: TokenKind,
     span: Span,
 }
 

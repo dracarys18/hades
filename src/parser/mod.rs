@@ -1,21 +1,33 @@
 mod error;
+mod expr;
+mod func;
+mod module;
+mod stmt;
+mod struct_;
 
 use crate::ast::*;
 use crate::error::Span;
 use crate::parser::error::FinalParseResult;
-use crate::token_matches;
 use crate::tokens::{Assoc, FunctionName, Ident, Op, ParamKind, Selff, Token, TokenKind};
+use crate::{token_matches, token_matches_opt};
 use error::{ParseError, ParseResult};
 use indexmap::IndexMap;
 use std::ops::Range;
 
-pub struct Parser {
-    tokens: Vec<Token>,
-    pos: usize,
-    source_id: String,
+pub trait Parse {
+    type Output;
+    fn parse(ctx: &mut ParserCtx) -> ParseResult<Self::Output>;
 }
 
-impl Parser {
+pub struct ParserCtx {
+    pub(crate) tokens: Vec<Token>,
+    pub(crate) pos: usize,
+    pub(crate) source_id: String,
+}
+
+pub type Parser = ParserCtx;
+
+impl ParserCtx {
     pub fn new(tokens: Vec<Token>, source_id: String) -> Self {
         Self {
             tokens,
@@ -29,7 +41,7 @@ impl Parser {
         let mut errors = Vec::new();
 
         while !self.is_eof() {
-            let stmt = self.parse_stmt();
+            let stmt = Stmt::parse(self);
             match stmt {
                 Ok(s) => stmts.push(s),
                 Err(e) => {
@@ -46,7 +58,7 @@ impl Parser {
         }
     }
 
-    fn skip_to_recovery_point(&mut self) {
+    pub(crate) fn skip_to_recovery_point(&mut self) {
         while !self.is_eof() {
             match self.peek() {
                 Some(tok)
@@ -77,11 +89,11 @@ impl Parser {
         }
     }
 
-    fn peek(&self) -> Option<&Token> {
+    pub(crate) fn peek(&self) -> Option<&Token> {
         self.tokens.get(self.pos)
     }
 
-    fn next(&mut self) -> Option<Token> {
+    pub(crate) fn next(&mut self) -> Option<Token> {
         if let Some(tok) = self.tokens.get(self.pos).cloned() {
             self.pos += 1;
             Some(tok)
@@ -90,18 +102,27 @@ impl Parser {
         }
     }
 
-    fn is_eof(&self) -> bool {
+    pub(crate) fn prev(&mut self) -> Option<Token> {
+        if self.pos > 0 {
+            self.pos -= 1;
+            self.tokens.get(self.pos).cloned()
+        } else {
+            None
+        }
+    }
+
+    pub(crate) fn is_eof(&self) -> bool {
         self.pos >= self.tokens.len()
     }
 
-    fn current_span(&self) -> Span {
+    pub(crate) fn current_span(&self) -> Span {
         self.peek()
             .expect("current_span called but no current token exists")
             .span()
             .clone()
     }
 
-    fn eof_span(&self) -> Span {
+    pub(crate) fn eof_span(&self) -> Span {
         self.tokens
             .last()
             .expect("eof_span called but no tokens exist")
@@ -109,7 +130,7 @@ impl Parser {
             .shrink_to_hi()
     }
 
-    fn prev_span(&self) -> Span {
+    pub(crate) fn prev_span(&self) -> Span {
         assert!(
             self.pos > 0,
             "prev_span called but no previous token exists"
@@ -117,7 +138,7 @@ impl Parser {
         self.tokens[self.pos - 1].span().clone()
     }
 
-    fn expect(&mut self, expected: &TokenKind) -> ParseResult<()> {
+    pub(crate) fn expect(&mut self, expected: &TokenKind) -> ParseResult<()> {
         let source_id = self.source_id.clone();
         let token = self.next();
         match token {
@@ -143,7 +164,7 @@ impl Parser {
         }
     }
 
-    fn expect_identifier(&mut self) -> ParseResult<Ident> {
+    pub(crate) fn expect_identifier(&mut self) -> ParseResult<Ident> {
         let source_id = self.source_id.clone();
         let token = self.next();
         match token {
@@ -171,7 +192,7 @@ impl Parser {
         }
     }
 
-    fn expect_keyword(&mut self, expected: &TokenKind) -> ParseResult<()> {
+    pub(crate) fn expect_keyword(&mut self, expected: &TokenKind) -> ParseResult<()> {
         let source_id = self.source_id.clone();
         let token = self.next();
         match token {
@@ -197,7 +218,7 @@ impl Parser {
         }
     }
 
-    fn expect_type(&mut self) -> ParseResult<Types> {
+    pub(crate) fn expect_type(&mut self) -> ParseResult<Types> {
         let source_id = self.source_id.clone();
         let token = self.next();
         match token {
@@ -250,92 +271,7 @@ impl Parser {
         }
     }
 
-    fn consume_if(&mut self, expected: &TokenKind) -> bool {
-        if self.peek().is_some_and(|tok| tok.kind() == expected) {
-            self.next();
-            true
-        } else {
-            false
-        }
-    }
-
-    fn parse_stmt(&mut self) -> ParseResult<Stmt> {
-        match self.peek() {
-            Some(tok) if token_matches!(tok, TokenKind::Struct) => self.parse_struct_def(),
-            Some(tok) if token_matches!(tok, TokenKind::Fn) => self.parse_function_def(),
-            Some(tok) if token_matches!(tok, TokenKind::Extern) => self.parse_extern_fn(),
-            Some(tok) if token_matches!(tok, TokenKind::Intrinsic) => self.parse_intrinsic_fn(),
-            Some(tok) if token_matches!(tok, TokenKind::Let) => self.parse_let_stmt(),
-            Some(tok) if token_matches!(tok, TokenKind::If) => self.parse_if_stmt(),
-            Some(tok) if token_matches!(tok, TokenKind::While) => self.parse_while_stmt(),
-            Some(tok) if token_matches!(tok, TokenKind::For) => self.parse_for_stmt(),
-            Some(tok) if token_matches!(tok, TokenKind::Return) => self.parse_return_stmt(),
-            Some(tok) if token_matches!(tok, TokenKind::Continue) => self.parse_continue_stmt(),
-            Some(tok) if token_matches!(tok, TokenKind::Break) => self.parse_break_stmt(),
-            Some(tok) if token_matches!(tok, TokenKind::Module) => self.parse_module(),
-            Some(tok) if token_matches!(tok, TokenKind::Import) => self.parse_import(),
-            _ => self.parse_expr_stmt(),
-        }
-    }
-
-    fn parse_struct_def(&mut self) -> ParseResult<Stmt> {
-        let start_tok = self.current_span();
-        self.expect(&TokenKind::Struct)?;
-        let name = self.expect_identifier()?;
-        let fields = self.parse_field_list(name.clone())?;
-        let end = self.prev_span();
-
-        Ok(Stmt::StructDef(StructDef {
-            name,
-            fields,
-            span: start_tok.to(end),
-        }))
-    }
-
-    fn parse_function_def(&mut self) -> ParseResult<Stmt> {
-        let start_tok = self.current_span();
-        self.expect(&TokenKind::Fn)?;
-        let name_ident = self.expect_identifier()?;
-        let name = FunctionName::new(name_ident.inner().to_string(), name_ident.span().clone());
-        let params = self.parse_parameter_list()?;
-        let return_type = self.parse_optional_return_type()?;
-        let body = self.parse_block()?;
-        let end = self.prev_span();
-        let span = start_tok.to(end);
-
-        Ok(Stmt::FuncDef(FuncDef {
-            name,
-            receiver: None,
-            params,
-            return_type,
-            body: FuncBody::Block(Block::new(body.into(), span.clone())),
-            span,
-        }))
-    }
-
-    fn parse_extern_fn(&mut self) -> ParseResult<Stmt> {
-        let start_tok = self.current_span();
-        self.expect(&TokenKind::Extern)?;
-        self.expect(&TokenKind::Fn)?;
-        let name_ident = self.expect_identifier()?;
-        let name = FunctionName::new(name_ident.inner().to_string(), name_ident.span().clone());
-        let (params, variadic) = self.parse_parameter_list_with_variadic()?;
-        let return_type = self.parse_optional_return_type()?;
-        self.expect(&TokenKind::Semicolon)?;
-        let end = self.prev_span();
-        let span = start_tok.to(end);
-
-        Ok(Stmt::FuncDef(FuncDef {
-            name,
-            receiver: None,
-            params,
-            return_type,
-            body: FuncBody::Extern { variadic },
-            span,
-        }))
-    }
-
-    fn expect_string_literal(&mut self) -> ParseResult<String> {
+    pub(crate) fn expect_string_literal(&mut self) -> ParseResult<String> {
         let source_id = self.source_id.clone();
         let token = self.next();
         match token {
@@ -363,313 +299,37 @@ impl Parser {
         }
     }
 
-    fn parse_intrinsic_fn(&mut self) -> ParseResult<Stmt> {
-        let start_tok = self.current_span();
-        self.expect(&TokenKind::Intrinsic)?;
-        self.expect(&TokenKind::Fn)?;
-        let name_ident = self.expect_identifier()?;
-        let name = FunctionName::new(name_ident.inner().to_string(), name_ident.span().clone());
-        let params = self.parse_parameter_list()?;
-        let return_type = self.parse_optional_return_type()?;
-        self.expect(&TokenKind::Assign)?;
-        let llvm_name = self.expect_string_literal()?;
-        self.expect(&TokenKind::Semicolon)?;
-        let end = self.prev_span();
-        let span = start_tok.to(end);
-
-        Ok(Stmt::FuncDef(FuncDef {
-            name,
-            receiver: None,
-            params,
-            return_type,
-            body: FuncBody::Intrinsic(llvm_name),
-            span,
-        }))
-    }
-
-    fn parse_module(&mut self) -> ParseResult<Stmt> {
-        let start_tok = self.current_span();
-        self.expect(&TokenKind::Module)?;
-        let name = self.expect_identifier()?;
-        let end = self.prev_span();
-
-        Ok(Stmt::ModuleDecl(ModuleDecl {
-            name,
-            span: start_tok.to(end),
-        }))
-    }
-
-    fn parse_import(&mut self) -> ParseResult<Stmt> {
-        use crate::ast::{Import, ImportPrefix};
-
-        let start_tok = self.current_span();
-        self.expect(&TokenKind::Import)?;
-
-        let prefix = match self.peek() {
-            Some(tok) if token_matches!(tok, TokenKind::Std) => {
-                self.next();
-                ImportPrefix::Std
-            }
-            Some(tok) if token_matches!(tok, TokenKind::Self_) => {
-                self.next();
-                ImportPrefix::Local
-            }
-            _ => {
-                return Err(ParseError::unexpected_token(
-                    self.peek().cloned(),
-                    "std or self",
-                    self.current_span().into_range(),
-                    self.source_id.clone(),
-                ));
-            }
-        };
-
-        self.expect(&TokenKind::DoubleColon)?;
-        let module_name = self.expect_identifier()?;
-        let end = self.prev_span();
-
-        Ok(Stmt::Import(Import {
-            prefix,
-            module: module_name.inner().to_string(),
-            span: start_tok.to(end),
-        }))
-    }
-
-    fn parse_let_stmt(&mut self) -> ParseResult<Stmt> {
-        let start_tok = self.current_span();
-        self.expect(&TokenKind::Let)?;
-        let name = self.expect_identifier()?;
-
-        let var_type = if self
-            .peek()
-            .is_some_and(|tok| token_matches!(tok, TokenKind::Colon))
-        {
-            Some(self.parse_optional_custom_type()?)
+    pub(crate) fn consume_if(&mut self, expected: &TokenKind) -> bool {
+        if self.peek().is_some_and(|tok| tok.kind() == expected) {
+            self.next();
+            true
         } else {
-            None
-        };
-
-        self.expect(&TokenKind::Assign)?;
-        let value = self.parse_let_expr()?;
-        self.expect(&TokenKind::Semicolon)?;
-        let end = self.prev_span();
-        let span = start_tok.to(end);
-
-        Ok(Stmt::Let(Let {
-            name,
-            declared_type: var_type,
-            value: ExprAst {
-                expr: value,
-                span: span.clone(),
-            },
-            span,
-        }))
-    }
-
-    fn parse_if_stmt(&mut self) -> ParseResult<Stmt> {
-        let start_tok = self.current_span();
-        self.expect(&TokenKind::If)?;
-        let cond = self.parse_if_expr()?;
-        let then_branch = self.parse_stmt_or_block()?;
-        let else_branch = if self.consume_if(&TokenKind::Else) {
-            Some(self.parse_stmt_or_block()?)
-        } else {
-            None
-        };
-        let end = self.prev_span();
-        let span = start_tok.to(end);
-
-        Ok(Stmt::If(If {
-            cond: ExprAst {
-                expr: cond,
-                span: span.clone(),
-            },
-            then_branch: Block::new(then_branch.into(), span.clone()),
-            else_branch: else_branch.map(|p| Block::new(p.into(), span.clone())),
-            span,
-        }))
-    }
-
-    fn parse_while_stmt(&mut self) -> ParseResult<Stmt> {
-        let start_tok = self.current_span();
-        self.expect(&TokenKind::While)?;
-        let cond = self.parse_while_expr()?;
-        let body = self.parse_stmt_or_block()?;
-        let end = self.prev_span();
-        let span = start_tok.to(end);
-
-        Ok(Stmt::While(While {
-            cond,
-            body: Block::new(body.into(), span.clone()),
-            span,
-        }))
-    }
-
-    fn parse_for_stmt(&mut self) -> ParseResult<Stmt> {
-        let start_tok = self.current_span();
-        self.expect(&TokenKind::For)?;
-        let init = self.parse_let_stmt()?;
-        let cond = self.parse_while_expr()?.unwrap_binary();
-        self.expect(&TokenKind::Semicolon)?;
-        let update = self.parse_assignment()?.unwrap_assign();
-        let body = self.parse_stmt_or_block()?;
-        let end = self.prev_span();
-        let span = start_tok.to(end);
-
-        Ok(Stmt::For(For {
-            init: init.unwrap_let(),
-            cond: cond.clone(),
-            update: update.clone(),
-            body: Block::new(body.into(), span.clone()),
-            span,
-        }))
-    }
-
-    fn parse_return_stmt(&mut self) -> ParseResult<Stmt> {
-        let start_tok = self.current_span();
-        self.expect(&TokenKind::Return)?;
-        let expr = if !self
-            .peek()
-            .is_some_and(|tok| token_matches!(tok, TokenKind::Semicolon))
-        {
-            Some(self.parse_stmt_expr()?)
-        } else {
-            None
-        };
-        self.expect(&TokenKind::Semicolon)?;
-        let end = self.prev_span();
-        let span = start_tok.to(end);
-        let expr = expr.map(|e| ExprAst {
-            expr: e,
-            span: span.clone(),
-        });
-
-        Ok(Stmt::Return(Return { expr, span }))
-    }
-
-    fn parse_continue_stmt(&mut self) -> ParseResult<Stmt> {
-        let start_tok = self.current_span();
-        self.expect(&TokenKind::Continue)?;
-        self.expect(&TokenKind::Semicolon)?;
-        let end = self.prev_span();
-        Ok(Stmt::Continue(Continue {
-            span: start_tok.to(end),
-        }))
-    }
-
-    fn parse_break_stmt(&mut self) -> ParseResult<Stmt> {
-        let start_tok = self.current_span();
-        self.expect(&TokenKind::Break)?;
-        self.expect(&TokenKind::Semicolon)?;
-        let end = self.prev_span();
-        Ok(Stmt::Break(Break {
-            span: start_tok.to(end),
-        }))
-    }
-
-    fn parse_expr_stmt(&mut self) -> ParseResult<Stmt> {
-        let start_tok = self.current_span();
-        let expr = self.parse_stmt_expr()?;
-        self.expect(&TokenKind::Semicolon)?;
-        let end = self.prev_span();
-        Ok(Stmt::Expr(ExprAst {
-            expr,
-            span: start_tok.to(end),
-        }))
-    }
-
-    fn parse_block(&mut self) -> ParseResult<Vec<Stmt>> {
-        self.expect(&TokenKind::LeftBrace)?;
-        let mut stmts = Vec::new();
-
-        while !self
-            .peek()
-            .is_some_and(|tok| token_matches!(tok, TokenKind::RightBrace))
-        {
-            stmts.push(self.parse_stmt()?);
-        }
-
-        self.expect(&TokenKind::RightBrace)?;
-        Ok(stmts)
-    }
-
-    fn parse_stmt_or_block(&mut self) -> ParseResult<Vec<Stmt>> {
-        if self
-            .peek()
-            .is_some_and(|tok| token_matches!(tok, TokenKind::LeftBrace))
-        {
-            self.parse_block()
-        } else {
-            Ok(vec![self.parse_stmt()?])
+            false
         }
     }
 
-    fn parse_parameter_list(&mut self) -> ParseResult<Vec<(ParamKind, Types)>> {
-        self.expect(&TokenKind::LeftParen)?;
-
-        let mut params = Vec::new();
-
-        if self.peek().is_some_and(|t| t.kind().eq(&TokenKind::Self_)) {
-            self.expect_keyword(&TokenKind::Self_)?;
-            let name = ParamKind::Self_(Selff::new(self.current_span()));
-            self.expect(&TokenKind::Colon)?;
-            let param_type = self.expect_type()?;
-            params.push((name, param_type));
-            self.consume_if(&TokenKind::Comma);
-        }
-
-        let mut rest = self.parse_comma_separated(
-            |parser| {
-                if parser
-                    .peek()
-                    .is_some_and(|t| t.kind().eq(&TokenKind::Self_))
-                {
-                    let span = parser.current_span().into_range();
-                    let source_id = parser.source_id.clone();
-                    return Err(ParseError::unexpected_token(
-                        parser.peek().cloned(),
-                        "parameter name",
-                        span,
-                        source_id,
-                    ));
-                }
-                let name = parser.expect_identifier()?;
-                parser.expect(&TokenKind::Colon)?;
-                let param_type = parser.expect_type()?;
-                Ok((ParamKind::Ident(name), param_type))
-            },
-            &TokenKind::RightParen,
-        )?;
-        params.append(&mut rest);
-
-        self.expect(&TokenKind::RightParen)?;
-        Ok(params)
-    }
-
-    fn parse_parameter_list_with_variadic(
+    pub(crate) fn parse_comma_separated<T, F>(
         &mut self,
-    ) -> ParseResult<(Vec<(ParamKind, Types)>, bool)> {
-        self.expect(&TokenKind::LeftParen)?;
+        mut parse_item: F,
+        terminator: &TokenKind,
+    ) -> ParseResult<Vec<T>>
+    where
+        F: FnMut(&mut Self) -> ParseResult<T>,
+    {
+        let mut items = Vec::new();
 
-        let mut params = Vec::new();
-        let mut variadic = false;
+        while !self.peek().is_some_and(|tok| tok.kind() == terminator) {
+            items.push(parse_item(self)?);
 
-        let mut rest = self.parse_comma_separated_with_variadic(
-            |parser| {
-                let name = parser.expect_identifier()?;
-                parser.expect(&TokenKind::Colon)?;
-                let param_type = parser.expect_type()?;
-                Ok((ParamKind::Ident(name), param_type))
-            },
-            &mut variadic,
-        )?;
-        params.append(&mut rest);
+            if !self.consume_if(&TokenKind::Comma) {
+                break;
+            }
+        }
 
-        self.expect(&TokenKind::RightParen)?;
-        Ok((params, variadic))
+        Ok(items)
     }
 
-    fn parse_comma_separated_with_variadic<T, F>(
+    pub(crate) fn parse_comma_separated_with_variadic<T, F>(
         &mut self,
         mut parse_item: F,
         variadic: &mut bool,
@@ -698,553 +358,5 @@ impl Parser {
         }
 
         Ok(items)
-    }
-
-    fn parse_field_list(&mut self, struct_name: Ident) -> ParseResult<IndexMap<Ident, FieldKind>> {
-        self.expect(&TokenKind::LeftBrace)?;
-        let mut fields = IndexMap::new();
-        while !self
-            .peek()
-            .is_some_and(|tok| token_matches!(tok, TokenKind::RightBrace))
-        {
-            let field = self.peek().ok_or_else(|| {
-                let span = self.eof_span().into_range();
-                ParseError::unexpected_token(
-                    None,
-                    "field declaration",
-                    span,
-                    self.source_id.clone(),
-                )
-            })?;
-
-            match field.kind() {
-                TokenKind::Fn => {
-                    let mut func = self.parse_function_def()?.unwrap_func_def();
-                    let kind = func
-                        .params
-                        .iter()
-                        .find(|(k, _)| matches!(k, ParamKind::Self_(_)))
-                        .map_or(ReceiverKind::Value, |(_, t)| {
-                            if matches!(t, Types::Pointer(_)) {
-                                ReceiverKind::Pointer
-                            } else {
-                                ReceiverKind::Value
-                            }
-                        });
-                    func.receiver = Some(Receiver {
-                        struct_name: struct_name.clone(),
-                        kind,
-                    });
-                    let key = func.name.to_ident();
-                    fields.insert(key, FieldKind::Func(func));
-                }
-                TokenKind::Ident(field_name) => {
-                    let field_name = field_name.clone();
-                    self.next();
-                    self.expect(&TokenKind::Colon)?;
-                    let field_type = self.expect_type()?;
-                    fields.insert(field_name, FieldKind::Var(field_type));
-
-                    if !self.consume_if(&TokenKind::Comma)
-                        && !self
-                            .peek()
-                            .is_some_and(|tok| token_matches!(tok, TokenKind::RightBrace))
-                    {
-                        break;
-                    }
-                }
-                _ => Err(ParseError::unexpected_token(
-                    Some(field.clone()),
-                    "field declaration",
-                    field.span().into_range(),
-                    self.source_id.clone(),
-                ))?,
-            }
-        }
-
-        self.expect(&TokenKind::RightBrace)?;
-        Ok(fields)
-    }
-
-    fn parse_optional_return_type(&mut self) -> ParseResult<Types> {
-        if self.consume_if(&TokenKind::Colon) {
-            self.expect_type()
-        } else {
-            Ok(Types::Void)
-        }
-    }
-
-    fn parse_comma_separated<T, F>(
-        &mut self,
-        mut parse_item: F,
-        terminator: &TokenKind,
-    ) -> ParseResult<Vec<T>>
-    where
-        F: FnMut(&mut Self) -> ParseResult<T>,
-    {
-        let mut items = Vec::new();
-
-        while !self.peek().is_some_and(|tok| tok.kind() == terminator) {
-            items.push(parse_item(self)?);
-
-            if !self.consume_if(&TokenKind::Comma) {
-                break;
-            }
-        }
-
-        Ok(items)
-    }
-
-    pub fn parse_if_expr(&mut self) -> ParseResult<Expr> {
-        self.parse_binary_with_flags(0, false)
-    }
-
-    pub fn parse_while_expr(&mut self) -> ParseResult<Expr> {
-        self.parse_binary_with_flags(0, false)
-    }
-
-    pub fn parse_let_expr(&mut self) -> ParseResult<Expr> {
-        self.parse_assignment()
-    }
-
-    pub fn parse_stmt_expr(&mut self) -> ParseResult<Expr> {
-        self.parse_assignment()
-    }
-
-    fn parse_binary_with_flags(
-        &mut self,
-        min_prec: u8,
-        allow_struct_literals: bool,
-    ) -> ParseResult<Expr> {
-        let mut left = self.parse_unary_with_flags(allow_struct_literals)?;
-
-        while let Some(token) = self.peek() {
-            let op = match Op::from_token(token) {
-                Some(op) => op,
-                None => break,
-            };
-
-            let prec_info = match op.get_precedence() {
-                Some(p) => p,
-                None => break,
-            };
-
-            if prec_info.prec < min_prec {
-                break;
-            }
-
-            self.next();
-            let next_min_prec = if prec_info.assoc == Assoc::Left {
-                prec_info.prec + 1
-            } else {
-                prec_info.prec
-            };
-
-            let right = self.parse_binary_with_flags(next_min_prec, allow_struct_literals)?;
-
-            left = Expr::Binary(BinaryExpr {
-                left: Box::new(left),
-                op,
-                right: Box::new(right),
-            });
-        }
-
-        if self
-            .peek()
-            .is_some_and(|tok| token_matches!(tok, TokenKind::As))
-        {
-            self.next();
-            let target_type = self.expect_type()?;
-            left = Expr::As(AsExpression {
-                expr: Box::new(left),
-                target_type,
-            });
-        }
-
-        Ok(left)
-    }
-
-    fn parse_unary_with_flags(&mut self, allow_struct_literals: bool) -> ParseResult<Expr> {
-        match self.peek() {
-            tok if tok.is_some_and(|token| token_matches!(token, TokenKind::Minus)) => {
-                self.next();
-                let expr = self.parse_unary_with_flags(allow_struct_literals)?;
-                Ok(Expr::Unary {
-                    op: Op::Minus,
-                    expr: Box::new(expr),
-                })
-            }
-            tok if tok.is_some_and(|token| token_matches!(token, TokenKind::Bang)) => {
-                self.next();
-                let expr = self.parse_unary_with_flags(allow_struct_literals)?;
-                Ok(Expr::Unary {
-                    op: Op::Not,
-                    expr: Box::new(expr),
-                })
-            }
-            tok if tok.is_some_and(|token| token_matches!(token, TokenKind::BooleanAnd)) => {
-                self.next();
-                let expr = self.parse_unary_with_flags(allow_struct_literals)?;
-                Ok(Expr::Unary {
-                    op: Op::Ref,
-                    expr: Box::new(expr),
-                })
-            }
-            tok if tok.is_some_and(|token| token_matches!(token, TokenKind::Multiply)) => {
-                self.next();
-                let expr = self.parse_unary_with_flags(allow_struct_literals)?;
-                let deref = Expr::Unary {
-                    op: Op::Deref,
-                    expr: Box::new(expr),
-                };
-                self.parse_postfix_chain(deref)
-            }
-            _ => self.parse_primary_with_flags(allow_struct_literals),
-        }
-    }
-
-    fn parse_array_literal(&mut self) -> ParseResult<Expr> {
-        if self
-            .peek()
-            .is_some_and(|tok| token_matches!(tok, TokenKind::RightBracket))
-        {
-            self.expect(&TokenKind::RightBracket)?;
-            return Ok(Expr::Value(Value::Array(ArrayLiteral::new(vec![]))));
-        }
-
-        let first = self.parse_assignment()?;
-
-        if self.consume_if(&TokenKind::Semicolon) {
-            let count_token = self.next();
-            let count = match count_token.as_ref().map(|t| t.kind()) {
-                Some(TokenKind::Number(n)) => *n as usize,
-                _ => {
-                    let span = self.current_span().into_range();
-                    let source_id = self.source_id.clone();
-                    return Err(ParseError::unexpected_token(
-                        count_token,
-                        "array repeat count",
-                        span,
-                        source_id,
-                    ));
-                }
-            };
-            self.expect(&TokenKind::RightBracket)?;
-            return Ok(Expr::Value(Value::Array(ArrayLiteral::new_fill(
-                first, count,
-            ))));
-        }
-
-        let mut elem = vec![first];
-        if self.consume_if(&TokenKind::Comma) {
-            let rest = self.parse_comma_separated(
-                |parse| parse.parse_assignment(),
-                &TokenKind::RightBracket,
-            )?;
-            elem.extend(rest);
-        }
-        self.expect(&TokenKind::RightBracket)?;
-        Ok(Expr::Value(Value::Array(ArrayLiteral::new(elem))))
-    }
-
-    fn parse_array_index(&mut self, name: Ident) -> ParseResult<Expr> {
-        self.expect(&TokenKind::LeftBracket)?;
-        let index_expr = self.parse_assignment()?;
-        self.expect(&TokenKind::RightBracket)?;
-
-        Ok(Expr::ArrayIndex(ArrayIndexExpr {
-            expr: Box::new(Expr::Ident(name)),
-            index: Box::new(index_expr),
-        }))
-    }
-
-    fn parse_primary_with_flags(&mut self, allow_struct_literals: bool) -> ParseResult<Expr> {
-        let source_id = self.source_id.clone();
-
-        let token = self.next();
-        match token {
-            Some(tok) => match tok.kind() {
-                TokenKind::Number(n) => Ok(Expr::Value(Value::Number(*n))),
-                TokenKind::Float(f) => Ok(Expr::Value(Value::Float(*f))),
-                TokenKind::String(s) => Ok(Expr::Value(Value::String(s.clone()))),
-                TokenKind::Char(c) => Ok(Expr::Value(Value::Char(*c))),
-                TokenKind::True => Ok(Expr::Value(Value::Boolean(true))),
-                TokenKind::False => Ok(Expr::Value(Value::Boolean(false))),
-                TokenKind::Null => Ok(Expr::Null),
-                TokenKind::Ident(name) => {
-                    if allow_struct_literals {
-                        self.parse_postfix_expr_with_struct(name.clone())
-                    } else {
-                        self.parse_postfix_expr(name.clone())
-                    }
-                }
-                TokenKind::LeftParen => {
-                    let expr = if allow_struct_literals {
-                        self.parse_assignment()?
-                    } else {
-                        self.parse_binary_with_flags(0, false)?
-                    };
-                    self.expect(&TokenKind::RightParen)?;
-                    self.parse_postfix_chain(expr)
-                }
-                TokenKind::LeftBracket => self.parse_array_literal(),
-                TokenKind::Self_ => {
-                    let self_ident =
-                        crate::tokens::Ident::new("self".to_string(), tok.span().clone());
-                    self.parse_postfix_chain(Expr::Ident(self_ident))
-                }
-                _ => {
-                    let span = tok.span().into_range();
-                    Err(ParseError::unexpected_token(
-                        Some(tok),
-                        "expression",
-                        span,
-                        source_id,
-                    ))
-                }
-            },
-            None => {
-                let span = self.current_span().into_range();
-                Err(ParseError::unexpected_token(
-                    None,
-                    "expression",
-                    span,
-                    source_id,
-                ))
-            }
-        }
-    }
-
-    fn parse_assignment(&mut self) -> ParseResult<Expr> {
-        let expr = self.parse_binary(0)?;
-
-        if self.peek_assignment_op().is_some() {
-            match expr {
-                Expr::Ident(name) => {
-                    let op = Op::from_token(&self.next().unwrap()).unwrap();
-                    let value = self.parse_assignment()?;
-                    return Ok(Expr::Assign(AssignExpr {
-                        target: AssignTarget::Ident(name),
-                        op,
-                        value: Box::new(value),
-                    }));
-                }
-                Expr::FieldAccess(field) => {
-                    let op = Op::from_token(&self.next().unwrap()).unwrap();
-                    let value = self.parse_assignment()?;
-                    return Ok(Expr::Assign(AssignExpr {
-                        target: AssignTarget::FieldAccess(field),
-                        op,
-                        value: Box::new(value),
-                    }));
-                }
-                Expr::ArrayIndex(index) => {
-                    let op = Op::from_token(&self.next().unwrap()).unwrap();
-                    let value = self.parse_assignment()?;
-                    return Ok(Expr::Assign(AssignExpr {
-                        target: AssignTarget::ArrayIndex(index),
-                        op,
-                        value: Box::new(value),
-                    }));
-                }
-                Expr::Unary {
-                    op: Op::Deref,
-                    expr: inner,
-                } => {
-                    let op = Op::from_token(&self.next().unwrap()).unwrap();
-                    let value = self.parse_assignment()?;
-                    return Ok(Expr::Assign(AssignExpr {
-                        target: AssignTarget::Deref(inner),
-                        op,
-                        value: Box::new(value),
-                    }));
-                }
-                _ => {
-                    let span = self.current_span().into_range();
-                    let source_id = self.source_id.clone();
-                    return Err(ParseError::invalid_assignment_target(span, source_id));
-                }
-            }
-        }
-
-        Ok(expr)
-    }
-
-    fn peek_assignment_op(&self) -> Option<&Token> {
-        match self.peek() {
-            Some(token)
-                if token_matches!(
-                    token,
-                    TokenKind::Assign | TokenKind::PlusEqual | TokenKind::MinusEqual
-                ) =>
-            {
-                Some(token)
-            }
-            _ => None,
-        }
-    }
-
-    fn parse_binary(&mut self, min_prec: u8) -> ParseResult<Expr> {
-        self.parse_binary_with_flags(min_prec, true)
-    }
-
-    fn parse_postfix_expr(&mut self, name: Ident) -> ParseResult<Expr> {
-        let expr = Expr::Ident(name);
-        self.parse_postfix_chain(expr)
-    }
-
-    fn parse_postfix_expr_with_struct(&mut self, name: Ident) -> ParseResult<Expr> {
-        let expr = match self.peek() {
-            Some(tok) if token_matches!(tok, TokenKind::LeftParen) => {
-                self.parse_function_call(name)?
-            }
-            Some(tok) if token_matches!(tok, TokenKind::LeftBrace) => {
-                self.parse_struct_literal(name)?
-            }
-            Some(tok) if token_matches!(tok, TokenKind::LeftBracket) => {
-                self.parse_array_index(name)?
-            }
-            _ => Expr::Ident(name),
-        };
-        self.parse_postfix_chain(expr)
-    }
-
-    fn parse_postfix_chain(&mut self, mut expr: Expr) -> ParseResult<Expr> {
-        loop {
-            match self.peek() {
-                Some(tok) if token_matches!(tok, TokenKind::Dot) => {
-                    self.next();
-                    let field_name = self.expect_identifier()?;
-                    if self
-                        .peek()
-                        .is_some_and(|tok| token_matches!(tok, TokenKind::LeftParen))
-                    {
-                        self.next(); // consume '('
-                        let args = self.parse_comma_separated(
-                            |parser| parser.parse_assignment(),
-                            &TokenKind::RightParen,
-                        )?;
-                        self.expect(&TokenKind::RightParen)?;
-                        expr = Expr::Call(CallKind::Method(MethodCall {
-                            receiver: Box::new(expr),
-                            func: FunctionName::new(
-                                field_name.inner().to_string(),
-                                field_name.span().clone(),
-                            ),
-                            args,
-                        }));
-                    } else {
-                        expr = Expr::FieldAccess(FieldAccessExpr {
-                            expr: Box::new(expr),
-                            field: field_name,
-                        });
-                    }
-                }
-                Some(tok) if token_matches!(tok, TokenKind::DoubleColon) => {
-                    self.next();
-                    let struct_name = match &expr {
-                        Expr::Ident(name) => name.clone(),
-                        _ => {
-                            let span = self.current_span().into_range();
-                            let source_id = self.source_id.clone();
-                            return Err(ParseError::unexpected_token(
-                                None,
-                                "struct name before '::'",
-                                span,
-                                source_id,
-                            ));
-                        }
-                    };
-                    let func_name = self.expect_identifier()?;
-                    self.expect(&TokenKind::LeftParen)?;
-                    let args = self.parse_comma_separated(
-                        |parser| parser.parse_assignment(),
-                        &TokenKind::RightParen,
-                    )?;
-                    self.expect(&TokenKind::RightParen)?;
-                    expr = Expr::Call(CallKind::Qualified(QualifiedCall {
-                        qualifier: struct_name,
-                        func: FunctionName::new(
-                            func_name.inner().to_string(),
-                            func_name.span().clone(),
-                        ),
-                        args,
-                    }));
-                }
-                Some(tok) if token_matches!(tok, TokenKind::LeftBracket) => {
-                    self.next();
-                    let index_expr = self.parse_assignment()?;
-                    self.expect(&TokenKind::RightBracket)?;
-                    expr = Expr::ArrayIndex(ArrayIndexExpr {
-                        expr: Box::new(expr),
-                        index: Box::new(index_expr),
-                    });
-                }
-                Some(tok) if token_matches!(tok, TokenKind::LeftParen) => {
-                    if let Expr::Ident(func_name) = expr {
-                        self.next(); // consume '('
-                        let args = self.parse_comma_separated(
-                            |parser| parser.parse_assignment(),
-                            &TokenKind::RightParen,
-                        )?;
-                        self.expect(&TokenKind::RightParen)?;
-                        expr = Expr::Call(CallKind::Function(FunctionCall {
-                            func: FunctionName::new(
-                                func_name.inner().to_string(),
-                                func_name.span().clone(),
-                            ),
-                            args,
-                        }));
-                    } else {
-                        break;
-                    }
-                }
-                _ => break,
-            }
-        }
-        Ok(expr)
-    }
-
-    fn parse_struct_literal(&mut self, name: Ident) -> ParseResult<Expr> {
-        self.expect(&TokenKind::LeftBrace)?;
-        let mut fields = IndexMap::new();
-
-        while !self
-            .peek()
-            .is_some_and(|tok| token_matches!(tok, TokenKind::RightBrace))
-        {
-            let field_name = self.expect_identifier()?;
-            self.expect(&TokenKind::Colon)?;
-            let field_value = self.parse_assignment()?;
-            fields.insert(field_name, field_value);
-
-            if !self.consume_if(&TokenKind::Comma)
-                && !self
-                    .peek()
-                    .is_some_and(|tok| token_matches!(tok, TokenKind::RightBrace))
-            {
-                break;
-            }
-        }
-
-        self.expect(&TokenKind::RightBrace)?;
-        Ok(Expr::StructInit { name, fields })
-    }
-
-    fn parse_optional_custom_type(&mut self) -> ParseResult<Types> {
-        self.expect(&TokenKind::Colon)?;
-        self.expect_type()
-    }
-
-    fn parse_function_call(&mut self, func_name: Ident) -> ParseResult<Expr> {
-        self.expect(&TokenKind::LeftParen)?;
-        let args =
-            self.parse_comma_separated(|parser| parser.parse_assignment(), &TokenKind::RightParen)?;
-        self.expect(&TokenKind::RightParen)?;
-
-        Ok(Expr::Call(CallKind::Function(FunctionCall {
-            func: FunctionName::new(func_name.inner().to_string(), func_name.span().clone()),
-            args,
-        })))
     }
 }

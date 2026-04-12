@@ -5,12 +5,41 @@ use crate::module::path::ModulePath;
 use crate::module::resolver::Resolver;
 use crate::parser::Parser;
 use crate::stdlib::Library;
+use ariadne::{Cache, Source};
 use std::path::PathBuf;
 
 pub struct Module {
     pub path: ModulePath,
     pub ast: Program,
     pub imports: Vec<ModulePath>,
+}
+
+struct SourceCache {
+    path: PathBuf,
+    source: Source<String>,
+}
+
+impl SourceCache {
+    fn new(path: PathBuf, source: String) -> Self {
+        Self {
+            path,
+            source: Source::from(source),
+        }
+    }
+}
+
+impl Cache<PathBuf> for SourceCache {
+    type Storage = String;
+    fn fetch(&mut self, id: &PathBuf) -> Result<&Source<String>, impl std::fmt::Debug> {
+        if id == &self.path {
+            Ok::<_, String>(&self.source)
+        } else {
+            Err(format!("source not found: {}", id.display()))
+        }
+    }
+    fn display<'a>(&self, id: &'a PathBuf) -> Option<impl std::fmt::Display + 'a> {
+        Some(id.display())
+    }
 }
 
 pub struct Loader {
@@ -86,10 +115,16 @@ impl Loader {
             error: "Lexer error".to_string(),
         })?;
 
-        let mut parser = Parser::new(lexer.into_tokens(), filename);
-        let ast = parser.parse().map_err(|_| ModuleError::ParseError {
-            module: module_path.to_string(),
-            error: "Parse error".to_string(),
+        let mut parser = Parser::new(lexer.into_tokens(), filename.clone());
+        let ast = parser.parse().map_err(|e| {
+            let mut cache = SourceCache::new(PathBuf::from(&filename), source.to_string());
+            for err in e.into_errors() {
+                err.eprint(&mut cache);
+            }
+            ModuleError::ParseError {
+                module: module_path.to_string(),
+                error: "Parse error".to_string(),
+            }
         })?;
 
         let imports = ast

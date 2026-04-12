@@ -1,3 +1,5 @@
+use std::num::NonZeroU32;
+
 use crate::ast::{ArrayType, Types};
 use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::error::Span;
@@ -126,6 +128,7 @@ impl<'ctx> TypeConverter<'ctx> {
     }
 
     pub fn get_int_type(&self, bits: u32) -> IntType<'ctx> {
+        let nonzero_bits = NonZeroU32::new(bits).expect("Bit width must be greater than 0");
         match bits {
             1 => self.context.bool_type(),
             8 => self.context.i8_type(),
@@ -133,7 +136,10 @@ impl<'ctx> TypeConverter<'ctx> {
             32 => self.context.i32_type(),
             64 => self.context.i64_type(),
             128 => self.context.i128_type(),
-            _ => self.context.custom_width_int_type(bits),
+            _ => self
+                .context
+                .custom_width_int_type(nonzero_bits)
+                .expect("Failed to create custom width integer type"),
         }
     }
 

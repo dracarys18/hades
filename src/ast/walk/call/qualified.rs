@@ -11,10 +11,10 @@ impl WalkAst for QualifiedCall {
     fn walk(&self, ctx: &mut CompilerContext, span: Span) -> Result<Self::Output, SemanticError> {
         let resolved = if ctx
             .structs()
-            .fields(&Name::new(
-                self.qualifier.to_string(),
-                self.qualifier.span().clone(),
-            ))
+            .fields(
+                &Name::new(self.qualifier.to_string(), self.qualifier.span().clone())
+                    .full_name_optional(ctx.module_name()),
+            )
             .is_some()
         {
             let mangled = self.func.mangle(&self.qualifier);

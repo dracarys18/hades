@@ -1,4 +1,5 @@
 use crate::ast::*;
+use crate::consts::ENTRY_POINT;
 use crate::parser::error::ParseResult;
 use crate::parser::expr::parse_assignment;
 use crate::parser::func::{parse_extern_fn, parse_intrinsic_fn, FuncDef};
@@ -14,9 +15,29 @@ impl Parse for Stmt {
     fn parse(ctx: &mut ParserCtx) -> ParseResult<Stmt> {
         match ctx.peek() {
             Some(tok) if token_matches!(tok, TokenKind::Struct) => StructDef::parse(ctx),
-            Some(tok) if token_matches!(tok, TokenKind::Fn) => FuncDef::parse(ctx),
-            Some(tok) if token_matches!(tok, TokenKind::Extern) => parse_extern_fn(ctx),
-            Some(tok) if token_matches!(tok, TokenKind::Intrinsic) => parse_intrinsic_fn(ctx),
+            Some(tok) if token_matches!(tok, TokenKind::Fn) => {
+                let mut stmt = FuncDef::parse(ctx)?;
+                if let Stmt::FuncDef(ref mut f) = stmt {
+                    if f.name.inner() != ENTRY_POINT {
+                        f.name = f.name.full_name_optional(ctx.module_name.as_deref());
+                    }
+                }
+                Ok(stmt)
+            }
+            Some(tok) if token_matches!(tok, TokenKind::Extern) => {
+                let mut stmt = parse_extern_fn(ctx)?;
+                if let Stmt::FuncDef(ref mut f) = stmt {
+                    f.name = f.name.full_name_optional(ctx.module_name.as_deref());
+                }
+                Ok(stmt)
+            }
+            Some(tok) if token_matches!(tok, TokenKind::Intrinsic) => {
+                let mut stmt = parse_intrinsic_fn(ctx)?;
+                if let Stmt::FuncDef(ref mut f) = stmt {
+                    f.name = f.name.full_name_optional(ctx.module_name.as_deref());
+                }
+                Ok(stmt)
+            }
             Some(tok) if token_matches!(tok, TokenKind::Let) => Let::parse(ctx),
             Some(tok) if token_matches!(tok, TokenKind::If) => If::parse(ctx),
             Some(tok) if token_matches!(tok, TokenKind::While) => While::parse(ctx),

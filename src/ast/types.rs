@@ -131,4 +131,24 @@ impl Types {
             _ => panic!("Expected a Struct type"),
         }
     }
+
+    pub fn with_module(type_str: &Ident, module: Option<&str>) -> Self {
+        match type_str.inner() {
+            "int" => Types::Int,
+            "float" => Types::Float,
+            "bool" => Types::Bool,
+            "string" => Types::String,
+            "void" => Types::Void,
+            "char" => Types::Char,
+            "[]int" => Types::Array(ArrayType::IntArray(0)),
+            "[]float" => Types::Array(ArrayType::FloatArray(0)),
+            "[]string" => Types::Array(ArrayType::StringArray(0)),
+            "[]char" => Types::Array(ArrayType::CharArray(0)),
+            "[]bool" => Types::Array(ArrayType::BoolArray(0)),
+            _ => Types::Struct(
+                Name::new(type_str.inner().to_string(), type_str.span().clone())
+                    .full_name_optional(module),
+            ),
+        }
+    }
 }

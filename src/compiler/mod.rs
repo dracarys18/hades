@@ -117,7 +117,7 @@ impl<'a> Compiler {
             .map_err(|err| eprintln!("{err:?}"))
             .expect("Tokenizing failed");
 
-        let mut parser = parser::Parser::new(lexer.into_tokens(), filename.to_string());
+        let mut parser = parser::Parser::new(lexer.into_tokens(), filename.to_string(), None);
         let program = match parser.parse() {
             Ok(prog) => prog,
             Err(err) => {
@@ -277,7 +277,7 @@ impl<'a> Compiler {
             .tokenize()
             .map_err(|err| eprintln!("{err}"))
             .expect("Tokenizing failed");
-        let mut parser = parser::Parser::new(lexer.into_tokens(), filename.to_string());
+        let mut parser = parser::Parser::new(lexer.into_tokens(), filename.to_string(), None);
         let program = match parser.parse() {
             Ok(prog) => prog,
             Err(err) => {

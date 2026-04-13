@@ -23,16 +23,18 @@ pub struct ParserCtx {
     pub(crate) tokens: Vec<Token>,
     pub(crate) pos: usize,
     pub(crate) source_id: String,
+    pub(crate) module_name: Option<String>,
 }
 
 pub type Parser = ParserCtx;
 
 impl ParserCtx {
-    pub fn new(tokens: Vec<Token>, source_id: String) -> Self {
+    pub fn new(tokens: Vec<Token>, source_id: String, module_name: Option<String>) -> Self {
         Self {
             tokens,
             pos: 0,
             source_id,
+            module_name,
         }
     }
 
@@ -243,7 +245,7 @@ impl ParserCtx {
 
                     Ok(Types::Array(self.expect_type()?.array_type(size)))
                 }
-                TokenKind::Ident(name) => Ok(Types::from_str(name)),
+                TokenKind::Ident(name) => Ok(Types::with_module(name, self.module_name.as_deref())),
                 TokenKind::Self_ => Ok(Types::Self_),
                 TokenKind::BooleanAnd | TokenKind::And => {
                     let inner = self.expect_type()?;

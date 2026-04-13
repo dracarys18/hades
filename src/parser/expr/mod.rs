@@ -1,13 +1,13 @@
 mod array;
 
 use crate::ast::*;
-use crate::parser::Parse;
-use crate::parser::ParserCtx;
 use crate::parser::error::ParseResult;
 use crate::parser::struct_::parse_struct_literal;
+use crate::parser::Parse;
+use crate::parser::ParserCtx;
 use crate::tokens::{Assoc, Ident, Name, Op, TokenKind};
 use crate::{token_matches, token_matches_opt};
-use array::{ArrayLiteral, parse_array_index};
+use array::{parse_array_index, ArrayLiteral};
 
 impl Parse for Expr {
     type Output = Expr;

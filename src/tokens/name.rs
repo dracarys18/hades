@@ -21,6 +21,10 @@ impl Name {
         }
     }
 
+    pub fn with_module(module: String, name: String, span: Span) -> Self {
+        Self::build(Some(module), name, span)
+    }
+
     pub fn from_key(key: &str, span: Span) -> Self {
         match key.rsplit_once("__") {
             Some((module, name)) => Self::build(Some(module.to_string()), name.to_string(), span),
@@ -49,6 +53,10 @@ impl Name {
         &self.name
     }
 
+    pub fn module(&self) -> Option<&str> {
+        self.module.as_deref()
+    }
+
     pub fn span(&self) -> &Span {
         &self.span
     }
@@ -75,6 +83,13 @@ impl Name {
             self.name.clone(),
             self.span.clone(),
         )
+    }
+
+    pub fn full_name_optional(&self, qualifier: Option<&str>) -> Name {
+        match qualifier {
+            Some(m) => self.full_name(m),
+            None => self.clone(),
+        }
     }
 
     pub fn to_ident(&self) -> Ident {

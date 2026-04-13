@@ -29,8 +29,13 @@ impl WalkAst for Expr {
                 fields,
                 module,
             }) => {
-                let struct_type = ctx.get_struct_type(name, span.clone())?;
-                let name = name.mangle_optional(module.as_ref());
+                let name = name.full_name_optional(
+                    module
+                        .as_ref()
+                        .map(|m| m.inner())
+                        .or_else(|| ctx.module_name()),
+                );
+                let struct_type = ctx.get_struct_type(&name, span.clone())?;
 
                 fields
                     .iter()

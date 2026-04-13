@@ -1,9 +1,9 @@
 use crate::ast::*;
-use crate::parser::Parse;
-use crate::parser::ParserCtx;
 use crate::parser::error::ParseResult;
 use crate::parser::expr::parse_assignment;
 use crate::parser::func::FuncDef;
+use crate::parser::Parse;
+use crate::parser::ParserCtx;
 use crate::token_matches;
 use crate::tokens::Name;
 use crate::tokens::{Ident, ParamKind, TokenKind};
@@ -18,7 +18,8 @@ impl Parse for StructDef {
         let start_tok = ctx.current_span();
         ctx.expect(&TokenKind::Struct)?;
         let ident = ctx.expect_identifier()?;
-        let name = Name::new(ident.to_string(), ident.span().clone());
+        let name = Name::new(ident.to_string(), ident.span().clone())
+            .full_name_optional(ctx.module_name.as_deref());
         let fields = parse_field_list(ctx, name.clone())?;
         let end = ctx.prev_span();
 

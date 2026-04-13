@@ -1,8 +1,7 @@
 use crate::ast::{FuncBody, FuncDef, ReceiverKind, Types, WalkAst};
-use crate::consts::ENTRY_POINT;
 use crate::error::SemanticError;
-use crate::tokens::{Name, ParamKind};
-use crate::typed_ast::{CompilerContext, FuncKind, FunctionSignature, TypedFuncDef, TypedReceiver};
+use crate::tokens::{Ident, Name, ParamKind};
+use crate::typed_ast::{CompilerContext, FunctionSignature, TypedFuncDef, TypedReceiver};
 use indexmap::IndexMap;
 
 impl FuncDef {
@@ -39,15 +38,18 @@ impl FuncDef {
         ctx.register_function(name, sig)
     }
 
-    fn full_name(&self, ctx: &CompilerContext) -> Name {
-        let base = match &self.receiver {
-            Some(r) => self.name.mangle(&r.struct_name.to_ident()),
+    fn full_name(&self, _ctx: &CompilerContext) -> Name {
+        match &self.receiver {
+            Some(r) => {
+                let bare_struct = Ident::new(
+                    r.struct_name.link_name().to_string(),
+                    self.name.span().clone(),
+                );
+                let mangled = self.name.mangle(&bare_struct);
+                mangled.full_name_optional(r.struct_name.module())
+            }
             None => self.name.clone(),
-        };
-        if base.inner() == ENTRY_POINT {
-            return base;
         }
-        ctx.module_name().map(|m| base.full_name(m)).unwrap_or(base)
     }
 }
 
@@ -70,7 +72,7 @@ impl WalkAst for FuncDef {
             FuncBody::Extern { .. } => {
                 if !ctx.is_stdlib() {
                     return Err(SemanticError::extern_outside_stdlib(
-                        self.name.inner().to_string(),
+                        self.name.link_name().to_string(),
                         self.span.clone(),
                     ));
                 }
@@ -84,7 +86,7 @@ impl WalkAst for FuncDef {
             FuncBody::Intrinsic(_) => {
                 if !ctx.is_stdlib() {
                     return Err(SemanticError::intrinsic_outside_stdlib(
-                        self.name.inner().to_string(),
+                        self.name.link_name().to_string(),
                         self.span.clone(),
                     ));
                 }

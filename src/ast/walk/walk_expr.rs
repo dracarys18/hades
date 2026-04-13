@@ -24,17 +24,23 @@ impl WalkAst for Expr {
                     ident: ident.clone(),
                     typ,
                 }),
-            Expr::StructInit(StructInitExpr {
-                name,
-                fields,
-                module,
-            }) => {
-                let name = name.full_name_optional(
-                    module
-                        .as_ref()
-                        .map(|m| m.inner())
-                        .or_else(|| ctx.module_name()),
-                );
+            Expr::StructInit(StructInitExpr { path, fields }) => {
+                let name = match path.as_slice() {
+                    [struct_name] => Name::new(struct_name.to_string(), struct_name.span().clone())
+                        .full_name_optional(ctx.module_name()),
+                    [module, struct_name] => {
+                        Name::new(struct_name.to_string(), struct_name.span().clone())
+                            .full_name(module.inner())
+                    }
+                    _ => {
+                        return Err(SemanticError::undefined_struct(
+                            path.last()
+                                .map(|i| i.clone())
+                                .unwrap_or_else(|| Ident::new("?".to_string(), span.clone())),
+                            span.clone(),
+                        ))
+                    }
+                };
                 let struct_type = ctx.get_struct_type(&name, span.clone())?;
 
                 fields

@@ -18,8 +18,7 @@ impl Parse for StructDef {
         let start_tok = ctx.current_span();
         ctx.expect(&TokenKind::Struct)?;
         let ident = ctx.expect_identifier()?;
-        let name = Name::new(ident.to_string(), ident.span().clone())
-            .full_name_optional(ctx.module_name.as_deref());
+        let name = Name::new(ident.to_string(), ident.span().clone());
         let fields = parse_field_list(ctx, name.clone())?;
         let end = ctx.prev_span();
 
@@ -31,11 +30,7 @@ impl Parse for StructDef {
     }
 }
 
-pub(super) fn parse_struct_literal(
-    ctx: &mut ParserCtx,
-    name: Name,
-    qualifier: Option<Ident>,
-) -> ParseResult<Expr> {
+pub(super) fn parse_struct_literal(ctx: &mut ParserCtx, path: Vec<Ident>) -> ParseResult<Expr> {
     ctx.expect(&TokenKind::LeftBrace)?;
     let mut fields = IndexMap::new();
 
@@ -58,11 +53,7 @@ pub(super) fn parse_struct_literal(
     }
 
     ctx.expect(&TokenKind::RightBrace)?;
-    Ok(Expr::StructInit(StructInitExpr {
-        name,
-        fields,
-        module: qualifier,
-    }))
+    Ok(Expr::StructInit(StructInitExpr { path, fields }))
 }
 
 pub(super) fn parse_field_list(

@@ -164,7 +164,7 @@ fn parse_unary_with_flags(ctx: &mut ParserCtx, allow_struct_literals: bool) -> P
                 op: Op::Deref,
                 expr: Box::new(expr),
             };
-            parse_postfix_chain(ctx, deref)
+            parse_postfix_chain(ctx, deref, allow_struct_literals)
         }
         _ => parse_primary_with_flags(ctx, allow_struct_literals),
     }
@@ -184,11 +184,7 @@ fn parse_primary_with_flags(ctx: &mut ParserCtx, allow_struct_literals: bool) ->
             TokenKind::False => Ok(Expr::Value(Value::Boolean(false))),
             TokenKind::Null => Ok(Expr::Null),
             TokenKind::Ident(name) => {
-                if allow_struct_literals {
-                    parse_postfix_expr_with_struct(ctx, name.clone(), None)
-                } else {
-                    parse_postfix_expr(ctx, name.clone())
-                }
+                parse_postfix_chain(ctx, Expr::Ident(name.clone()), allow_struct_literals)
             }
             TokenKind::LeftParen => {
                 let expr = if allow_struct_literals {
@@ -197,12 +193,12 @@ fn parse_primary_with_flags(ctx: &mut ParserCtx, allow_struct_literals: bool) ->
                     parse_binary_with_flags(ctx, 0, false)?
                 };
                 ctx.expect(&TokenKind::RightParen)?;
-                parse_postfix_chain(ctx, expr)
+                parse_postfix_chain(ctx, expr, allow_struct_literals)
             }
             TokenKind::LeftBracket => ArrayLiteral::parse(ctx),
             TokenKind::Self_ => {
                 let self_ident = crate::tokens::Ident::new("self".to_string(), tok.span().clone());
-                parse_postfix_chain(ctx, Expr::Ident(self_ident))
+                parse_postfix_chain(ctx, Expr::Ident(self_ident), allow_struct_literals)
             }
             _ => {
                 let span = tok.span().into_range();
@@ -226,30 +222,11 @@ fn parse_primary_with_flags(ctx: &mut ParserCtx, allow_struct_literals: bool) ->
     }
 }
 
-fn parse_postfix_expr(ctx: &mut ParserCtx, name: Ident) -> ParseResult<Expr> {
-    parse_postfix_chain(ctx, Expr::Ident(name))
-}
-
-fn parse_postfix_expr_with_struct(
+fn parse_postfix_chain(
     ctx: &mut ParserCtx,
-    name: Ident,
-    qualified: Option<Ident>,
+    mut expr: Expr,
+    allow_struct_literals: bool,
 ) -> ParseResult<Expr> {
-    let expr = match ctx.peek() {
-        Some(tok) if token_matches!(tok, TokenKind::LeftParen) => {
-            parse_function_call(ctx, name, qualified)?
-        }
-        Some(tok) if token_matches!(tok, TokenKind::LeftBrace) => {
-            let name = Name::new(name.inner().to_string(), name.span().clone());
-            parse_struct_literal(ctx, name, qualified)?
-        }
-        Some(tok) if token_matches!(tok, TokenKind::LeftBracket) => parse_array_index(ctx, name)?,
-        _ => Expr::Ident(name),
-    };
-    parse_postfix_chain(ctx, expr)
-}
-
-fn parse_postfix_chain(ctx: &mut ParserCtx, mut expr: Expr) -> ParseResult<Expr> {
     loop {
         match ctx.peek() {
             Some(tok) if token_matches!(tok, TokenKind::Dot) => {
@@ -276,22 +253,59 @@ fn parse_postfix_chain(ctx: &mut ParserCtx, mut expr: Expr) -> ParseResult<Expr>
                 }
             }
             Some(tok) if token_matches!(tok, TokenKind::DoubleColon) => {
-                ctx.next();
-                let qualifier = match &expr {
-                    Expr::Ident(name) => name.clone(),
+                let first = match expr {
+                    Expr::Ident(ref name) => name.clone(),
                     _ => {
                         let span = ctx.current_span().into_range();
                         let source_id = ctx.source_id.clone();
                         return Err(crate::parser::error::ParseError::unexpected_token(
                             None,
-                            "struct name before '::'",
+                            "identifier before '::'",
                             span,
                             source_id,
                         ));
                     }
                 };
-                let func_name = ctx.expect_identifier()?;
-                expr = parse_postfix_expr_with_struct(ctx, func_name.clone(), Some(qualifier))?;
+                ctx.next(); // consume ::
+                let mut path = vec![first];
+                loop {
+                    let segment = ctx.expect_identifier()?;
+                    if ctx
+                        .peek()
+                        .is_some_and(|t| token_matches!(t, TokenKind::DoubleColon))
+                    {
+                        ctx.next(); // consume ::
+                        path.push(segment);
+                    } else if ctx
+                        .peek()
+                        .is_some_and(|t| token_matches!(t, TokenKind::LeftParen))
+                    {
+                        ctx.next(); // consume (
+                        let args = ctx.parse_comma_separated(
+                            |c| parse_assignment(c),
+                            &TokenKind::RightParen,
+                        )?;
+                        ctx.expect(&TokenKind::RightParen)?;
+                        expr = Expr::Call(CallKind::Qualified(QualifiedCall {
+                            path,
+                            func: Name::new(segment.inner().to_string(), segment.span().clone()),
+                            args,
+                        }));
+                        break;
+                    } else if allow_struct_literals
+                        && ctx
+                            .peek()
+                            .is_some_and(|t| token_matches!(t, TokenKind::LeftBrace))
+                    {
+                        path.push(segment);
+                        expr = parse_struct_literal(ctx, path)?;
+                        break;
+                    } else {
+                        path.push(segment);
+                        expr = Expr::Ident(path.last().unwrap().clone());
+                        break;
+                    }
+                }
             }
             Some(tok) if token_matches!(tok, TokenKind::LeftBracket) => {
                 ctx.next();
@@ -316,33 +330,17 @@ fn parse_postfix_chain(ctx: &mut ParserCtx, mut expr: Expr) -> ParseResult<Expr>
                     break;
                 }
             }
+            Some(tok) if allow_struct_literals && token_matches!(tok, TokenKind::LeftBrace) => {
+                if let Expr::Ident(name) = expr {
+                    expr = parse_struct_literal(ctx, vec![name])?;
+                } else {
+                    break;
+                }
+            }
             _ => break,
         }
     }
     Ok(expr)
-}
-
-pub(crate) fn parse_function_call(
-    ctx: &mut ParserCtx,
-    func_name: Ident,
-    qualifier: Option<Ident>,
-) -> ParseResult<Expr> {
-    ctx.expect(&TokenKind::LeftParen)?;
-    let args = ctx.parse_comma_separated(|c| parse_assignment(c), &TokenKind::RightParen)?;
-    ctx.expect(&TokenKind::RightParen)?;
-
-    if let Some(qualifier) = qualifier {
-        Ok(Expr::Call(CallKind::Qualified(QualifiedCall {
-            qualifier: qualifier,
-            func: Name::new(func_name.inner().to_string(), func_name.span().clone()),
-            args,
-        })))
-    } else {
-        Ok(Expr::Call(CallKind::Function(FunctionCall {
-            func: Name::new(func_name.inner().to_string(), func_name.span().clone()),
-            args,
-        })))
-    }
 }
 
 fn peek_assignment_op(ctx: &ParserCtx) -> Option<&crate::tokens::Token> {

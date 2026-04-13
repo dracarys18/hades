@@ -132,6 +132,17 @@ impl Types {
         }
     }
 
+    pub fn qualify(&self, module: Option<&str>) -> Self {
+        match self {
+            Types::Struct(name) => Types::Struct(name.full_name_optional(module)),
+            Types::Array(ArrayType::StructArray(size, name)) => Types::Array(
+                ArrayType::StructArray(*size, name.full_name_optional(module)),
+            ),
+            Types::Pointer(inner) => Types::Pointer(Box::new(inner.qualify(module))),
+            other => other.clone(),
+        }
+    }
+
     pub fn with_module(type_str: &Ident, module: Option<&str>) -> Self {
         match type_str.inner() {
             "int" => Types::Int,

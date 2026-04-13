@@ -9,21 +9,30 @@ impl WalkAst for QualifiedCall {
     type Output = TypedExpr;
 
     fn walk(&self, ctx: &mut CompilerContext, span: Span) -> Result<Self::Output, SemanticError> {
-        let resolved = if ctx
-            .structs()
-            .fields(
-                &Name::new(self.qualifier.to_string(), self.qualifier.span().clone())
-                    .full_name_optional(ctx.module_name()),
-            )
-            .is_some()
-        {
-            let mangled = self.func.mangle(&self.qualifier);
-            ctx.module_name()
-                .map(|m| mangled.full_name(m))
-                .filter(|n| ctx.get_function_signature(n).is_ok())
-                .unwrap_or_else(|| mangled.clone())
-        } else {
-            self.func.full_name(self.qualifier.inner())
+        let resolved = match self.path.as_slice() {
+            [qualifier] => {
+                let struct_key = Name::new(qualifier.to_string(), qualifier.span().clone())
+                    .full_name_optional(ctx.module_name());
+                if ctx.structs().fields(&struct_key).is_some() {
+                    let mangled = self.func.mangle(qualifier);
+                    ctx.module_name()
+                        .map(|m| mangled.full_name(m))
+                        .filter(|n| ctx.get_function_signature(n).is_ok())
+                        .unwrap_or_else(|| mangled.clone())
+                } else {
+                    self.func.full_name(qualifier.inner())
+                }
+            }
+            [module, struct_name] => {
+                let mangled = self.func.mangle(struct_name);
+                mangled.full_name(module.inner())
+            }
+            _ => {
+                return Err(SemanticError::undefined_function(
+                    self.func.to_ident(),
+                    span,
+                ))
+            }
         };
         let sig = ctx.get_function_signature(&resolved)?;
         let return_type = sig.return_type().clone();

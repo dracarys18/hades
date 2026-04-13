@@ -115,11 +115,7 @@ impl Loader {
             error: "Lexer error".to_string(),
         })?;
 
-        let mut parser = Parser::new(
-            lexer.into_tokens(),
-            filename.clone(),
-            Some(module_path.name().to_string()),
-        );
+        let mut parser = Parser::new(lexer.into_tokens(), filename.clone());
         let ast = parser.parse().map_err(|e| {
             let mut cache = SourceCache::new(PathBuf::from(&filename), source.to_string());
             for err in e.into_errors() {

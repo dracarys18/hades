@@ -13,7 +13,9 @@ impl WalkAst for Let {
 
         let typed_expr = walk_possibly_null(
             &self.value.expr,
-            self.declared_type.clone(),
+            self.declared_type
+                .as_ref()
+                .map(|t| t.qualify(ctx.module_name())),
             ctx,
             span.clone(),
         )?;
@@ -21,14 +23,15 @@ impl WalkAst for Let {
 
         let final_type = match self.declared_type.as_ref() {
             Some(declared) => {
-                if declared != &inferred_type {
+                let qualified = declared.qualify(ctx.module_name());
+                if qualified != inferred_type {
                     return Err(SemanticError::type_mismatch(
-                        declared.to_string(),
+                        qualified.to_string(),
                         inferred_type.to_string(),
                         span.clone(),
                     ));
                 }
-                declared.clone()
+                qualified
             }
             None => inferred_type,
         };

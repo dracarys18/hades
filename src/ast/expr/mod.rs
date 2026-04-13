@@ -36,7 +36,7 @@ pub struct MethodCall {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct QualifiedCall {
-    pub qualifier: Ident,
+    pub path: Vec<Ident>,
     pub func: Name,
     pub args: Vec<Expr>,
 }
@@ -56,8 +56,7 @@ pub struct AsExpression {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructInitExpr {
-    pub name: Name,
-    pub module: Option<Ident>,
+    pub path: Vec<Ident>,
     pub fields: IndexMap<Ident, Expr>,
 }
 

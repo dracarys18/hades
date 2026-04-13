@@ -5,7 +5,7 @@ use ariadne::{Cache, Source};
 use inkwell::context::Context;
 use std::path::PathBuf;
 use std::{
-    collections::{HashMap, hash_map::Entry},
+    collections::{hash_map::Entry, HashMap},
     fmt, fs,
     path::Path,
 };
@@ -117,7 +117,7 @@ impl<'a> Compiler {
             .map_err(|err| eprintln!("{err:?}"))
             .expect("Tokenizing failed");
 
-        let mut parser = parser::Parser::new(lexer.into_tokens(), filename.to_string(), None);
+        let mut parser = parser::Parser::new(lexer.into_tokens(), filename.to_string());
         let program = match parser.parse() {
             Ok(prog) => prog,
             Err(err) => {
@@ -277,7 +277,7 @@ impl<'a> Compiler {
             .tokenize()
             .map_err(|err| eprintln!("{err}"))
             .expect("Tokenizing failed");
-        let mut parser = parser::Parser::new(lexer.into_tokens(), filename.to_string(), None);
+        let mut parser = parser::Parser::new(lexer.into_tokens(), filename.to_string());
         let program = match parser.parse() {
             Ok(prog) => prog,
             Err(err) => {

@@ -1,4 +1,5 @@
 use crate::ast::{FuncBody, FuncDef, ReceiverKind, Types, WalkAst};
+use crate::consts::ENTRY_POINT;
 use crate::error::SemanticError;
 use crate::tokens::{Ident, Name, ParamKind};
 use crate::typed_ast::{CompilerContext, FunctionSignature, TypedFuncDef, TypedReceiver};
@@ -10,35 +11,35 @@ impl FuncDef {
         let params_map = self
             .params
             .iter()
-            .map(|(k, v)| (k.clone(), v.clone()))
+            .map(|(k, v)| (k.clone(), v.qualify(ctx.module_name())))
             .collect::<IndexMap<_, _>>();
-        let receiver = self.receiver.as_ref().map(|r| TypedReceiver {
-            struct_name: r.struct_name.clone(),
-            kind: r.kind.clone(),
-            typ: match r.kind {
-                ReceiverKind::Value => Types::Struct(r.struct_name.clone()),
-                ReceiverKind::Pointer => {
-                    Types::Pointer(Box::new(Types::Struct(r.struct_name.clone())))
-                }
-            },
+        let receiver = self.receiver.as_ref().map(|r| {
+            let qualified_struct = r.struct_name.full_name_optional(ctx.module_name());
+            TypedReceiver {
+                struct_name: qualified_struct.clone(),
+                kind: r.kind.clone(),
+                typ: match r.kind {
+                    ReceiverKind::Value => Types::Struct(qualified_struct),
+                    ReceiverKind::Pointer => {
+                        Types::Pointer(Box::new(Types::Struct(qualified_struct)))
+                    }
+                },
+            }
         });
+        let qualified_return = self.return_type.qualify(ctx.module_name());
         let sig = match &self.body {
             FuncBody::Extern { variadic } => {
-                FunctionSignature::new_extern(params_map, self.return_type.clone(), *variadic)
+                FunctionSignature::new_extern(params_map, qualified_return, *variadic)
             }
-            FuncBody::Intrinsic(llvm_name) => FunctionSignature::new_intrinsic(
-                params_map,
-                self.return_type.clone(),
-                llvm_name.clone(),
-            ),
-            FuncBody::Block(_) => {
-                FunctionSignature::new(params_map, self.return_type.clone(), receiver)
+            FuncBody::Intrinsic(llvm_name) => {
+                FunctionSignature::new_intrinsic(params_map, qualified_return, llvm_name.clone())
             }
+            FuncBody::Block(_) => FunctionSignature::new(params_map, qualified_return, receiver),
         };
         ctx.register_function(name, sig)
     }
 
-    fn full_name(&self, _ctx: &CompilerContext) -> Name {
+    fn full_name(&self, ctx: &CompilerContext) -> Name {
         match &self.receiver {
             Some(r) => {
                 let bare_struct = Ident::new(
@@ -46,9 +47,15 @@ impl FuncDef {
                     self.name.span().clone(),
                 );
                 let mangled = self.name.mangle(&bare_struct);
-                mangled.full_name_optional(r.struct_name.module())
+                mangled.full_name_optional(ctx.module_name())
             }
-            None => self.name.clone(),
+            None => {
+                if self.name.inner() == ENTRY_POINT {
+                    self.name.clone()
+                } else {
+                    self.name.full_name_optional(ctx.module_name())
+                }
+            }
         }
     }
 }
@@ -98,7 +105,7 @@ impl WalkAst for FuncDef {
                 });
             }
             FuncBody::Block(block) => {
-                ctx.set_current_function(name.clone(), self.return_type.clone());
+                ctx.set_current_function(name.clone(), self.return_type.qualify(ctx.module_name()));
 
                 for (param, declared_type) in &self.params {
                     let resolved_type = match param {
@@ -109,7 +116,7 @@ impl WalkAst for FuncDef {
                                 })?
                                 .typ
                         }
-                        ParamKind::Ident(_) => declared_type.clone(),
+                        ParamKind::Ident(_) => declared_type.qualify(ctx.module_name()),
                     };
                     ctx.insert_variable(param.name(), resolved_type);
                 }

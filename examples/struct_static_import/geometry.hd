@@ -1,0 +1,12 @@
+struct Point {
+    x: int,
+    y: int,
+
+    fn origin(): Point {
+        return Point { x: 0, y: 0 };
+    }
+
+    fn new(x: int, y: int): Point {
+        return Point { x: x, y: y };
+    }
+}

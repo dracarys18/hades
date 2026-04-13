@@ -4,7 +4,7 @@ use crate::parser::stmt::parse_block;
 use crate::parser::Parse;
 use crate::parser::ParserCtx;
 use crate::token_matches;
-use crate::tokens::{FunctionName, ParamKind, Selff, TokenKind};
+use crate::tokens::{Name, ParamKind, Selff, TokenKind};
 
 pub(super) struct FuncDef;
 
@@ -15,7 +15,7 @@ impl Parse for FuncDef {
         let start_tok = ctx.current_span();
         ctx.expect(&TokenKind::Fn)?;
         let name_ident = ctx.expect_identifier()?;
-        let name = FunctionName::new(name_ident.inner().to_string(), name_ident.span().clone());
+        let name = Name::new(name_ident.inner().to_string(), name_ident.span().clone());
         let params = parse_parameter_list(ctx)?;
         let return_type = parse_optional_return_type(ctx)?;
         let body = parse_block(ctx)?;
@@ -38,7 +38,7 @@ pub(super) fn parse_extern_fn(ctx: &mut ParserCtx) -> ParseResult<Stmt> {
     ctx.expect(&TokenKind::Extern)?;
     ctx.expect(&TokenKind::Fn)?;
     let name_ident = ctx.expect_identifier()?;
-    let name = FunctionName::new(name_ident.inner().to_string(), name_ident.span().clone());
+    let name = Name::new(name_ident.inner().to_string(), name_ident.span().clone());
     let (params, variadic) = parse_parameter_list_with_variadic(ctx)?;
     let return_type = parse_optional_return_type(ctx)?;
     ctx.expect(&TokenKind::Semicolon)?;
@@ -60,7 +60,7 @@ pub(super) fn parse_intrinsic_fn(ctx: &mut ParserCtx) -> ParseResult<Stmt> {
     ctx.expect(&TokenKind::Intrinsic)?;
     ctx.expect(&TokenKind::Fn)?;
     let name_ident = ctx.expect_identifier()?;
-    let name = FunctionName::new(name_ident.inner().to_string(), name_ident.span().clone());
+    let name = Name::new(name_ident.inner().to_string(), name_ident.span().clone());
     let params = parse_parameter_list(ctx)?;
     let return_type = parse_optional_return_type(ctx)?;
     ctx.expect(&TokenKind::Assign)?;

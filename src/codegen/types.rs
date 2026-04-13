@@ -3,7 +3,7 @@ use std::num::NonZeroU32;
 use crate::ast::{ArrayType, Types};
 use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::error::Span;
-use crate::tokens::{Ident, ParamKind};
+use crate::tokens::{Ident, Name, ParamKind};
 use crate::typed_ast::{CompilerContext, FunctionSignature, TypedFieldKind};
 use inkwell::AddressSpace;
 use inkwell::context::Context;
@@ -97,7 +97,7 @@ impl<'ctx> TypeConverter<'ctx> {
 
     pub fn convert_struct_type(
         &self,
-        name: &Ident,
+        name: &Name,
         compiler_ctx: &CompilerContext,
     ) -> CodegenResult<StructType<'ctx>> {
         let struct_def = compiler_ctx

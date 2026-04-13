@@ -2,7 +2,7 @@ use crate::ast::Types;
 use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::codegen::symbols::{CodegenSymbols, LLVMVariable};
 use crate::codegen::types::TypeConverter;
-use crate::tokens::{FunctionName, Ident};
+use crate::tokens::{Name, Ident};
 use crate::typed_ast::{CompilerContext, FuncKind, FunctionSignature, ModuleSignatures};
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
@@ -96,7 +96,7 @@ impl<'ctx> LLVMContext<'ctx> {
                     })
             }
             FuncKind::Extern { .. } => {
-                let link_name = FunctionName::from_key(name, Default::default());
+                let link_name = Name::from_key(name, Default::default());
                 self.module().get_function(link_name.link_name()).ok_or(
                     CodegenError::FunctionNotFound {
                         name: name.to_string(),

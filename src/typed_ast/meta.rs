@@ -1,16 +1,16 @@
 use crate::error::SemanticError;
 use crate::module::ModulePath;
 use crate::typed_ast::{
-    TypedFieldKind,
     function::{FunctionSignature, Functions},
     ident::IdentMap,
     signatures::ModuleSignatures,
     struc::{Field, Structs},
+    TypedFieldKind,
 };
 
 use crate::ast::Types;
 use crate::error::Span;
-use crate::tokens::{FunctionName, Ident, Op};
+use crate::tokens::{Ident, Name, Op};
 use indexmap::IndexMap;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -18,7 +18,7 @@ pub struct CompilerContext {
     idents: IdentMap,
     functions: Functions,
     structs: Structs,
-    current_function: Option<(FunctionName, Types)>,
+    current_function: Option<(Name, Types)>,
     module_path: Option<ModulePath>,
 }
 
@@ -51,13 +51,13 @@ impl CompilerContext {
 
     pub fn register_function(
         &mut self,
-        name: FunctionName,
+        name: Name,
         sig: FunctionSignature,
     ) -> Result<(), SemanticError> {
         self.functions.insert(name, sig)
     }
 
-    pub fn set_current_function(&mut self, name: FunctionName, return_type: Types) {
+    pub fn set_current_function(&mut self, name: Name, return_type: Types) {
         self.current_function = Some((name, return_type));
     }
 
@@ -84,22 +84,19 @@ impl CompilerContext {
             .cloned()
     }
 
-    pub fn insert_struct(&mut self, name: Ident, fields: IndexMap<Ident, TypedFieldKind>) {
+    pub fn insert_struct(&mut self, name: Name, fields: IndexMap<Ident, TypedFieldKind>) {
         self.structs.insert(name.clone(), fields);
     }
 
-    pub fn get_struct_type(&self, name: &Ident, span: Span) -> Result<Field, SemanticError> {
+    pub fn get_struct_type(&self, name: &Name, span: Span) -> Result<Field, SemanticError> {
         if let Some(fields) = self.structs.fields(name) {
             Ok(fields.clone())
         } else {
-            Err(SemanticError::undefined_struct(name.clone(), span))
+            Err(SemanticError::undefined_struct(name.to_ident(), span))
         }
     }
 
-    pub fn get_function_signature(
-        &self,
-        name: &FunctionName,
-    ) -> Result<&FunctionSignature, SemanticError> {
+    pub fn get_function_signature(&self, name: &Name) -> Result<&FunctionSignature, SemanticError> {
         self.functions.get(name)
     }
 

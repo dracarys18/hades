@@ -1,5 +1,5 @@
 use crate::codegen::VisitOptions;
-use crate::tokens::Ident;
+use crate::tokens::{Ident, Name};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ArrayType {
@@ -7,7 +7,7 @@ pub enum ArrayType {
     FloatArray(usize),
     StringArray(usize),
     BoolArray(usize),
-    StructArray(usize, Ident),
+    StructArray(usize, Name),
     PointerArray(usize, Box<Types>),
     CharArray(usize),
 }
@@ -22,7 +22,7 @@ pub enum Types {
     Void,
     Generic(Vec<Types>),
     Array(ArrayType),
-    Struct(Ident),
+    Struct(Name),
     Self_,
     Pointer(Box<Types>),
 }
@@ -67,7 +67,10 @@ impl Types {
             "[]string" => Types::Array(ArrayType::FloatArray(0)),
             "[]char" => Types::Array(ArrayType::CharArray(0)),
             "[]bool" => Types::Array(ArrayType::BoolArray(0)),
-            _ => Types::Struct(type_str.to_owned()),
+            _ => Types::Struct(Name::new(
+                type_str.inner().to_string(),
+                type_str.span().clone(),
+            )),
         }
     }
 
@@ -120,12 +123,43 @@ impl Types {
         VisitOptions::new()
     }
 
-    pub fn unwrap_struct_name(&self) -> &Ident {
+    pub fn unwrap_struct_name(&self) -> &Name {
         match self {
             Types::Struct(name) => name,
             Types::Array(ArrayType::StructArray(_, name)) => name,
             Types::Pointer(inner) => inner.unwrap_struct_name(),
             _ => panic!("Expected a Struct type"),
+        }
+    }
+
+    pub fn qualify(&self, module: Option<&str>) -> Self {
+        match self {
+            Types::Struct(name) => Types::Struct(name.full_name_optional(module)),
+            Types::Array(ArrayType::StructArray(size, name)) => Types::Array(
+                ArrayType::StructArray(*size, name.full_name_optional(module)),
+            ),
+            Types::Pointer(inner) => Types::Pointer(Box::new(inner.qualify(module))),
+            other => other.clone(),
+        }
+    }
+
+    pub fn with_module(type_str: &Ident, module: Option<&str>) -> Self {
+        match type_str.inner() {
+            "int" => Types::Int,
+            "float" => Types::Float,
+            "bool" => Types::Bool,
+            "string" => Types::String,
+            "void" => Types::Void,
+            "char" => Types::Char,
+            "[]int" => Types::Array(ArrayType::IntArray(0)),
+            "[]float" => Types::Array(ArrayType::FloatArray(0)),
+            "[]string" => Types::Array(ArrayType::StringArray(0)),
+            "[]char" => Types::Array(ArrayType::CharArray(0)),
+            "[]bool" => Types::Array(ArrayType::BoolArray(0)),
+            _ => Types::Struct(
+                Name::new(type_str.inner().to_string(), type_str.span().clone())
+                    .full_name_optional(module),
+            ),
         }
     }
 }

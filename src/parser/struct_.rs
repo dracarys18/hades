@@ -5,7 +5,8 @@ use crate::parser::func::FuncDef;
 use crate::parser::Parse;
 use crate::parser::ParserCtx;
 use crate::token_matches;
-use crate::tokens::{ParamKind, TokenKind};
+use crate::tokens::Name;
+use crate::tokens::{Ident, ParamKind, TokenKind};
 use indexmap::IndexMap;
 
 pub(super) struct StructDef;
@@ -16,7 +17,8 @@ impl Parse for StructDef {
     fn parse(ctx: &mut ParserCtx) -> ParseResult<Stmt> {
         let start_tok = ctx.current_span();
         ctx.expect(&TokenKind::Struct)?;
-        let name = ctx.expect_identifier()?;
+        let ident = ctx.expect_identifier()?;
+        let name = Name::new(ident.to_string(), ident.span().clone());
         let fields = parse_field_list(ctx, name.clone())?;
         let end = ctx.prev_span();
 
@@ -28,10 +30,7 @@ impl Parse for StructDef {
     }
 }
 
-pub(super) fn parse_struct_literal(
-    ctx: &mut ParserCtx,
-    name: crate::tokens::Ident,
-) -> ParseResult<Expr> {
+pub(super) fn parse_struct_literal(ctx: &mut ParserCtx, path: Vec<Ident>) -> ParseResult<Expr> {
     ctx.expect(&TokenKind::LeftBrace)?;
     let mut fields = IndexMap::new();
 
@@ -54,12 +53,12 @@ pub(super) fn parse_struct_literal(
     }
 
     ctx.expect(&TokenKind::RightBrace)?;
-    Ok(Expr::StructInit { name, fields })
+    Ok(Expr::StructInit(StructInitExpr { path, fields }))
 }
 
 pub(super) fn parse_field_list(
     ctx: &mut ParserCtx,
-    struct_name: crate::tokens::Ident,
+    struct_name: crate::tokens::Name,
 ) -> ParseResult<IndexMap<crate::tokens::Ident, FieldKind>> {
     ctx.expect(&TokenKind::LeftBrace)?;
     let mut fields = IndexMap::new();

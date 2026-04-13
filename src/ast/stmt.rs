@@ -4,7 +4,7 @@ use crate::{
     ast::{AssignExpr, BinaryExpr, Program, Types},
     error::{SemanticError, Span},
     impl_span,
-    tokens::{FunctionName, Ident, ParamKind},
+    tokens::{Ident, Name, ParamKind},
 };
 use derive_more::Debug;
 use indexmap::IndexMap;
@@ -19,7 +19,7 @@ pub enum ReceiverKind {
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Receiver {
-    pub struct_name: Ident,
+    pub struct_name: Name,
     pub kind: ReceiverKind,
 }
 
@@ -88,7 +88,7 @@ pub struct For {
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct StructDef {
-    pub name: Ident,
+    pub name: Name,
     pub fields: IndexMap<Ident, FieldKind>,
     pub span: Span,
 }
@@ -108,7 +108,7 @@ pub enum FuncBody {
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct FuncDef {
-    pub name: FunctionName,
+    pub name: Name,
     pub receiver: Option<Receiver>,
     pub params: Vec<(ParamKind, Types)>,
     pub return_type: Types,

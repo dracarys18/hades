@@ -8,7 +8,7 @@ mod struct_;
 use crate::ast::*;
 use crate::error::Span;
 use crate::parser::error::FinalParseResult;
-use crate::tokens::{Assoc, FunctionName, Ident, Op, ParamKind, Selff, Token, TokenKind};
+use crate::tokens::{Assoc, Ident, Name, Op, ParamKind, Selff, Token, TokenKind};
 use crate::{token_matches, token_matches_opt};
 use error::{ParseError, ParseResult};
 use indexmap::IndexMap;

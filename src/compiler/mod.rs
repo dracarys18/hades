@@ -5,7 +5,7 @@ use ariadne::{Cache, Source};
 use inkwell::context::Context;
 use std::path::PathBuf;
 use std::{
-    collections::{HashMap, hash_map::Entry},
+    collections::{hash_map::Entry, HashMap},
     fmt, fs,
     path::Path,
 };

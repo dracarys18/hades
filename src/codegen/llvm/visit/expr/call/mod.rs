@@ -13,7 +13,7 @@ pub fn build_call<'ctx>(
     arg_values: &[BasicMetadataValueEnum<'ctx>],
     context: &mut LLVMContext<'ctx>,
 ) -> CodegenResult<CodegenValue<'ctx>> {
-    let name_fn = crate::tokens::FunctionName::new(name.to_string(), Default::default());
+    let name_fn = crate::tokens::Name::new(name.to_string(), Default::default());
     let sig = context
         .symbols()
         .get_function_signature(&name_fn)

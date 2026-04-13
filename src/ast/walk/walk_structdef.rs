@@ -24,13 +24,15 @@ impl WalkAst for StructDef {
         ctx: &mut crate::typed_ast::CompilerContext,
         span: crate::error::Span,
     ) -> Result<Self::Output, SemanticError> {
-        let name = self.name.clone();
+        let name = self.name.full_name_optional(ctx.module_name());
 
         let var_fields = self
             .fields
             .iter()
             .filter_map(|(k, v)| match v {
-                FieldKind::Var(t) => Some((k.clone(), TypedFieldKind::Var(t.clone()))),
+                FieldKind::Var(t) => {
+                    Some((k.clone(), TypedFieldKind::Var(t.qualify(ctx.module_name()))))
+                }
                 FieldKind::Func(_) => None,
             })
             .collect();

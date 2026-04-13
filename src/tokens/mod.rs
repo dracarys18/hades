@@ -1,13 +1,13 @@
-mod function_name;
 mod ident;
+mod name;
 mod op;
 mod param_kind;
 mod selff;
 
 use std::fmt::Debug;
 
-pub use function_name::*;
 pub use ident::*;
+pub use name::*;
 pub use op::*;
 pub use param_kind::*;
 pub use selff::*;

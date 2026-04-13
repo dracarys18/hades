@@ -1,8 +1,8 @@
 use crate::ast::{FuncBody, FuncDef, ReceiverKind, Types, WalkAst};
 use crate::consts::ENTRY_POINT;
 use crate::error::SemanticError;
-use crate::tokens::{FunctionName, ParamKind};
-use crate::typed_ast::{CompilerContext, FuncKind, FunctionSignature, TypedFuncDef, TypedReceiver};
+use crate::tokens::{Ident, Name, ParamKind};
+use crate::typed_ast::{CompilerContext, FunctionSignature, TypedFuncDef, TypedReceiver};
 use indexmap::IndexMap;
 
 impl FuncDef {
@@ -11,43 +11,52 @@ impl FuncDef {
         let params_map = self
             .params
             .iter()
-            .map(|(k, v)| (k.clone(), v.clone()))
+            .map(|(k, v)| (k.clone(), v.qualify(ctx.module_name())))
             .collect::<IndexMap<_, _>>();
-        let receiver = self.receiver.as_ref().map(|r| TypedReceiver {
-            struct_name: r.struct_name.clone(),
-            kind: r.kind.clone(),
-            typ: match r.kind {
-                ReceiverKind::Value => Types::Struct(r.struct_name.clone()),
-                ReceiverKind::Pointer => {
-                    Types::Pointer(Box::new(Types::Struct(r.struct_name.clone())))
-                }
-            },
+        let receiver = self.receiver.as_ref().map(|r| {
+            let qualified_struct = r.struct_name.full_name_optional(ctx.module_name());
+            TypedReceiver {
+                struct_name: qualified_struct.clone(),
+                kind: r.kind.clone(),
+                typ: match r.kind {
+                    ReceiverKind::Value => Types::Struct(qualified_struct),
+                    ReceiverKind::Pointer => {
+                        Types::Pointer(Box::new(Types::Struct(qualified_struct)))
+                    }
+                },
+            }
         });
+        let qualified_return = self.return_type.qualify(ctx.module_name());
         let sig = match &self.body {
             FuncBody::Extern { variadic } => {
-                FunctionSignature::new_extern(params_map, self.return_type.clone(), *variadic)
+                FunctionSignature::new_extern(params_map, qualified_return, *variadic)
             }
-            FuncBody::Intrinsic(llvm_name) => FunctionSignature::new_intrinsic(
-                params_map,
-                self.return_type.clone(),
-                llvm_name.clone(),
-            ),
-            FuncBody::Block(_) => {
-                FunctionSignature::new(params_map, self.return_type.clone(), receiver)
+            FuncBody::Intrinsic(llvm_name) => {
+                FunctionSignature::new_intrinsic(params_map, qualified_return, llvm_name.clone())
             }
+            FuncBody::Block(_) => FunctionSignature::new(params_map, qualified_return, receiver),
         };
         ctx.register_function(name, sig)
     }
 
-    fn full_name(&self, ctx: &CompilerContext) -> FunctionName {
-        let base = match &self.receiver {
-            Some(r) => self.name.mangle(&r.struct_name),
-            None => self.name.clone(),
-        };
-        if base.inner() == ENTRY_POINT {
-            return base;
+    fn full_name(&self, ctx: &CompilerContext) -> Name {
+        match &self.receiver {
+            Some(r) => {
+                let bare_struct = Ident::new(
+                    r.struct_name.link_name().to_string(),
+                    self.name.span().clone(),
+                );
+                let mangled = self.name.mangle(&bare_struct);
+                mangled.full_name_optional(ctx.module_name())
+            }
+            None => {
+                if self.name.inner() == ENTRY_POINT {
+                    self.name.clone()
+                } else {
+                    self.name.full_name_optional(ctx.module_name())
+                }
+            }
         }
-        ctx.module_name().map(|m| base.full_name(m)).unwrap_or(base)
     }
 }
 
@@ -70,7 +79,7 @@ impl WalkAst for FuncDef {
             FuncBody::Extern { .. } => {
                 if !ctx.is_stdlib() {
                     return Err(SemanticError::extern_outside_stdlib(
-                        self.name.inner().to_string(),
+                        self.name.link_name().to_string(),
                         self.span.clone(),
                     ));
                 }
@@ -84,7 +93,7 @@ impl WalkAst for FuncDef {
             FuncBody::Intrinsic(_) => {
                 if !ctx.is_stdlib() {
                     return Err(SemanticError::intrinsic_outside_stdlib(
-                        self.name.inner().to_string(),
+                        self.name.link_name().to_string(),
                         self.span.clone(),
                     ));
                 }
@@ -96,7 +105,7 @@ impl WalkAst for FuncDef {
                 });
             }
             FuncBody::Block(block) => {
-                ctx.set_current_function(name.clone(), self.return_type.clone());
+                ctx.set_current_function(name.clone(), self.return_type.qualify(ctx.module_name()));
 
                 for (param, declared_type) in &self.params {
                     let resolved_type = match param {
@@ -107,7 +116,7 @@ impl WalkAst for FuncDef {
                                 })?
                                 .typ
                         }
-                        ParamKind::Ident(_) => declared_type.clone(),
+                        ParamKind::Ident(_) => declared_type.qualify(ctx.module_name()),
                     };
                     ctx.insert_variable(param.name(), resolved_type);
                 }

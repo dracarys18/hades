@@ -1,9 +1,9 @@
 use crate::ast::{
     ArrayIndexExpr, ArrayType, AssignExpr, AssignTarget, BinaryExpr, CallKind, Expr,
-    FieldAccessExpr, NullExpr, Types, WalkAst,
+    FieldAccessExpr, NullExpr, StructInitExpr, Types, WalkAst,
 };
 use crate::error::{SemanticError, Span};
-use crate::tokens::Ident;
+use crate::tokens::{Ident, Name};
 use crate::typed_ast::{
     CompilerContext, TypedArrayIndex, TypedAssignExpr, TypedAssignTarget, TypedBinaryExpr,
     TypedExpr, TypedExprAst, TypedFieldAccess,
@@ -24,14 +24,31 @@ impl WalkAst for Expr {
                     ident: ident.clone(),
                     typ,
                 }),
-            Expr::StructInit { name, fields } => {
-                let struct_type = ctx.get_struct_type(name, span.clone())?;
+            Expr::StructInit(StructInitExpr { path, fields }) => {
+                let name = match path.as_slice() {
+                    [struct_name] => Name::new(struct_name.to_string(), struct_name.span().clone())
+                        .full_name_optional(ctx.module_name()),
+                    [module, struct_name] => {
+                        Name::new(struct_name.to_string(), struct_name.span().clone())
+                            .full_name(module.inner())
+                    }
+                    _ => {
+                        return Err(SemanticError::undefined_struct(
+                            path.last()
+                                .map(|i| i.clone())
+                                .unwrap_or_else(|| Ident::new("?".to_string(), span.clone())),
+                            span.clone(),
+                        ))
+                    }
+                };
+                let struct_type = ctx.get_struct_type(&name, span.clone())?;
+
                 fields
                     .iter()
                     .map(|(field_name, field_expr)| {
                         let expected = struct_type.get(field_name).ok_or_else(|| {
                             SemanticError::unknown_field(
-                                name.clone(),
+                                name.to_ident().clone(),
                                 field_name.clone(),
                                 span.clone(),
                             )
@@ -200,14 +217,14 @@ impl WalkAst for FieldAccessExpr {
         let typed_expr = self.expr.walk(ctx, span.clone())?;
         let strc = typed_expr.get_type();
 
-        let walk_struct = |struct_name: &Ident| {
-            ctx.get_struct_type(struct_name, span.clone())
+        let walk_struct = |struct_name: &Name| {
+            ctx.get_struct_type(&struct_name, span.clone())
                 .and_then(|field_map| {
                     field_map
                         .get(&self.field)
                         .ok_or_else(|| {
                             SemanticError::unknown_field(
-                                struct_name.clone(),
+                                struct_name.to_ident().clone(),
                                 self.field.clone(),
                                 span.clone(),
                             )

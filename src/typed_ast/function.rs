@@ -1,12 +1,12 @@
 use super::builtins::BUILTIN_FUNCTIONS;
 use crate::ast::{ReceiverKind, Types};
 use crate::error::SemanticError;
-use crate::tokens::{FunctionName, Ident, ParamKind};
+use crate::tokens::{Ident, Name, ParamKind};
 use indexmap::IndexMap;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypedReceiver {
-    pub struct_name: Ident,
+    pub struct_name: Name,
     pub kind: ReceiverKind,
     pub typ: Types,
 }
@@ -151,7 +151,7 @@ impl FunctionSignature {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Functions {
-    inner: IndexMap<FunctionName, FunctionSignature>,
+    inner: IndexMap<Name, FunctionSignature>,
 }
 
 impl Functions {
@@ -159,18 +159,14 @@ impl Functions {
         let built_ins = BUILTIN_FUNCTIONS
             .iter()
             .map(|(k, v)| {
-                let fn_name = FunctionName::new(k.inner().to_string(), k.span().clone());
+                let fn_name = Name::new(k.inner().to_string(), k.span().clone());
                 (fn_name, v.clone())
             })
             .collect();
         Self { inner: built_ins }
     }
 
-    pub fn insert(
-        &mut self,
-        name: FunctionName,
-        sig: FunctionSignature,
-    ) -> Result<(), SemanticError> {
+    pub fn insert(&mut self, name: Name, sig: FunctionSignature) -> Result<(), SemanticError> {
         if self.inner.contains_key(&name) {
             if matches!(sig.kind, FuncKind::Extern { .. } | FuncKind::Intrinsic(_)) {
                 return Ok(());
@@ -185,18 +181,18 @@ impl Functions {
         Ok(())
     }
 
-    pub fn get_unchecked(&self, name: &FunctionName) -> &FunctionSignature {
+    pub fn get_unchecked(&self, name: &Name) -> &FunctionSignature {
         self.inner.get(name).expect("Function not found")
     }
 
-    pub fn get(&self, name: &FunctionName) -> Result<&FunctionSignature, SemanticError> {
+    pub fn get(&self, name: &Name) -> Result<&FunctionSignature, SemanticError> {
         self.inner.get(name).ok_or_else(|| {
             let ident = name.to_ident();
             SemanticError::undefined_function(ident.clone(), ident.span().clone())
         })
     }
 
-    pub fn into_user_defined(self) -> IndexMap<FunctionName, FunctionSignature> {
+    pub fn into_user_defined(self) -> IndexMap<Name, FunctionSignature> {
         let builtin_names: std::collections::HashSet<String> = BUILTIN_FUNCTIONS
             .keys()
             .map(|k| k.inner().to_string())

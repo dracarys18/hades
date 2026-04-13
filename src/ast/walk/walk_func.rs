@@ -1,7 +1,7 @@
 use crate::ast::{FuncBody, FuncDef, ReceiverKind, Types, WalkAst};
 use crate::consts::ENTRY_POINT;
 use crate::error::SemanticError;
-use crate::tokens::{FunctionName, ParamKind};
+use crate::tokens::{Name, ParamKind};
 use crate::typed_ast::{CompilerContext, FuncKind, FunctionSignature, TypedFuncDef, TypedReceiver};
 use indexmap::IndexMap;
 
@@ -39,9 +39,9 @@ impl FuncDef {
         ctx.register_function(name, sig)
     }
 
-    fn full_name(&self, ctx: &CompilerContext) -> FunctionName {
+    fn full_name(&self, ctx: &CompilerContext) -> Name {
         let base = match &self.receiver {
-            Some(r) => self.name.mangle(&r.struct_name),
+            Some(r) => self.name.mangle(&r.struct_name.to_ident()),
             None => self.name.clone(),
         };
         if base.inner() == ENTRY_POINT {

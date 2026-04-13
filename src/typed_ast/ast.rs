@@ -1,7 +1,7 @@
 use crate::{
     ast::{ImportPrefix, Types},
     error::Span,
-    tokens::{FunctionName, Ident},
+    tokens::{Ident, Name},
     typed_ast::{
         expr::{TypedAssignExpr, TypedBinaryExpr},
         function::FunctionSignature,
@@ -90,7 +90,7 @@ pub struct TypedFor {
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct TypedStructDef {
-    pub name: Ident,
+    pub name: Name,
     pub fields: IndexMap<Ident, TypedFieldKind>,
     pub span: Span,
 }
@@ -103,7 +103,7 @@ pub enum TypedFieldKind {
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct TypedFuncDef {
-    pub name: FunctionName,
+    pub name: Name,
     pub signature: FunctionSignature,
     pub body: Option<TypedBlock>,
     pub span: Span,

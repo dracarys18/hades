@@ -8,7 +8,7 @@ pub use assign::*;
 use indexmap::IndexMap;
 
 use super::value::TypedValue;
-use crate::tokens::{FunctionName, Ident, Op};
+use crate::tokens::{Ident, Name, Op};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypedExpr {
@@ -18,7 +18,7 @@ pub enum TypedExpr {
         typ: Types,
     },
     StructInit {
-        name: Ident,
+        name: Name,
         fields: IndexMap<Ident, TypedExpr>,
         types: Types,
     },
@@ -33,7 +33,7 @@ pub enum TypedExpr {
     Assign(TypedAssignExpr),
     As(TypedAsExpression),
     Call {
-        func: FunctionName,
+        func: Name,
         args: Vec<TypedExpr>,
         receiver: Option<Box<TypedExpr>>,
         typ: Types,

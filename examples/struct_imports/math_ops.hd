@@ -1,0 +1,9 @@
+struct Arithmetic {
+    a: int,
+    b: int,
+
+    fn mul(self): int {
+        return self.a * self.b;
+    }
+}
+

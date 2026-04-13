@@ -1,5 +1,6 @@
 use crate::ast::{QualifiedCall, WalkAst};
 use crate::error::{SemanticError, Span};
+use crate::tokens::Name;
 use crate::typed_ast::{CompilerContext, TypedExpr};
 
 use super::func::walk_typed_args;
@@ -8,7 +9,14 @@ impl WalkAst for QualifiedCall {
     type Output = TypedExpr;
 
     fn walk(&self, ctx: &mut CompilerContext, span: Span) -> Result<Self::Output, SemanticError> {
-        let resolved = if ctx.structs().fields(&self.qualifier).is_some() {
+        let resolved = if ctx
+            .structs()
+            .fields(&Name::new(
+                self.qualifier.to_string(),
+                self.qualifier.span().clone(),
+            ))
+            .is_some()
+        {
             let mangled = self.func.mangle(&self.qualifier);
             ctx.module_name()
                 .map(|m| mangled.full_name(m))

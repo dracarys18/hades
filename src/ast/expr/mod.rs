@@ -6,7 +6,7 @@ use indexmap::IndexMap;
 
 use super::value::Value;
 use crate::ast::Types;
-use crate::tokens::{FunctionName, Ident, Op};
+use crate::tokens::{Ident, Name, Op};
 
 /// A `null` literal with the pointer type expected by the surrounding context.
 /// `expected` is `None` when `null` appears with no type context (an error).
@@ -23,21 +23,21 @@ impl NullExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionCall {
-    pub func: FunctionName,
+    pub func: Name,
     pub args: Vec<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MethodCall {
     pub receiver: Box<Expr>,
-    pub func: FunctionName,
+    pub func: Name,
     pub args: Vec<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct QualifiedCall {
     pub qualifier: Ident,
-    pub func: FunctionName,
+    pub func: Name,
     pub args: Vec<Expr>,
 }
 
@@ -55,19 +55,20 @@ pub struct AsExpression {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct StructInitExpr {
+    pub name: Name,
+    pub module: Option<Ident>,
+    pub fields: IndexMap<Ident, Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Value(Value),
     Ident(Ident),
-    StructInit {
-        name: Ident,
-        fields: IndexMap<Ident, Expr>,
-    },
+    StructInit(StructInitExpr),
     ArrayIndex(ArrayIndexExpr),
     Binary(BinaryExpr),
-    Unary {
-        op: Op,
-        expr: Box<Expr>,
-    },
+    Unary { op: Op, expr: Box<Expr> },
     Assign(AssignExpr),
     As(AsExpression),
     FieldAccess(FieldAccessExpr),

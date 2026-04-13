@@ -2,17 +2,17 @@ use crate::ast::Types;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
-use crate::tokens::Ident;
+use crate::tokens::{Ident, Name};
 use crate::typed_ast::TypedExpr;
 use indexmap::IndexMap;
 
 pub struct StructInit<'a> {
-    pub name: &'a Ident,
+    pub name: &'a Name,
     pub fields: &'a IndexMap<Ident, TypedExpr>,
 }
 
 impl<'a> StructInit<'a> {
-    pub fn new(name: &'a Ident, fields: &'a IndexMap<Ident, TypedExpr>) -> Self {
+    pub fn new(name: &'a Name, fields: &'a IndexMap<Ident, TypedExpr>) -> Self {
         Self { name, fields }
     }
 }

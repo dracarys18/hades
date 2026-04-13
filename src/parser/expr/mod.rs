@@ -1,13 +1,13 @@
 mod array;
 
 use crate::ast::*;
-use crate::parser::error::ParseResult;
-use crate::parser::struct_::parse_struct_literal;
 use crate::parser::Parse;
 use crate::parser::ParserCtx;
-use crate::tokens::{Assoc, FunctionName, Ident, Op, TokenKind};
+use crate::parser::error::ParseResult;
+use crate::parser::struct_::parse_struct_literal;
+use crate::tokens::{Assoc, Ident, Name, Op, TokenKind};
 use crate::{token_matches, token_matches_opt};
-use array::{parse_array_index, ArrayLiteral};
+use array::{ArrayLiteral, parse_array_index};
 
 impl Parse for Expr {
     type Output = Expr;
@@ -185,7 +185,7 @@ fn parse_primary_with_flags(ctx: &mut ParserCtx, allow_struct_literals: bool) ->
             TokenKind::Null => Ok(Expr::Null),
             TokenKind::Ident(name) => {
                 if allow_struct_literals {
-                    parse_postfix_expr_with_struct(ctx, name.clone())
+                    parse_postfix_expr_with_struct(ctx, name.clone(), None)
                 } else {
                     parse_postfix_expr(ctx, name.clone())
                 }
@@ -230,10 +230,19 @@ fn parse_postfix_expr(ctx: &mut ParserCtx, name: Ident) -> ParseResult<Expr> {
     parse_postfix_chain(ctx, Expr::Ident(name))
 }
 
-fn parse_postfix_expr_with_struct(ctx: &mut ParserCtx, name: Ident) -> ParseResult<Expr> {
+fn parse_postfix_expr_with_struct(
+    ctx: &mut ParserCtx,
+    name: Ident,
+    qualified: Option<Ident>,
+) -> ParseResult<Expr> {
     let expr = match ctx.peek() {
-        Some(tok) if token_matches!(tok, TokenKind::LeftParen) => parse_function_call(ctx, name)?,
-        Some(tok) if token_matches!(tok, TokenKind::LeftBrace) => parse_struct_literal(ctx, name)?,
+        Some(tok) if token_matches!(tok, TokenKind::LeftParen) => {
+            parse_function_call(ctx, name, qualified)?
+        }
+        Some(tok) if token_matches!(tok, TokenKind::LeftBrace) => {
+            let name = Name::new(name.inner().to_string(), name.span().clone());
+            parse_struct_literal(ctx, name, qualified)?
+        }
         Some(tok) if token_matches!(tok, TokenKind::LeftBracket) => parse_array_index(ctx, name)?,
         _ => Expr::Ident(name),
     };
@@ -256,10 +265,7 @@ fn parse_postfix_chain(ctx: &mut ParserCtx, mut expr: Expr) -> ParseResult<Expr>
                     ctx.expect(&TokenKind::RightParen)?;
                     expr = Expr::Call(CallKind::Method(MethodCall {
                         receiver: Box::new(expr),
-                        func: FunctionName::new(
-                            field_name.inner().to_string(),
-                            field_name.span().clone(),
-                        ),
+                        func: Name::new(field_name.inner().to_string(), field_name.span().clone()),
                         args,
                     }));
                 } else {
@@ -285,18 +291,7 @@ fn parse_postfix_chain(ctx: &mut ParserCtx, mut expr: Expr) -> ParseResult<Expr>
                     }
                 };
                 let func_name = ctx.expect_identifier()?;
-                ctx.expect(&TokenKind::LeftParen)?;
-                let args =
-                    ctx.parse_comma_separated(|c| parse_assignment(c), &TokenKind::RightParen)?;
-                ctx.expect(&TokenKind::RightParen)?;
-                expr = Expr::Call(CallKind::Qualified(QualifiedCall {
-                    qualifier,
-                    func: FunctionName::new(
-                        func_name.inner().to_string(),
-                        func_name.span().clone(),
-                    ),
-                    args,
-                }));
+                expr = parse_postfix_expr_with_struct(ctx, func_name.clone(), Some(qualifier))?;
             }
             Some(tok) if token_matches!(tok, TokenKind::LeftBracket) => {
                 ctx.next();
@@ -314,10 +309,7 @@ fn parse_postfix_chain(ctx: &mut ParserCtx, mut expr: Expr) -> ParseResult<Expr>
                         ctx.parse_comma_separated(|c| parse_assignment(c), &TokenKind::RightParen)?;
                     ctx.expect(&TokenKind::RightParen)?;
                     expr = Expr::Call(CallKind::Function(FunctionCall {
-                        func: FunctionName::new(
-                            func_name.inner().to_string(),
-                            func_name.span().clone(),
-                        ),
+                        func: Name::new(func_name.inner().to_string(), func_name.span().clone()),
                         args,
                     }));
                 } else {
@@ -330,15 +322,27 @@ fn parse_postfix_chain(ctx: &mut ParserCtx, mut expr: Expr) -> ParseResult<Expr>
     Ok(expr)
 }
 
-pub(crate) fn parse_function_call(ctx: &mut ParserCtx, func_name: Ident) -> ParseResult<Expr> {
+pub(crate) fn parse_function_call(
+    ctx: &mut ParserCtx,
+    func_name: Ident,
+    qualifier: Option<Ident>,
+) -> ParseResult<Expr> {
     ctx.expect(&TokenKind::LeftParen)?;
     let args = ctx.parse_comma_separated(|c| parse_assignment(c), &TokenKind::RightParen)?;
     ctx.expect(&TokenKind::RightParen)?;
 
-    Ok(Expr::Call(CallKind::Function(FunctionCall {
-        func: FunctionName::new(func_name.inner().to_string(), func_name.span().clone()),
-        args,
-    })))
+    if let Some(qualifier) = qualifier {
+        Ok(Expr::Call(CallKind::Qualified(QualifiedCall {
+            qualifier: qualifier,
+            func: Name::new(func_name.inner().to_string(), func_name.span().clone()),
+            args,
+        })))
+    } else {
+        Ok(Expr::Call(CallKind::Function(FunctionCall {
+            func: Name::new(func_name.inner().to_string(), func_name.span().clone()),
+            args,
+        })))
+    }
 }
 
 fn peek_assignment_op(ctx: &ParserCtx) -> Option<&crate::tokens::Token> {

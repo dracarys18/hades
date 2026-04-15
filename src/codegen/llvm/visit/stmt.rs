@@ -336,6 +336,22 @@ impl Visit for TypedStructDef {
     type Output<'ctx> = ();
 
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
+        let opaque_struct = context.context().opaque_struct_type(self.name.inner());
+        opaque_struct.set_body(
+            &self
+                .fields
+                .iter()
+                .filter_map(|(_, field)| match field {
+                    TypedFieldKind::Var(typ) => {
+                        let symbols = context.symbols();
+                        Some(context.type_converter().to_llvm_type(typ, symbols).ok()?)
+                    }
+                    TypedFieldKind::Func(_) => None,
+                })
+                .collect::<Vec<_>>(),
+            false,
+        );
+
         self.fields
             .iter()
             .filter(|(_, field)| matches!(field, TypedFieldKind::Func(_)))

@@ -2,7 +2,7 @@ use crate::ast::Types;
 use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::codegen::symbols::{CodegenSymbols, LLVMVariable};
 use crate::codegen::types::TypeConverter;
-use crate::tokens::{Name, Ident};
+use crate::tokens::{Ident, Name};
 use crate::typed_ast::{CompilerContext, FuncKind, FunctionSignature, ModuleSignatures};
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;

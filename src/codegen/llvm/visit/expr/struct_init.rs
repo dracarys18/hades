@@ -23,8 +23,9 @@ impl<'a> Visit for StructInit<'a> {
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
         let symbols = context.symbols();
         let struct_type = context
-            .type_converter()
-            .convert_struct_type(self.name, symbols)?;
+            .module()
+            .get_struct_type(&self.name.to_string())
+            .expect("Struct type should be defined at this point");
 
         let struct_ptr = context.create_alloca("struct_tmp", struct_type.into())?;
 

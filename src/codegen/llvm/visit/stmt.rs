@@ -345,29 +345,22 @@ impl Visit for TypedStructDef {
                 .fields
                 .iter()
                 .filter_map(|(_, field)| match field {
-                    TypedFieldKind::Var(typ) => {
-                        let symbols = context.symbols();
-                        Some(
-                            context
-                                .type_converter()
-                                .to_llvm_type(typ, context.module())
-                                .ok()?,
-                        )
+                    TypedFieldKind::Func(method) => {
+                        method.visit(context).ok()?;
+                        None
                     }
-                    TypedFieldKind::Func(_) => None,
+                    TypedFieldKind::Var(_) => {
+                        let symbols = context.symbols();
+                        let typ = field.get_type();
+                        context
+                            .type_converter()
+                            .to_llvm_type(&typ, context.module())
+                            .ok()
+                    }
                 })
                 .collect::<Vec<_>>(),
             false,
         );
-
-        self.fields
-            .iter()
-            .filter(|(_, field)| matches!(field, TypedFieldKind::Func(_)))
-            .try_for_each(|(name, field)| {
-                if let TypedFieldKind::Func(method) = field {
-                    method.visit(context)?;
-                }
-                Ok(())
-            })
+        Ok(())
     }
 }

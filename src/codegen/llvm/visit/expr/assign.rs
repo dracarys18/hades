@@ -1,8 +1,8 @@
 use inkwell::values::BasicValueEnum;
 
-use crate::codegen::VisitOptions;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
+use crate::codegen::VisitOptions;
 use crate::codegen::{
     context::LLVMContext, llvm::visit::expr::variable::VariableAccess, symbols::LLVMVariable,
 };
@@ -99,11 +99,7 @@ impl<'a> Assignment<'a> {
                 let llvm_ptr_type: inkwell::types::BasicTypeEnum =
                     ctx.type_converter().ptr_type().into();
                 let loaded_ptr = ctx
-                    .builder()
-                    .build_load(llvm_ptr_type, ptr_holder, "deref_assign_ptr")
-                    .map_err(|e| CodegenError::LLVMBuild {
-                        message: e.to_string(),
-                    })?
+                    .load(ptr_holder, llvm_ptr_type, "deref_assign_ptr")?
                     .into_pointer_value();
                 Ok(LLVMVariable::new(loaded_ptr, pointee_type))
             }
@@ -183,11 +179,7 @@ impl Visit for TypedAssignTarget {
                 let llvm_ptr_type: inkwell::types::BasicTypeEnum =
                     context.type_converter().ptr_type().into();
                 let loaded_ptr = context
-                    .builder()
-                    .build_load(llvm_ptr_type, ptr_holder, "deref_read_ptr")
-                    .map_err(|e| CodegenError::LLVMBuild {
-                        message: e.to_string(),
-                    })?
+                    .load(ptr_holder, llvm_ptr_type, "deref_read_ptr")?
                     .into_pointer_value();
                 let pointee_type = match inner.get_type() {
                     crate::ast::Types::Pointer(t) => *t,
@@ -202,10 +194,8 @@ impl Visit for TypedAssignTarget {
                     .type_converter()
                     .to_llvm_type(&pointee_type, symbols)?;
                 context
-                    .builder()
-                    .build_load(llvm_pointee, loaded_ptr, "deref_read_val")
+                    .load(loaded_ptr, llvm_pointee, "deref_read_val")
                     .map(|val| CodegenValue::new(val, pointee_type))
-                    .map_err(CodegenError::from)
             }
         }
     }

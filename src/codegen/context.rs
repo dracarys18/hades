@@ -177,7 +177,7 @@ impl<'ctx> LLVMContext<'ctx> {
             })
     }
 
-    pub fn create_load(
+    pub fn load(
         &self,
         ptr: PointerValue<'ctx>,
         element_type: BasicTypeEnum<'ctx>,

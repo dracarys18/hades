@@ -1,14 +1,14 @@
 use crate::ast::Types;
-use crate::codegen::VisitOptions;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
+use crate::codegen::VisitOptions;
 use crate::tokens::Op;
 use crate::typed_ast::{
     TypedArrayIndex, TypedAssignExpr, TypedBinaryExpr, TypedExpr, TypedFieldAccess,
 };
-use inkwell::AddressSpace;
 use inkwell::values::PointerValue;
+use inkwell::AddressSpace;
 
 pub mod asexpr;
 pub mod assign;
@@ -32,14 +32,12 @@ impl<'ctx> LLVMContext<'ctx> {
         expr_type: &Types,
     ) -> CodegenResult<PointerValue<'ctx>> {
         if let Types::Pointer(_) = expr_type {
-            self.builder()
-                .build_load(
-                    self.context().ptr_type(AddressSpace::default()),
-                    raw_ptr,
-                    "deref_for_field",
-                )
-                .map_err(CodegenError::from)
-                .map(|v| v.into_pointer_value())
+            self.load(
+                raw_ptr,
+                self.context().ptr_type(AddressSpace::default()).into(),
+                "deref_for_field",
+            )
+            .map(|v| v.into_pointer_value())
         } else {
             Ok(raw_ptr)
         }
@@ -210,10 +208,8 @@ impl Visit for TypedArrayIndex {
         };
 
         context
-            .builder()
-            .build_load(elem_type, elem_ptr, "array_elem")
+            .load(elem_ptr, elem_type, "array_elem")
             .map(|val| CodegenValue::new(val, self.typ.get_array_elem_type()))
-            .map_err(CodegenError::from)
     }
 }
 
@@ -266,9 +262,7 @@ impl Visit for TypedFieldAccess {
             .to_llvm_type(&self.field_type, compiler_context)?;
 
         context
-            .builder()
-            .build_load(field_llvm_type, field_ptr, "field_access")
+            .load(field_ptr, field_llvm_type, "field_access")
             .map(|val| CodegenValue::new(val, self.field_type.clone()))
-            .map_err(CodegenError::from)
     }
 }

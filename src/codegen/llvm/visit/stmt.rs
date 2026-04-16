@@ -167,7 +167,7 @@ impl Visit for TypedReturn {
                             let symbols = context.symbols();
                             let llvm_type =
                                 context.type_converter().to_llvm_type(&expr_type, symbols)?;
-                            context.builder().build_load(llvm_type, ptr, "struct_ret")?
+                            context.load(ptr, llvm_type, "struct_ret")?
                         }
                         other => {
                             return Err(CodegenError::LLVMBuild {

@@ -32,14 +32,12 @@ impl<'ctx> LLVMContext<'ctx> {
         expr_type: &Types,
     ) -> CodegenResult<PointerValue<'ctx>> {
         if let Types::Pointer(_) = expr_type {
-            self.builder()
-                .build_load(
-                    self.context().ptr_type(AddressSpace::default()),
-                    raw_ptr,
-                    "deref_for_field",
-                )
-                .map_err(CodegenError::from)
-                .map(|v| v.into_pointer_value())
+            self.load(
+                raw_ptr,
+                self.context().ptr_type(AddressSpace::default()).into(),
+                "deref_for_field",
+            )
+            .map(|v| v.into_pointer_value())
         } else {
             Ok(raw_ptr)
         }
@@ -69,7 +67,7 @@ impl<'ctx> LLVMContext<'ctx> {
             let symbols = self.symbols();
             let struct_type = self
                 .type_converter()
-                .to_llvm_type(&field.struct_type, symbols)?;
+                .to_llvm_type(&field.struct_type, self.module())?;
             let struct_name = field.struct_type.unwrap_struct_name();
             let field_index = self
                 .symbols()
@@ -96,7 +94,9 @@ impl<'ctx> LLVMContext<'ctx> {
             let array_ptr = self.get_ptr(&index.expr)?;
             let index_value = index.index.visit(self)?;
             let symbols = self.symbols();
-            let array_type = self.type_converter().to_llvm_type(&index.typ, symbols)?;
+            let array_type = self
+                .type_converter()
+                .to_llvm_type(&index.typ, self.module())?;
             let zero = self.context().i32_type().const_zero();
             return unsafe {
                 self.builder().build_in_bounds_gep(
@@ -116,7 +116,9 @@ impl<'ctx> LLVMContext<'ctx> {
         }
         let type_info = val.unwrap_concrete()?.type_info();
         let symbols = self.symbols();
-        let t = self.type_converter().to_llvm_type(&type_info, symbols)?;
+        let t = self
+            .type_converter()
+            .to_llvm_type(&type_info, self.module())?;
         let ptr = self.create_alloca("tmp_ptr", t)?;
         self.builder()
             .build_store(ptr, val.value()?)
@@ -159,7 +161,12 @@ impl Visit for TypedExpr {
                 args,
             }
             .visit(context),
-            Self::StructInit { name, fields, .. } => StructInit::new(name, fields).visit(context),
+            Self::StructInit {
+                name,
+                fields,
+                is_const,
+                ..
+            } => StructInit::new(name, fields, *is_const).visit(context),
             Self::Assign(assign) => assign.visit(context),
             Self::FieldAccess(field) => field.visit(context),
             Self::ArrayIndex(index) => index.visit(context),
@@ -191,8 +198,10 @@ impl Visit for TypedArrayIndex {
         let symbols = context.symbols();
         let elem_type = context
             .type_converter()
-            .to_llvm_type(&self.typ.get_array_elem_type(), symbols)?;
-        let array_type = context.type_converter().to_llvm_type(&self.typ, symbols)?;
+            .to_llvm_type(&self.typ.get_array_elem_type(), context.module())?;
+        let array_type = context
+            .type_converter()
+            .to_llvm_type(&self.typ, context.module())?;
 
         let zero = context.context().i32_type().const_zero();
         let elem_ptr = unsafe {
@@ -205,10 +214,8 @@ impl Visit for TypedArrayIndex {
         };
 
         context
-            .builder()
-            .build_load(elem_type, elem_ptr, "array_elem")
+            .load(elem_ptr, elem_type, "array_elem")
             .map(|val| CodegenValue::new(val, self.typ.get_array_elem_type()))
-            .map_err(CodegenError::from)
     }
 }
 
@@ -230,7 +237,7 @@ impl Visit for TypedFieldAccess {
 
         let struct_type = context
             .type_converter()
-            .to_llvm_type(&self.struct_type, compiler_context)?;
+            .to_llvm_type(&self.struct_type, context.module())?;
 
         let struct_name = self.struct_type.unwrap_struct_name();
         let field_index = context
@@ -258,12 +265,10 @@ impl Visit for TypedFieldAccess {
 
         let field_llvm_type = context
             .type_converter()
-            .to_llvm_type(&self.field_type, compiler_context)?;
+            .to_llvm_type(&self.field_type, context.module())?;
 
         context
-            .builder()
-            .build_load(field_llvm_type, field_ptr, "field_access")
+            .load(field_ptr, field_llvm_type, "field_access")
             .map(|val| CodegenValue::new(val, self.field_type.clone()))
-            .map_err(CodegenError::from)
     }
 }

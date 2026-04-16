@@ -1,7 +1,7 @@
 use crate::ast::{Import, ImportPrefix, ModuleDecl, Stmt};
-use crate::parser::error::ParseResult;
 use crate::parser::Parse;
 use crate::parser::ParserCtx;
+use crate::parser::error::ParseResult;
 use crate::token_matches;
 use crate::tokens::TokenKind;
 

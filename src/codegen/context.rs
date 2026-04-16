@@ -2,7 +2,7 @@ use crate::ast::Types;
 use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::codegen::symbols::{CodegenSymbols, LLVMVariable};
 use crate::codegen::types::TypeConverter;
-use crate::tokens::{Name, Ident};
+use crate::tokens::{Ident, Name};
 use crate::typed_ast::{CompilerContext, FuncKind, FunctionSignature, ModuleSignatures};
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
@@ -105,7 +105,9 @@ impl<'ctx> LLVMContext<'ctx> {
             }
             FuncKind::Intrinsic(llvm_name) => {
                 let symbols = self.symbols();
-                let param_types = self.type_converter.params_to_llvm_types(sig, symbols)?;
+                let param_types = self
+                    .type_converter
+                    .params_to_llvm_types(sig, &self.module)?;
                 let type_slice: Vec<BasicTypeEnum> = param_types
                     .iter()
                     .map(|t| BasicTypeEnum::try_from(*t).expect("param is not a basic type"))
@@ -177,7 +179,7 @@ impl<'ctx> LLVMContext<'ctx> {
             })
     }
 
-    pub fn create_load(
+    pub fn load(
         &self,
         ptr: PointerValue<'ctx>,
         element_type: BasicTypeEnum<'ctx>,
@@ -198,7 +200,7 @@ impl<'ctx> LLVMContext<'ctx> {
     ) -> CodegenResult<()> {
         if let Types::Array(_) = typ {
             if let BasicValueEnum::PointerValue(src_ptr) = value {
-                let llvm_type = self.type_converter.to_llvm_type(typ, self.symbols)?;
+                let llvm_type = self.type_converter.to_llvm_type(typ, &self.module)?;
                 let size_bytes = llvm_type.size_of().ok_or(CodegenError::LLVMBuild {
                     message: "Could not compute aggregate size".to_string(),
                 })?;
@@ -308,7 +310,9 @@ impl<'ctx> LLVMContext<'ctx> {
                 .fn_type(param_types, variadic))
         } else {
             let symbols = self.symbols();
-            let ret = self.type_converter().to_llvm_type(return_type, symbols)?;
+            let ret = self
+                .type_converter()
+                .to_llvm_type(return_type, &self.module)?;
             Ok(ret.fn_type(param_types, variadic))
         }
     }
@@ -322,7 +326,7 @@ impl<'ctx> LLVMContext<'ctx> {
                         let symbols = self.symbols();
                         let param_types = self
                             .type_converter()
-                            .params_to_llvm_types(fn_sig, symbols)?;
+                            .params_to_llvm_types(fn_sig, &self.module)?;
                         let type_slice: Vec<BasicTypeEnum> = param_types
                             .iter()
                             .map(|t| {
@@ -348,7 +352,7 @@ impl<'ctx> LLVMContext<'ctx> {
                         let symbols = self.symbols();
                         let param_types = self
                             .type_converter()
-                            .params_to_llvm_types(fn_sig, symbols)?;
+                            .params_to_llvm_types(fn_sig, &self.module)?;
                         let fn_type = self.build_fn_type(
                             &fn_sig.return_type.clone(),
                             &param_types,
@@ -364,7 +368,7 @@ impl<'ctx> LLVMContext<'ctx> {
                         let symbols = self.symbols();
                         let param_types = self
                             .type_converter()
-                            .params_to_llvm_types(fn_sig, symbols)?;
+                            .params_to_llvm_types(fn_sig, &self.module)?;
                         let fn_type =
                             self.build_fn_type(&fn_sig.return_type.clone(), &param_types, false)?;
                         self.module()

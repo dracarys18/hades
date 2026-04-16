@@ -37,7 +37,7 @@ impl<'a> Assignment<'a> {
 
                 let struct_type = ctx
                     .type_converter()
-                    .to_llvm_type(&field.struct_type, symbols)?;
+                    .to_llvm_type(&field.struct_type, ctx.module())?;
 
                 let struct_name = field.struct_type.unwrap_struct_name();
                 let strct = symbols.structs();
@@ -68,7 +68,9 @@ impl<'a> Assignment<'a> {
                 let index_val = index.index.visit(ctx)?;
                 let elem_type = index.typ.get_array_elem_type();
                 let symbols = ctx.symbols();
-                let array_type = ctx.type_converter().to_llvm_type(&index.typ, symbols)?;
+                let array_type = ctx
+                    .type_converter()
+                    .to_llvm_type(&index.typ, ctx.module())?;
                 let zero = ctx.context().i32_type().const_zero();
                 let elem_ptr = unsafe {
                     ctx.builder().build_in_bounds_gep(
@@ -99,11 +101,7 @@ impl<'a> Assignment<'a> {
                 let llvm_ptr_type: inkwell::types::BasicTypeEnum =
                     ctx.type_converter().ptr_type().into();
                 let loaded_ptr = ctx
-                    .builder()
-                    .build_load(llvm_ptr_type, ptr_holder, "deref_assign_ptr")
-                    .map_err(|e| CodegenError::LLVMBuild {
-                        message: e.to_string(),
-                    })?
+                    .load(ptr_holder, llvm_ptr_type, "deref_assign_ptr")?
                     .into_pointer_value();
                 Ok(LLVMVariable::new(loaded_ptr, pointee_type))
             }
@@ -183,11 +181,7 @@ impl Visit for TypedAssignTarget {
                 let llvm_ptr_type: inkwell::types::BasicTypeEnum =
                     context.type_converter().ptr_type().into();
                 let loaded_ptr = context
-                    .builder()
-                    .build_load(llvm_ptr_type, ptr_holder, "deref_read_ptr")
-                    .map_err(|e| CodegenError::LLVMBuild {
-                        message: e.to_string(),
-                    })?
+                    .load(ptr_holder, llvm_ptr_type, "deref_read_ptr")?
                     .into_pointer_value();
                 let pointee_type = match inner.get_type() {
                     crate::ast::Types::Pointer(t) => *t,
@@ -200,12 +194,10 @@ impl Visit for TypedAssignTarget {
                 let symbols = context.symbols();
                 let llvm_pointee = context
                     .type_converter()
-                    .to_llvm_type(&pointee_type, symbols)?;
+                    .to_llvm_type(&pointee_type, context.module())?;
                 context
-                    .builder()
-                    .build_load(llvm_pointee, loaded_ptr, "deref_read_val")
+                    .load(loaded_ptr, llvm_pointee, "deref_read_val")
                     .map(|val| CodegenValue::new(val, pointee_type))
-                    .map_err(CodegenError::from)
             }
         }
     }

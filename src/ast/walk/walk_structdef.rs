@@ -11,7 +11,7 @@ impl WalkAst for FieldKind {
         span: crate::error::Span,
     ) -> Result<Self::Output, SemanticError> {
         match self {
-            FieldKind::Var(typ) => Ok(TypedFieldKind::Var(typ.clone())),
+            FieldKind::Var(typ) => Ok(TypedFieldKind::Var(typ.qualify(ctx.module_name()))),
             FieldKind::Func(func_def) => Ok(TypedFieldKind::Func(func_def.walk(ctx, span)?)),
         }
     }

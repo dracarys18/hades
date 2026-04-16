@@ -31,7 +31,7 @@ impl WalkAst for QualifiedCall {
                 return Err(SemanticError::undefined_function(
                     self.func.to_ident(),
                     span,
-                ))
+                ));
             }
         };
         let sig = ctx.get_function_signature(&resolved)?;

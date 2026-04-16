@@ -1,10 +1,10 @@
 use crate::ast::*;
-use crate::parser::error::ParseResult;
-use crate::parser::expr::parse_assignment;
-use crate::parser::func::{parse_extern_fn, parse_intrinsic_fn, FuncDef};
-use crate::parser::struct_::StructDef;
 use crate::parser::Parse;
 use crate::parser::ParserCtx;
+use crate::parser::error::ParseResult;
+use crate::parser::expr::parse_assignment;
+use crate::parser::func::{FuncDef, parse_extern_fn, parse_intrinsic_fn};
+use crate::parser::struct_::StructDef;
 use crate::token_matches;
 use crate::tokens::TokenKind;
 

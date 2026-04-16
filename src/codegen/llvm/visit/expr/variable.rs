@@ -24,13 +24,18 @@ impl<'a> Visit for VariableAccess<'a> {
         let var_type = var.typ();
 
         if self.options.ptr {
-            return Ok(CodegenValue::new(var_ptr.into(), var_type.clone()));
+            return Ok(CodegenValue::new(
+                var_ptr.into(),
+                crate::ast::Types::Pointer(Box::new(var_type.clone())),
+            ));
         }
 
         let symbols = context.symbols();
-        let llvm_type = context.type_converter().to_llvm_type(var_type, symbols)?;
+        let llvm_type = context
+            .type_converter()
+            .to_llvm_type(var_type, context.module())?;
 
-        let loaded_val = context.create_load(var_ptr, llvm_type, self.name.inner())?;
+        let loaded_val = context.load(var_ptr, llvm_type, self.name.inner())?;
         Ok(CodegenValue::new(loaded_val, var_type.clone()))
     }
 }

@@ -14,9 +14,11 @@ impl Visit for TypedArrayLiteral {
         let symbols = context.symbols();
         let array_type = context
             .type_converter()
-            .to_llvm_type(&self.elem_typ, symbols)?;
+            .to_llvm_type(&self.elem_typ, context.module())?;
         let elem_type = self.elem_typ.get_array_elem_type();
-        let llvm_elem_type = context.type_converter().to_llvm_type(&elem_type, symbols)?;
+        let llvm_elem_type = context
+            .type_converter()
+            .to_llvm_type(&elem_type, context.module())?;
         let llvm_array_type = array_type.into_array_type();
 
         let elems = resolve_elements(context, &self.elements, &elem_type, llvm_elem_type)?;
@@ -42,7 +44,6 @@ fn resolve_elements<'ctx>(
     for element in elements {
         let val = element.visit(context)?.value()?;
         let resolved = match (elem_type, val) {
-            (Types::Struct(_), BasicValueEnum::PointerValue(ptr)) => ptr.into(),
             (Types::Struct(_), v) => {
                 let tmp = context.create_alloca("struct_elem", llvm_elem_type)?;
                 context
@@ -55,9 +56,7 @@ fn resolve_elements<'ctx>(
             }
             (Types::Pointer(_), v) => v,
             (Types::String, v) => v,
-            (_, BasicValueEnum::PointerValue(ptr)) => {
-                context.builder().build_load(llvm_elem_type, ptr, "elem")?
-            }
+            (_, BasicValueEnum::PointerValue(ptr)) => context.load(ptr, llvm_elem_type, "elem")?,
             (_, v) => v,
         };
         out.push(resolved);

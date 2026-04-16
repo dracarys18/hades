@@ -1,8 +1,8 @@
 use crate::ast::*;
-use crate::parser::error::ParseResult;
-use crate::parser::stmt::parse_block;
 use crate::parser::Parse;
 use crate::parser::ParserCtx;
+use crate::parser::error::ParseResult;
+use crate::parser::stmt::parse_block;
 use crate::token_matches;
 use crate::tokens::{Name, ParamKind, Selff, TokenKind};
 

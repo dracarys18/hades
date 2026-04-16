@@ -310,7 +310,9 @@ impl<'ctx> LLVMContext<'ctx> {
                 .fn_type(param_types, variadic))
         } else {
             let symbols = self.symbols();
-            let ret = self.type_converter().to_llvm_type(return_type, &self.module)?;
+            let ret = self
+                .type_converter()
+                .to_llvm_type(return_type, &self.module)?;
             Ok(ret.fn_type(param_types, variadic))
         }
     }

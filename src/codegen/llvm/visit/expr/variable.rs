@@ -1,7 +1,7 @@
+use crate::codegen::VisitOptions;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
-use crate::codegen::VisitOptions;
 use crate::tokens::Ident;
 
 pub struct VariableAccess<'a> {
@@ -31,7 +31,9 @@ impl<'a> Visit for VariableAccess<'a> {
         }
 
         let symbols = context.symbols();
-        let llvm_type = context.type_converter().to_llvm_type(var_type, context.module())?;
+        let llvm_type = context
+            .type_converter()
+            .to_llvm_type(var_type, context.module())?;
 
         let loaded_val = context.load(var_ptr, llvm_type, self.name.inner())?;
         Ok(CodegenValue::new(loaded_val, var_type.clone()))

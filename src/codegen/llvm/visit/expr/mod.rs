@@ -1,14 +1,14 @@
 use crate::ast::Types;
+use crate::codegen::VisitOptions;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
-use crate::codegen::VisitOptions;
 use crate::tokens::Op;
 use crate::typed_ast::{
     TypedArrayIndex, TypedAssignExpr, TypedBinaryExpr, TypedExpr, TypedFieldAccess,
 };
-use inkwell::values::PointerValue;
 use inkwell::AddressSpace;
+use inkwell::values::PointerValue;
 
 pub mod asexpr;
 pub mod assign;
@@ -94,7 +94,9 @@ impl<'ctx> LLVMContext<'ctx> {
             let array_ptr = self.get_ptr(&index.expr)?;
             let index_value = index.index.visit(self)?;
             let symbols = self.symbols();
-            let array_type = self.type_converter().to_llvm_type(&index.typ, self.module())?;
+            let array_type = self
+                .type_converter()
+                .to_llvm_type(&index.typ, self.module())?;
             let zero = self.context().i32_type().const_zero();
             return unsafe {
                 self.builder().build_in_bounds_gep(
@@ -114,7 +116,9 @@ impl<'ctx> LLVMContext<'ctx> {
         }
         let type_info = val.unwrap_concrete()?.type_info();
         let symbols = self.symbols();
-        let t = self.type_converter().to_llvm_type(&type_info, self.module())?;
+        let t = self
+            .type_converter()
+            .to_llvm_type(&type_info, self.module())?;
         let ptr = self.create_alloca("tmp_ptr", t)?;
         self.builder()
             .build_store(ptr, val.value()?)
@@ -195,7 +199,9 @@ impl Visit for TypedArrayIndex {
         let elem_type = context
             .type_converter()
             .to_llvm_type(&self.typ.get_array_elem_type(), context.module())?;
-        let array_type = context.type_converter().to_llvm_type(&self.typ, context.module())?;
+        let array_type = context
+            .type_converter()
+            .to_llvm_type(&self.typ, context.module())?;
 
         let zero = context.context().i32_type().const_zero();
         let elem_ptr = unsafe {

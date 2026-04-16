@@ -1,8 +1,8 @@
 use inkwell::values::BasicValueEnum;
 
+use crate::codegen::VisitOptions;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
-use crate::codegen::VisitOptions;
 use crate::codegen::{
     context::LLVMContext, llvm::visit::expr::variable::VariableAccess, symbols::LLVMVariable,
 };
@@ -68,7 +68,9 @@ impl<'a> Assignment<'a> {
                 let index_val = index.index.visit(ctx)?;
                 let elem_type = index.typ.get_array_elem_type();
                 let symbols = ctx.symbols();
-                let array_type = ctx.type_converter().to_llvm_type(&index.typ, ctx.module())?;
+                let array_type = ctx
+                    .type_converter()
+                    .to_llvm_type(&index.typ, ctx.module())?;
                 let zero = ctx.context().i32_type().const_zero();
                 let elem_ptr = unsafe {
                     ctx.builder().build_in_bounds_gep(

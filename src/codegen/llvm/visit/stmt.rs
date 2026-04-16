@@ -288,7 +288,9 @@ impl Visit for TypedFuncDef {
                         crate::tokens::ParamKind::Ident(_) => {
                             let typ = declared_type.clone();
                             let symbols = context.symbols();
-                            let llvm_type = context.type_converter().to_llvm_type(&typ, context.module())?;
+                            let llvm_type = context
+                                .type_converter()
+                                .to_llvm_type(&typ, context.module())?;
                             let alloca = context.create_alloca(name.inner(), llvm_type)?;
                             context.create_store(alloca, param_val, &typ)?;
                             context.declare_variable(name, alloca, typ)?;
@@ -345,7 +347,12 @@ impl Visit for TypedStructDef {
                 .filter_map(|(_, field)| match field {
                     TypedFieldKind::Var(typ) => {
                         let symbols = context.symbols();
-                        Some(context.type_converter().to_llvm_type(typ, context.module()).ok()?)
+                        Some(
+                            context
+                                .type_converter()
+                                .to_llvm_type(typ, context.module())
+                                .ok()?,
+                        )
                     }
                     TypedFieldKind::Func(_) => None,
                 })

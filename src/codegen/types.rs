@@ -4,13 +4,13 @@ use crate::ast::{ArrayType, Types};
 use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::tokens::{Ident, Name, ParamKind};
 use crate::typed_ast::FunctionSignature;
+use inkwell::AddressSpace;
 use inkwell::context::Context;
 use inkwell::module::Module;
 use inkwell::types::{
     AnyTypeEnum, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FloatType, FunctionType, IntType,
     StructType,
 };
-use inkwell::AddressSpace;
 
 pub struct TypeConverter<'ctx> {
     context: &'ctx Context,

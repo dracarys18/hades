@@ -47,9 +47,10 @@ impl<'a> Visit for StructInit<'a> {
             values.push((field_val.value()?, field_expr.get_type()));
         }
         let ptr = build_alloca_struct(context, struct_type, &values)?;
+        let struct_val = context.load(ptr, struct_type.into(), "struct_val")?;
 
         Ok(CodegenValue::new(
-            ptr.into(),
+            struct_val,
             Types::Struct(self.name.clone()),
         ))
     }

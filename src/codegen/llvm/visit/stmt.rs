@@ -1,4 +1,3 @@
-use crate::ast::Types;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::codegen::traits::Visit;
@@ -159,34 +158,7 @@ impl Visit for TypedReturn {
         match &self.expr {
             Some(expr) => {
                 let return_val = expr.expr().visit(context)?;
-                let expr_type = expr.expr().get_type();
-                let val = match &expr_type {
-                    Types::Struct(_) => match return_val.value()? {
-                        BasicValueEnum::StructValue(sv) => sv.into(),
-                        BasicValueEnum::PointerValue(ptr) => {
-                            let symbols = context.symbols();
-                            let llvm_type =
-                                context.type_converter().to_llvm_type(&expr_type, symbols)?;
-                            context.load(ptr, llvm_type, "struct_ret")?
-                        }
-                        other => {
-                            return Err(CodegenError::LLVMBuild {
-                                message: format!("unexpected value for struct return: {:?}", other),
-                            })
-                        }
-                    },
-                    Types::Int
-                    | Types::Float
-                    | Types::Bool
-                    | Types::Char
-                    | Types::String
-                    | Types::Void
-                    | Types::Pointer(_)
-                    | Types::Array(_)
-                    | Types::Generic(_)
-                    | Types::Self_ => return_val.value()?,
-                };
-                context.build_return(Some(val))?;
+                context.build_return(Some(return_val.value()?))?;
             }
             None => {
                 context.build_return(None)?;

@@ -55,7 +55,9 @@ fn resolve_elements<'ctx>(
             }
             (Types::Pointer(_), v) => v,
             (Types::String, v) => v,
-            (_, BasicValueEnum::PointerValue(ptr)) => context.load(ptr, llvm_elem_type, "elem")?,
+            (_, BasicValueEnum::PointerValue(ptr)) => {
+                context.load(ptr, llvm_elem_type, "elem")?
+            }
             (_, v) => v,
         };
         out.push(resolved);

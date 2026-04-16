@@ -24,7 +24,10 @@ impl<'a> Visit for VariableAccess<'a> {
         let var_type = var.typ();
 
         if self.options.ptr {
-            return Ok(CodegenValue::new(var_ptr.into(), var_type.clone()));
+            return Ok(CodegenValue::new(
+                var_ptr.into(),
+                crate::ast::Types::Pointer(Box::new(var_type.clone())),
+            ));
         }
 
         let symbols = context.symbols();

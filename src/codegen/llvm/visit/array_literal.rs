@@ -42,7 +42,6 @@ fn resolve_elements<'ctx>(
     for element in elements {
         let val = element.visit(context)?.value()?;
         let resolved = match (elem_type, val) {
-            (Types::Struct(_), BasicValueEnum::PointerValue(ptr)) => ptr.into(),
             (Types::Struct(_), v) => {
                 let tmp = context.create_alloca("struct_elem", llvm_elem_type)?;
                 context
@@ -55,9 +54,7 @@ fn resolve_elements<'ctx>(
             }
             (Types::Pointer(_), v) => v,
             (Types::String, v) => v,
-            (_, BasicValueEnum::PointerValue(ptr)) => {
-                context.load(ptr, llvm_elem_type, "elem")?
-            }
+            (_, BasicValueEnum::PointerValue(ptr)) => context.load(ptr, llvm_elem_type, "elem")?,
             (_, v) => v,
         };
         out.push(resolved);

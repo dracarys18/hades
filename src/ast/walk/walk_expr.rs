@@ -8,6 +8,7 @@ use crate::typed_ast::{
     CompilerContext, TypedArrayIndex, TypedAssignExpr, TypedAssignTarget, TypedBinaryExpr,
     TypedExpr, TypedExprAst, TypedFieldAccess,
 };
+use indexmap::IndexMap;
 
 use super::walk_possibly_null;
 
@@ -38,7 +39,7 @@ impl WalkAst for Expr {
                                 .map(|i| i.clone())
                                 .unwrap_or_else(|| Ident::new("?".to_string(), span.clone())),
                             span.clone(),
-                        ))
+                        ));
                     }
                 };
                 let struct_type = ctx.get_struct_type(&name, span.clone())?;
@@ -73,10 +74,14 @@ impl WalkAst for Expr {
                         Ok((field_name.clone(), typed))
                     })
                     .collect::<Result<_, _>>()
-                    .map(|typed_fields| TypedExpr::StructInit {
-                        name: name.clone(),
-                        fields: typed_fields,
-                        types: Types::Struct(name.clone()),
+                    .map(|typed_fields: IndexMap<Ident, TypedExpr>| {
+                        let is_const = typed_fields.values().all(|e| e.is_const());
+                        TypedExpr::StructInit {
+                            name: name.clone(),
+                            fields: typed_fields,
+                            types: Types::Struct(name.clone()),
+                            is_const,
+                        }
                     })
             }
             Expr::Binary(binary) => binary.walk(ctx, span).map(TypedExpr::Binary),

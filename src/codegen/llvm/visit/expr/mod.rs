@@ -159,7 +159,12 @@ impl Visit for TypedExpr {
                 args,
             }
             .visit(context),
-            Self::StructInit { name, fields, .. } => StructInit::new(name, fields).visit(context),
+            Self::StructInit {
+                name,
+                fields,
+                is_const,
+                ..
+            } => StructInit::new(name, fields, *is_const).visit(context),
             Self::Assign(assign) => assign.visit(context),
             Self::FieldAccess(field) => field.visit(context),
             Self::ArrayIndex(index) => index.visit(context),

@@ -196,7 +196,7 @@ impl<'ctx> LLVMContext<'ctx> {
         value: BasicValueEnum<'ctx>,
         typ: &Types,
     ) -> CodegenResult<()> {
-        if let Types::Array(_) = typ {
+        if let Types::Array(_) | Types::Struct(_) = typ {
             if let BasicValueEnum::PointerValue(src_ptr) = value {
                 let llvm_type = self.type_converter.to_llvm_type(typ, self.symbols)?;
                 let size_bytes = llvm_type.size_of().ok_or(CodegenError::LLVMBuild {

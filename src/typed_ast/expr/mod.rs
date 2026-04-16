@@ -21,6 +21,7 @@ pub enum TypedExpr {
         name: Name,
         fields: IndexMap<Ident, TypedExpr>,
         types: Types,
+        is_const: bool,
     },
     Binary(TypedBinaryExpr),
     Unary {
@@ -72,6 +73,29 @@ pub struct TypedAsExpression {
 }
 
 impl TypedExpr {
+    pub fn is_const(&self) -> bool {
+        match self {
+            TypedExpr::Value(v) => match v {
+                TypedValue::Number(_) => true,
+                TypedValue::Float(_) => true,
+                TypedValue::Boolean(_) => true,
+                TypedValue::Char(_) => true,
+                TypedValue::String(_) => false,
+                TypedValue::Array(_) => false,
+            },
+            TypedExpr::StructInit { is_const, .. } => *is_const,
+            TypedExpr::Ident { .. } => false,
+            TypedExpr::Binary(_) => false,
+            TypedExpr::Unary { .. } => false,
+            TypedExpr::FieldAccess(_) => false,
+            TypedExpr::ArrayIndex(_) => false,
+            TypedExpr::Assign(_) => false,
+            TypedExpr::As(_) => false,
+            TypedExpr::Call { .. } => false,
+            TypedExpr::Null(_) => false,
+        }
+    }
+
     pub fn get_type(&self) -> Types {
         match self {
             TypedExpr::Value(val) => val.get_type(),

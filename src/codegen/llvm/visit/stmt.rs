@@ -1,3 +1,4 @@
+use crate::ast::Types;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::codegen::traits::Visit;
@@ -5,6 +6,7 @@ use crate::typed_ast::{
     FuncKind, TypedBlock, TypedBreak, TypedContinue, TypedFieldKind, TypedFor, TypedFuncDef,
     TypedIf, TypedReturn, TypedStmt, TypedStructDef, TypedWhile,
 };
+use inkwell::values::BasicValueEnum;
 
 impl Visit for TypedStmt {
     type Output<'ctx> = ();
@@ -157,7 +159,34 @@ impl Visit for TypedReturn {
         match &self.expr {
             Some(expr) => {
                 let return_val = expr.expr().visit(context)?;
-                context.build_return(Some(return_val.value()?))?;
+                let expr_type = expr.expr().get_type();
+                let val = match &expr_type {
+                    Types::Struct(_) => match return_val.value()? {
+                        BasicValueEnum::StructValue(sv) => sv.into(),
+                        BasicValueEnum::PointerValue(ptr) => {
+                            let symbols = context.symbols();
+                            let llvm_type =
+                                context.type_converter().to_llvm_type(&expr_type, symbols)?;
+                            context.builder().build_load(llvm_type, ptr, "struct_ret")?
+                        }
+                        other => {
+                            return Err(CodegenError::LLVMBuild {
+                                message: format!("unexpected value for struct return: {:?}", other),
+                            })
+                        }
+                    },
+                    Types::Int
+                    | Types::Float
+                    | Types::Bool
+                    | Types::Char
+                    | Types::String
+                    | Types::Void
+                    | Types::Pointer(_)
+                    | Types::Array(_)
+                    | Types::Generic(_)
+                    | Types::Self_ => return_val.value()?,
+                };
+                context.build_return(Some(val))?;
             }
             None => {
                 context.build_return(None)?;

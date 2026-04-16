@@ -1,9 +1,9 @@
 use crate::ast::*;
+use crate::parser::Parse;
+use crate::parser::ParserCtx;
 use crate::parser::error::ParseResult;
 use crate::parser::expr::parse_assignment;
 use crate::parser::func::FuncDef;
-use crate::parser::Parse;
-use crate::parser::ParserCtx;
 use crate::token_matches;
 use crate::tokens::Name;
 use crate::tokens::{Ident, ParamKind, TokenKind};

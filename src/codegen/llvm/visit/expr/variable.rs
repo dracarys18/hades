@@ -31,7 +31,7 @@ impl<'a> Visit for VariableAccess<'a> {
         }
 
         let symbols = context.symbols();
-        let llvm_type = context.type_converter().to_llvm_type(var_type, symbols)?;
+        let llvm_type = context.type_converter().to_llvm_type(var_type, context.module())?;
 
         let loaded_val = context.load(var_ptr, llvm_type, self.name.inner())?;
         Ok(CodegenValue::new(loaded_val, var_type.clone()))

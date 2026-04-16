@@ -45,7 +45,7 @@ impl<'a> UnaryOp<'a> {
         let symbols = context.symbols();
         let llvm_type = context
             .type_converter()
-            .to_llvm_type(&pointee_type, symbols)?;
+            .to_llvm_type(&pointee_type, context.module())?;
         let loaded = context.load(ptr_val.value()?.into_pointer_value(), llvm_type, "deref")?;
         Ok(CodegenValue::new(loaded, pointee_type))
     }

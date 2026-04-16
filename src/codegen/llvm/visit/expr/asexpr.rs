@@ -16,7 +16,7 @@ impl Visit for TypedAsExpression {
         let target_type = {
             let symbols = context.symbols();
             let converter = context.type_converter();
-            converter.to_llvm_type(&self.target_type, symbols)?
+            converter.to_llvm_type(&self.target_type, context.module())?
         };
 
         let value = self.expr.visit(context)?;

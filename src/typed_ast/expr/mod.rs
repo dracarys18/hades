@@ -80,7 +80,7 @@ impl TypedExpr {
                 TypedValue::Float(_) => true,
                 TypedValue::Boolean(_) => true,
                 TypedValue::Char(_) => true,
-                TypedValue::String(_) => false,
+                TypedValue::String(_) => true,
                 TypedValue::Array(_) => false,
             },
             TypedExpr::StructInit { is_const, .. } => *is_const,

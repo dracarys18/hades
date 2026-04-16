@@ -14,9 +14,9 @@ impl Visit for TypedArrayLiteral {
         let symbols = context.symbols();
         let array_type = context
             .type_converter()
-            .to_llvm_type(&self.elem_typ, symbols)?;
+            .to_llvm_type(&self.elem_typ, context.module())?;
         let elem_type = self.elem_typ.get_array_elem_type();
-        let llvm_elem_type = context.type_converter().to_llvm_type(&elem_type, symbols)?;
+        let llvm_elem_type = context.type_converter().to_llvm_type(&elem_type, context.module())?;
         let llvm_array_type = array_type.into_array_type();
 
         let elems = resolve_elements(context, &self.elements, &elem_type, llvm_elem_type)?;

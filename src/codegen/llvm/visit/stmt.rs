@@ -209,7 +209,7 @@ impl Visit for TypedFuncDef {
 
         let param_types = context
             .type_converter()
-            .params_to_llvm_types(&signature, symbols)?;
+            .params_to_llvm_types(&signature, context.module())?;
 
         match &signature.kind {
             FuncKind::Extern { variadic } => {
@@ -271,7 +271,7 @@ impl Visit for TypedFuncDef {
                                     let symbols = context.symbols();
                                     let llvm_type = context
                                         .type_converter()
-                                        .to_llvm_type(&typed_receiver.typ, symbols)?;
+                                        .to_llvm_type(&typed_receiver.typ, context.module())?;
                                     let alloca = context.create_alloca(name.inner(), llvm_type)?;
                                     context.create_store(alloca, param_val, &typed_receiver.typ)?;
                                     context.declare_variable(name, alloca, typed_receiver.typ)?;
@@ -288,7 +288,7 @@ impl Visit for TypedFuncDef {
                         crate::tokens::ParamKind::Ident(_) => {
                             let typ = declared_type.clone();
                             let symbols = context.symbols();
-                            let llvm_type = context.type_converter().to_llvm_type(&typ, symbols)?;
+                            let llvm_type = context.type_converter().to_llvm_type(&typ, context.module())?;
                             let alloca = context.create_alloca(name.inner(), llvm_type)?;
                             context.create_store(alloca, param_val, &typ)?;
                             context.declare_variable(name, alloca, typ)?;
@@ -345,7 +345,7 @@ impl Visit for TypedStructDef {
                 .filter_map(|(_, field)| match field {
                     TypedFieldKind::Var(typ) => {
                         let symbols = context.symbols();
-                        Some(context.type_converter().to_llvm_type(typ, symbols).ok()?)
+                        Some(context.type_converter().to_llvm_type(typ, context.module()).ok()?)
                     }
                     TypedFieldKind::Func(_) => None,
                 })

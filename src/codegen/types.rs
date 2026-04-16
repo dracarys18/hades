@@ -2,15 +2,15 @@ use std::num::NonZeroU32;
 
 use crate::ast::{ArrayType, Types};
 use crate::codegen::error::{CodegenError, CodegenResult};
-use crate::error::Span;
 use crate::tokens::{Ident, Name, ParamKind};
-use crate::typed_ast::{CompilerContext, FunctionSignature, TypedFieldKind};
-use inkwell::AddressSpace;
+use crate::typed_ast::FunctionSignature;
 use inkwell::context::Context;
+use inkwell::module::Module;
 use inkwell::types::{
     AnyTypeEnum, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FloatType, FunctionType, IntType,
     StructType,
 };
+use inkwell::AddressSpace;
 
 pub struct TypeConverter<'ctx> {
     context: &'ctx Context,
@@ -24,7 +24,7 @@ impl<'ctx> TypeConverter<'ctx> {
     pub fn to_llvm_type(
         &self,
         ty: &Types,
-        compiler_ctx: &CompilerContext,
+        module: &Module<'ctx>,
     ) -> CodegenResult<BasicTypeEnum<'ctx>> {
         let llvm_type = match ty {
             Types::Int => self.context.i64_type().into(),
@@ -32,7 +32,7 @@ impl<'ctx> TypeConverter<'ctx> {
             Types::Bool => self.context.bool_type().into(),
             Types::String => self.context.ptr_type(AddressSpace::default()).into(),
             Types::Char => self.context.i8_type().into(),
-            Types::Struct(name) => self.convert_struct_type(name, compiler_ctx)?.into(),
+            Types::Struct(name) => self.convert_struct_type(name, module)?.into(),
             Types::Void => {
                 return Err(CodegenError::TypeConversion {
                     from: "void".to_string(),
@@ -72,7 +72,7 @@ impl<'ctx> TypeConverter<'ctx> {
                     array_type.into()
                 }
                 ArrayType::StructArray(size, name) => {
-                    let struct_type = self.convert_struct_type(name, compiler_ctx)?;
+                    let struct_type = self.convert_struct_type(name, module)?;
                     let array_type = struct_type.array_type(*size as u32);
                     array_type.into()
                 }
@@ -98,22 +98,14 @@ impl<'ctx> TypeConverter<'ctx> {
     pub fn convert_struct_type(
         &self,
         name: &Name,
-        compiler_ctx: &CompilerContext,
+        module: &Module<'ctx>,
     ) -> CodegenResult<StructType<'ctx>> {
-        let struct_def = compiler_ctx
-            .get_struct_type(&name, Span::default())
-            .map_err(|_| CodegenError::TypeConversion {
+        module
+            .get_struct_type(&name.to_string())
+            .ok_or_else(|| CodegenError::TypeConversion {
                 from: format!("struct {name}"),
                 to: "LLVM type".to_string(),
-            })?;
-        let field_types = struct_def
-            .iter()
-            .filter(|(_, kind)| matches!(kind, TypedFieldKind::Var(_)))
-            .map(|(_, kind)| self.to_llvm_type(&kind.get_type(), compiler_ctx))
-            .collect::<CodegenResult<Vec<_>>>()?;
-
-        let struct_type = self.context.struct_type(&field_types, false);
-        Ok(struct_type)
+            })
     }
 
     pub fn fn_type(&self, typ: &AnyTypeEnum<'ctx>) -> FunctionType<'ctx> {
@@ -198,7 +190,7 @@ impl<'ctx> TypeConverter<'ctx> {
     pub fn params_to_llvm_types(
         &self,
         sig: &FunctionSignature,
-        compiler_ctx: &CompilerContext,
+        module: &Module<'ctx>,
     ) -> CodegenResult<Vec<BasicMetadataTypeEnum<'ctx>>> {
         let params = sig.to_fixed_params();
         let mut param_types = Vec::new();
@@ -208,7 +200,7 @@ impl<'ctx> TypeConverter<'ctx> {
                     param_types.push(self.ptr_type().into());
                 }
                 ParamKind::Ident(_) => {
-                    param_types.push(self.to_llvm_type(declared_type, compiler_ctx)?.into());
+                    param_types.push(self.to_llvm_type(declared_type, module)?.into());
                 }
             }
         }

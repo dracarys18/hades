@@ -9,7 +9,7 @@ impl Visit for crate::typed_ast::TypedLet {
         let var_name = self.name.clone();
         let init_value = self.value.expr().visit(context)?;
         let symbols = context.symbols();
-        let var_type = context.type_converter().to_llvm_type(&self.typ, symbols)?;
+        let var_type = context.type_converter().to_llvm_type(&self.typ, context.module())?;
         let alloca = context.create_alloca(var_name.inner(), var_type)?;
         context.create_store(alloca, init_value.value()?, &self.typ)?;
         context.declare_variable(var_name, alloca, self.typ.clone())?;

@@ -37,7 +37,7 @@ impl<'a> Assignment<'a> {
 
                 let struct_type = ctx
                     .type_converter()
-                    .to_llvm_type(&field.struct_type, symbols)?;
+                    .to_llvm_type(&field.struct_type, ctx.module())?;
 
                 let struct_name = field.struct_type.unwrap_struct_name();
                 let strct = symbols.structs();
@@ -68,7 +68,7 @@ impl<'a> Assignment<'a> {
                 let index_val = index.index.visit(ctx)?;
                 let elem_type = index.typ.get_array_elem_type();
                 let symbols = ctx.symbols();
-                let array_type = ctx.type_converter().to_llvm_type(&index.typ, symbols)?;
+                let array_type = ctx.type_converter().to_llvm_type(&index.typ, ctx.module())?;
                 let zero = ctx.context().i32_type().const_zero();
                 let elem_ptr = unsafe {
                     ctx.builder().build_in_bounds_gep(
@@ -192,7 +192,7 @@ impl Visit for TypedAssignTarget {
                 let symbols = context.symbols();
                 let llvm_pointee = context
                     .type_converter()
-                    .to_llvm_type(&pointee_type, symbols)?;
+                    .to_llvm_type(&pointee_type, context.module())?;
                 context
                     .load(loaded_ptr, llvm_pointee, "deref_read_val")
                     .map(|val| CodegenValue::new(val, pointee_type))

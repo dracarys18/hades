@@ -202,6 +202,20 @@ impl SemanticError {
             span,
         }
     }
+
+    pub fn return_not_allowed_in_defer(span: Span) -> Self {
+        Self {
+            message: String::from("Return statements are not allowed inside defer blocks"),
+            span,
+        }
+    }
+
+    pub fn defer_outside_function(span: Span) -> Self {
+        Self {
+            message: String::from("Defer statements are only allowed inside functions"),
+            span,
+        }
+    }
 }
 
 impl std::fmt::Display for SemanticError {

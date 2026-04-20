@@ -1,4 +1,5 @@
 pub mod array_literal;
+pub mod defer;
 pub mod expr;
 pub mod let_stmt;
 pub mod program;

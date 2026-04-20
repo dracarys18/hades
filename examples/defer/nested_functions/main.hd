@@ -1,0 +1,25 @@
+import std::io
+
+fn a(): int {
+    defer {
+        io::printf("a deferred\n");
+    }
+
+    io::printf("a body\n");
+    return 0;
+}
+
+fn b(): int {
+    defer {
+        io::printf("b deferred\n");
+    }
+
+    io::printf("b body\n");
+    return 0;
+}
+
+fn main(): int {
+    a();
+    b();
+    return 0;
+}

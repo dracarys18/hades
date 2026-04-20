@@ -1,0 +1,16 @@
+import std::io
+
+fn run(): int {
+    let x = 42;
+    defer {
+        io::printf("value is %d\n", x);
+    }
+
+    io::printf("done\n");
+    return 0;
+}
+
+fn main(): int {
+    run();
+    return 0;
+}

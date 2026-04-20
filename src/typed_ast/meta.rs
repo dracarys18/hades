@@ -37,6 +37,10 @@ impl CompilerContext {
         self.module_path = Some(path);
     }
 
+    pub fn current_function(&self) -> Option<&(Name, Types)> {
+        self.current_function.as_ref()
+    }
+
     pub fn module_name(&self) -> Option<&str> {
         self.module_path.as_ref().map(|p| p.name())
     }

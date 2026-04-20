@@ -1,0 +1,23 @@
+import std::io
+
+fn run(): int {
+    defer {
+        io::printf("first deferred\n");
+    }
+
+    defer {
+        io::printf("second deferred\n");
+    }
+
+    defer {
+        io::printf("third deferred\n");
+    }
+
+    io::printf("body\n");
+    return 0;
+}
+
+fn main(): int {
+    run();
+    return 0;
+}

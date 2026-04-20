@@ -7,6 +7,7 @@ use crate::typed_ast::{
 };
 use inkwell::values::BasicValueEnum;
 
+
 impl Visit for TypedStmt {
     type Output<'ctx> = ();
 
@@ -28,6 +29,7 @@ impl Visit for TypedStmt {
             Self::Break(break_stmt) => break_stmt.visit(context),
             Self::ModuleDecl(_) => Ok(()),
             Self::Import(_) => Ok(()),
+            Self::Defer(d) => d.visit(context),
         }
     }
 }
@@ -155,6 +157,15 @@ impl Visit for TypedReturn {
     type Output<'ctx> = ();
 
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
+        let defer_stmts: Vec<TypedBlock> = context
+            .current_function_unchecked()
+            .defer_iter()
+            .map(|d| d.stmt.clone())
+            .collect();
+        for block in defer_stmts {
+            block.visit(context)?;
+        }
+
         match &self.expr {
             Some(expr) => {
                 let return_val = expr.expr().visit(context)?;
@@ -303,6 +314,14 @@ impl Visit for TypedFuncDef {
 
                 if !context.is_block_terminated() {
                     if self.signature.return_type == crate::ast::Types::Void {
+                        let defer_stmts: Vec<TypedBlock> = context
+                            .current_function_unchecked()
+                            .defer_iter()
+                            .map(|d| d.stmt.clone())
+                            .collect();
+                        for block in defer_stmts {
+                            block.visit(context)?;
+                        }
                         context.build_return(None)?;
                     } else {
                         let default_val = match self.signature.return_type {

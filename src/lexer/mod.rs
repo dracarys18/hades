@@ -33,6 +33,7 @@ static KEYWORDS: phf::Map<&'static str, TokenKind> = phf_map! {
     "as" => TokenKind::As,
     "extern" => TokenKind::Extern,
     "intrinsic" => TokenKind::Intrinsic,
+    "defer" => TokenKind::Defer,
 };
 
 pub struct Lexer {

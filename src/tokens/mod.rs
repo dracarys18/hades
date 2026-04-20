@@ -104,6 +104,7 @@ pub enum TokenKind {
     As,
     Extern,
     Intrinsic,
+    Defer,
     Ellipsis,
 }
 
@@ -168,6 +169,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Extern => write!(f, "extern"),
             TokenKind::Intrinsic => write!(f, "intrinsic"),
             TokenKind::Ellipsis => write!(f, "..."),
+            TokenKind::Defer => write!(f, "defer"),
         }
     }
 }

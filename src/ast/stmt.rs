@@ -142,6 +142,12 @@ pub struct Import {
 }
 
 #[derive(Clone, PartialEq, Debug)]
+pub struct DeferStmt {
+    pub stmt: Block,
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
 pub enum Stmt {
     Let(Let),
     Continue(Continue),
@@ -156,6 +162,7 @@ pub enum Stmt {
     Block(Block),
     Return(Return),
     Break(Break),
+    Defer(DeferStmt),
 }
 
 impl_span!(Let);
@@ -171,6 +178,7 @@ impl_span!(Return);
 impl_span!(Block);
 impl_span!(ModuleDecl);
 impl_span!(Import);
+impl_span!(DeferStmt);
 
 impl Stmt {
     pub fn unwrap_let(self) -> Let {
@@ -204,6 +212,7 @@ impl Stmt {
             Stmt::ModuleDecl(m) => m.span(),
             Stmt::Import(i) => i.span(),
             Stmt::Break(b) => b.span(),
+            Stmt::Defer(d) => d.span(),
         }
     }
 }

@@ -1,0 +1,14 @@
+import std::io
+
+fn run() {
+    defer {
+        io::printf("deferred\n");
+    }
+
+    io::printf("body\n");
+}
+
+fn main(): int {
+    run();
+    return 0;
+}

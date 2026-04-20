@@ -3,7 +3,9 @@ use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::codegen::symbols::{CodegenSymbols, LLVMVariable};
 use crate::codegen::types::TypeConverter;
 use crate::tokens::{Ident, Name};
-use crate::typed_ast::{CompilerContext, FuncKind, FunctionSignature, ModuleSignatures};
+use crate::typed_ast::{
+    CompilerContext, FuncKind, FunctionSignature, ModuleSignatures, TypedDefer,
+};
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
 use inkwell::context::Context;
@@ -23,8 +25,13 @@ pub struct LLVMContext<'ctx> {
     symbols: &'ctx CompilerContext,
     codegen_symbols: CodegenSymbols<'ctx>,
     type_converter: TypeConverter<'ctx>,
-    current_function: Option<FunctionValue<'ctx>>,
-    loop_stack: Vec<LoopContext<'ctx>>,
+    current_function: Option<FunctionContext<'ctx>>,
+}
+
+pub struct FunctionContext<'ctx> {
+    pub function: FunctionValue<'ctx>,
+    pub defer: Vec<TypedDefer>,
+    pub loop_stack: Vec<LoopContext<'ctx>>,
 }
 
 impl<'ctx> LLVMContext<'ctx> {
@@ -45,7 +52,6 @@ impl<'ctx> LLVMContext<'ctx> {
             codegen_symbols,
             type_converter,
             current_function: None,
-            loop_stack: Vec::new(),
         }
     }
 
@@ -131,11 +137,25 @@ impl<'ctx> LLVMContext<'ctx> {
     }
 
     pub fn set_current_function(&mut self, func: FunctionValue<'ctx>) {
-        self.current_function = Some(func);
+        let func_ctx = FunctionContext {
+            function: func,
+            loop_stack: Vec::new(),
+            defer: Vec::new(),
+        };
+
+        self.current_function = Some(func_ctx);
     }
 
-    pub fn current_function(&self) -> Option<FunctionValue<'ctx>> {
-        self.current_function
+    pub fn current_function(&self) -> Option<&FunctionContext<'ctx>> {
+        self.current_function.as_ref()
+    }
+
+    pub fn current_function_unchecked(&self) -> &FunctionContext<'ctx> {
+        self.current_function.as_ref().expect("No current function")
+    }
+
+    pub fn current_fn_mut_unchecked(&mut self) -> &mut FunctionContext<'ctx> {
+        self.current_function.as_mut().expect("No current function")
     }
 
     pub fn clear_current_function(&mut self) {
@@ -143,18 +163,23 @@ impl<'ctx> LLVMContext<'ctx> {
     }
 
     pub fn push_loop(&mut self, continue_block: BasicBlock<'ctx>, break_block: BasicBlock<'ctx>) {
-        self.loop_stack.push(LoopContext {
+        let current_func = self
+            .current_function
+            .as_mut()
+            .expect("LOOP OUTSIDE FUNCTION");
+
+        current_func.loop_stack.push(LoopContext {
             continue_block,
             break_block,
         });
     }
 
     pub fn pop_loop(&mut self) -> Option<LoopContext<'ctx>> {
-        self.loop_stack.pop()
+        self.current_function.as_mut()?.loop_stack.pop()
     }
 
     pub fn current_loop(&self) -> Option<&LoopContext<'ctx>> {
-        self.loop_stack.last()
+        self.current_function.as_ref()?.loop_stack.last()
     }
 
     pub fn create_alloca(
@@ -166,6 +191,7 @@ impl<'ctx> LLVMContext<'ctx> {
             .current_function()
             .ok_or(CodegenError::AllocaOutsideFunction)?;
         let entry_block = func
+            .function
             .get_first_basic_block()
             .expect("function has no entry block");
         let bx = self.context.create_builder();
@@ -226,7 +252,8 @@ impl<'ctx> LLVMContext<'ctx> {
     pub fn create_basic_block(&self, name: &str) -> BasicBlock<'ctx> {
         self.context.append_basic_block(
             self.current_function()
-                .expect("Cannot create basic block without current function"),
+                .expect("Cannot create basic block without current function")
+                .function,
             name,
         )
     }
@@ -378,5 +405,19 @@ impl<'ctx> LLVMContext<'ctx> {
             }
         }
         Ok(())
+    }
+}
+
+impl FunctionContext<'_> {
+    pub fn push_defer(&mut self, defer: TypedDefer) {
+        self.defer.push(defer);
+    }
+
+    pub fn pop_defer(&mut self) -> Option<TypedDefer> {
+        self.defer.pop()
+    }
+
+    pub fn defer_iter(&self) -> impl Iterator<Item = &TypedDefer> {
+        self.defer.iter().rev()
     }
 }

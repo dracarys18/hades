@@ -28,6 +28,7 @@ impl Visit for TypedStmt {
             Self::Break(break_stmt) => break_stmt.visit(context),
             Self::ModuleDecl(_) => Ok(()),
             Self::Import(_) => Ok(()),
+            Self::Defer(d) => d.visit(context),
         }
     }
 }

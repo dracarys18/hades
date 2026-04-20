@@ -121,6 +121,12 @@ pub struct TypedModuleDecl {
     pub span: Span,
 }
 
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedDefer {
+    pub stmt: Box<TypedStmt>,
+    pub span: Span,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypedStmt {
     Let(TypedLet),
@@ -136,6 +142,7 @@ pub enum TypedStmt {
     Return(TypedReturn),
     ModuleDecl(TypedModuleDecl),
     Import(TypedImport),
+    Defer(TypedDefer),
 }
 
 impl TypedFieldKind {

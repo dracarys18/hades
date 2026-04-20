@@ -1,3 +1,4 @@
+mod defer;
 mod error;
 mod expr;
 mod func;

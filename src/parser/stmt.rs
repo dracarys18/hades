@@ -26,6 +26,7 @@ impl Parse for Stmt {
             Some(tok) if token_matches!(tok, TokenKind::Break) => Break::parse(ctx),
             Some(tok) if token_matches!(tok, TokenKind::Module) => ModuleDecl::parse(ctx),
             Some(tok) if token_matches!(tok, TokenKind::Import) => Import::parse(ctx),
+            Some(tok) if token_matches!(tok, TokenKind::Defer) => DeferStmt::parse(ctx),
             _ => parse_expr_stmt(ctx),
         }
     }

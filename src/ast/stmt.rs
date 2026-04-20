@@ -143,7 +143,7 @@ pub struct Import {
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct DeferStmt {
-    pub stmt: Box<Stmt>,
+    pub stmt: Block,
     pub span: Span,
 }
 

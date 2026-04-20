@@ -156,6 +156,16 @@ impl Visit for TypedReturn {
     type Output<'ctx> = ();
 
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
+        let defer_stmts = context
+            .current_function_unchecked()
+            .defer_iter()
+            .map(|d| d.stmt.clone())
+            .collect::<Vec<_>>();
+
+        for defer in defer_stmts {
+            defer.visit(context)?;
+        }
+
         match &self.expr {
             Some(expr) => {
                 let return_val = expr.expr().visit(context)?;

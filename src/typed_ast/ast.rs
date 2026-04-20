@@ -123,7 +123,7 @@ pub struct TypedModuleDecl {
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct TypedDefer {
-    pub stmt: Box<TypedStmt>,
+    pub stmt: TypedBlock,
     pub span: Span,
 }
 

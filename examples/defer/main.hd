@@ -2,9 +2,9 @@ import std::io
 
 fn main(): int {
     defer {
-        io::printf("Hello");
+        io::printf("Hello\n");
     }
 
-    io::printf("World");
+    io::printf("World\n");
     return 0;
 }

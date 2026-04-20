@@ -7,6 +7,7 @@ use crate::typed_ast::{
 };
 use inkwell::values::BasicValueEnum;
 
+
 impl Visit for TypedStmt {
     type Output<'ctx> = ();
 
@@ -156,14 +157,13 @@ impl Visit for TypedReturn {
     type Output<'ctx> = ();
 
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
-        let defer_stmts = context
+        let defer_stmts: Vec<TypedBlock> = context
             .current_function_unchecked()
             .defer_iter()
             .map(|d| d.stmt.clone())
-            .collect::<Vec<_>>();
-
-        for defer in defer_stmts {
-            defer.visit(context)?;
+            .collect();
+        for block in defer_stmts {
+            block.visit(context)?;
         }
 
         match &self.expr {
@@ -314,6 +314,14 @@ impl Visit for TypedFuncDef {
 
                 if !context.is_block_terminated() {
                     if self.signature.return_type == crate::ast::Types::Void {
+                        let defer_stmts: Vec<TypedBlock> = context
+                            .current_function_unchecked()
+                            .defer_iter()
+                            .map(|d| d.stmt.clone())
+                            .collect();
+                        for block in defer_stmts {
+                            block.visit(context)?;
+                        }
                         context.build_return(None)?;
                     } else {
                         let default_val = match self.signature.return_type {

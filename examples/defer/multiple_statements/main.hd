@@ -1,0 +1,17 @@
+import std::io
+
+fn run(): int {
+    defer {
+        io::printf("first\n");
+        io::printf("second\n");
+        io::printf("third\n");
+    }
+
+    io::printf("body\n");
+    return 0;
+}
+
+fn main(): int {
+    run();
+    return 0;
+}

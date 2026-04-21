@@ -1,0 +1,9 @@
+fn find(x: int): int {
+    while (x > 0) {
+        return x;
+    }
+}
+
+fn main(): int {
+    return 0;
+}

@@ -1,0 +1,7 @@
+fn get_value(): int {
+    let x = 42;
+}
+
+fn main(): int {
+    return 0;
+}

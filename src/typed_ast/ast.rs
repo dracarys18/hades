@@ -115,6 +115,15 @@ pub struct TypedReturn {
     pub span: Span,
 }
 
+impl TypedReturn {
+    pub fn void(span: Span) -> Self {
+        Self {
+            expr: None,
+            span: span,
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Debug)]
 pub struct TypedModuleDecl {
     pub name: Ident,

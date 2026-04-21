@@ -1,8 +1,10 @@
-use crate::ast::{FuncBody, FuncDef, ReceiverKind, Types, WalkAst};
+use crate::ast::{FuncBody, FuncDef, ReceiverKind, Stmt, Types, WalkAst};
 use crate::consts::ENTRY_POINT;
-use crate::error::SemanticError;
+use crate::error::{SemanticError, Span};
 use crate::tokens::{Ident, Name, ParamKind};
-use crate::typed_ast::{CompilerContext, FunctionSignature, TypedFuncDef, TypedReceiver};
+use crate::typed_ast::{
+    CompilerContext, FunctionSignature, TypedBlock, TypedFuncDef, TypedReceiver, TypedStmt,
+};
 use indexmap::IndexMap;
 
 impl FuncDef {
@@ -122,6 +124,11 @@ impl WalkAst for FuncDef {
                 }
 
                 let typed_body = block.walk(ctx, self.span.clone())?;
+
+                if !self.return_type.eq(&Types::Void) {
+                    check_return_path(&typed_body)?;
+                }
+
                 ctx.exit_function();
 
                 Ok(TypedFuncDef {
@@ -133,4 +140,28 @@ impl WalkAst for FuncDef {
             }
         }
     }
+}
+
+fn check_return_path(body: &TypedBlock) -> Result<(), SemanticError> {
+    for stmt in &body.stmts {
+        match stmt {
+            TypedStmt::Return(_) => return Ok(()),
+            TypedStmt::If(if_stmt) => {
+                if check_return_path(&if_stmt.then_branch).is_ok() {
+                    if let Some(else_branch) = &if_stmt.else_branch {
+                        if check_return_path(else_branch).is_ok() {
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+            TypedStmt::Block(block) => {
+                if check_return_path(block).is_ok() {
+                    return Ok(());
+                }
+            }
+            _ => {}
+        }
+    }
+    Err(SemanticError::missing_return(body.span.clone()))
 }

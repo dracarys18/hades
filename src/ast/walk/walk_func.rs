@@ -153,10 +153,8 @@ fn check_return_path(body: &TypedBlock) -> Result<(), SemanticError> {
                             return Ok(());
                         }
             }
-            TypedStmt::Block(block) => {
-                if check_return_path(block).is_ok() {
-                    return Ok(());
-                }
+            TypedStmt::Block(block) if check_return_path(block).is_ok() => {
+                return Ok(());
             }
             _ => {}
         }

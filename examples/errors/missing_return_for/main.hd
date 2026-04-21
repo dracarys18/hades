@@ -1,0 +1,9 @@
+fn first(): int {
+    for (let i = 0; i < 10; i = i + 1) {
+        return i;
+    }
+}
+
+fn main(): int {
+    return 0;
+}

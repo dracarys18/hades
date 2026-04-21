@@ -54,7 +54,7 @@ pub enum Op {
 }
 
 impl Op {
-    pub fn from_str(op: &str) -> Option<Self> {
+    pub fn from_ident(op: &str) -> Option<Self> {
         match op {
             "=" => Some(Op::Assign),
             "+" => Some(Op::Plus),

@@ -17,6 +17,10 @@ impl Ident {
         self.name.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.name.is_empty()
+    }
+
     pub fn inner(&self) -> &str {
         &self.name
     }

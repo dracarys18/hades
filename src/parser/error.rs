@@ -13,7 +13,7 @@ impl FinalParseError {
     }
 }
 
-impl<'a> ParseError {
+impl ParseError {
     pub fn unexpected_token(
         found: Option<crate::tokens::Token>,
         expected: &str,

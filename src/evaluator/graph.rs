@@ -10,11 +10,13 @@ pub struct GraphNode {
     evaluators: Vec<Arc<EvaluatorFn<TypedProgram>>>,
 }
 
-impl GraphNode {
-    pub fn default() -> Self {
+impl Default for GraphNode {
+    fn default() -> Self {
         Self::new()
     }
+}
 
+impl GraphNode {
     pub fn default_boxed() -> Arc<Self> {
         Arc::new(Self::new())
     }
@@ -43,6 +45,12 @@ impl GraphNode {
 
 pub struct EvaluationGraph {
     nodes: Vec<GraphNode>,
+}
+
+impl Default for EvaluationGraph {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl EvaluationGraph {

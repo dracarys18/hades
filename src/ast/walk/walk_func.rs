@@ -1,6 +1,6 @@
-use crate::ast::{FuncBody, FuncDef, ReceiverKind, Stmt, Types, WalkAst};
+use crate::ast::{FuncBody, FuncDef, ReceiverKind, Types, WalkAst};
 use crate::consts::ENTRY_POINT;
-use crate::error::{SemanticError, Span};
+use crate::error::SemanticError;
 use crate::tokens::{Ident, Name, ParamKind};
 use crate::typed_ast::{
     CompilerContext, FunctionSignature, TypedBlock, TypedFuncDef, TypedReceiver, TypedStmt,
@@ -85,12 +85,12 @@ impl WalkAst for FuncDef {
                         self.span.clone(),
                     ));
                 }
-                return Ok(TypedFuncDef {
+                Ok(TypedFuncDef {
                     name,
                     signature: sig,
                     body: None,
                     span: self.span.clone(),
-                });
+                })
             }
             FuncBody::Intrinsic(_) => {
                 if !ctx.is_stdlib() {
@@ -99,12 +99,12 @@ impl WalkAst for FuncDef {
                         self.span.clone(),
                     ));
                 }
-                return Ok(TypedFuncDef {
+                Ok(TypedFuncDef {
                     name,
                     signature: sig,
                     body: None,
                     span: self.span.clone(),
-                });
+                })
             }
             FuncBody::Block(block) => {
                 ctx.set_current_function(name.clone(), self.return_type.qualify(ctx.module_name()));
@@ -147,13 +147,11 @@ fn check_return_path(body: &TypedBlock) -> Result<(), SemanticError> {
         match stmt {
             TypedStmt::Return(_) => return Ok(()),
             TypedStmt::If(if_stmt) => {
-                if check_return_path(&if_stmt.then_branch).is_ok() {
-                    if let Some(else_branch) = &if_stmt.else_branch {
-                        if check_return_path(else_branch).is_ok() {
+                if check_return_path(&if_stmt.then_branch).is_ok()
+                    && let Some(else_branch) = &if_stmt.else_branch
+                        && check_return_path(else_branch).is_ok() {
                             return Ok(());
                         }
-                    }
-                }
             }
             TypedStmt::Block(block) => {
                 if check_return_path(block).is_ok() {

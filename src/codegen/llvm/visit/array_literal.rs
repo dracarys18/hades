@@ -4,14 +4,14 @@ use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
 use crate::typed_ast::{TypedArrayLiteral, TypedExpr};
 use inkwell::module::Linkage;
-use inkwell::types::{ArrayType, BasicType, BasicTypeEnum, StructType};
+use inkwell::types::{ArrayType, BasicTypeEnum, StructType};
 use inkwell::values::{BasicValue, BasicValueEnum, PointerValue};
 
 impl Visit for TypedArrayLiteral {
     type Output<'ctx> = CodegenValue<'ctx>;
 
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
-        let symbols = context.symbols();
+        let _symbols = context.symbols();
         let array_type = context
             .type_converter()
             .to_llvm_type(&self.elem_typ, context.module())?;

@@ -38,7 +38,7 @@ impl WalkAst for QualifiedCall {
         let return_type = sig.return_type().clone();
         let params = sig.params();
         sig.check_arg_count(self.args.len())
-            .then(|| ())
+            .then_some(())
             .ok_or_else(|| {
                 SemanticError::argument_count_mismatch(
                     sig.param_count(),

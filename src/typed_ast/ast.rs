@@ -98,7 +98,7 @@ pub struct TypedStructDef {
 #[derive(Clone, PartialEq, Debug)]
 pub enum TypedFieldKind {
     Var(Types),
-    Func(TypedFuncDef),
+    Func(Box<TypedFuncDef>),
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -119,7 +119,7 @@ impl TypedReturn {
     pub fn void(span: Span) -> Self {
         Self {
             expr: None,
-            span: span,
+            span,
         }
     }
 }
@@ -144,7 +144,7 @@ pub enum TypedStmt {
     TypedExpr(TypedExprAst),
     If(TypedIf),
     While(TypedWhile),
-    For(TypedFor),
+    For(Box<TypedFor>),
     StructDef(TypedStructDef),
     FuncDef(TypedFuncDef),
     Block(TypedBlock),

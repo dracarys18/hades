@@ -98,6 +98,12 @@ impl Cache<PathBuf> for FileCache {
 
 pub struct Compiler {}
 
+impl Default for Compiler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'a> Compiler {
     pub fn new() -> Self {
         Self {}

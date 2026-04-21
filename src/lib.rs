@@ -1,5 +1,3 @@
-#![allow(warnings)]
-
 pub mod ast;
 pub mod cmd;
 pub mod codegen;

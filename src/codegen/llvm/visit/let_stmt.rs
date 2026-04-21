@@ -8,7 +8,7 @@ impl Visit for crate::typed_ast::TypedLet {
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
         let var_name = self.name.clone();
         let init_value = self.value.expr().visit(context)?;
-        let symbols = context.symbols();
+        let _symbols = context.symbols();
         let var_type = context
             .type_converter()
             .to_llvm_type(&self.typ, context.module())?;

@@ -4,7 +4,7 @@ pub use crate::semantic::error::SemanticError;
 pub use span::*;
 
 use ariadne::{Cache, Label, Report, ReportKind};
-use std::{ops::Range, path::PathBuf};
+use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
 pub struct Error {

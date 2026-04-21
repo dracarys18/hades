@@ -101,11 +101,10 @@ impl Visit for TypedFuncDef {
                 let body = self.body.as_ref().expect("Normal function has no body");
                 body.visit(context)?;
 
-                if !context.is_block_terminated() {
-                    if self.signature.return_type == crate::ast::Types::Void {
+                if !context.is_block_terminated()
+                    && self.signature.return_type == crate::ast::Types::Void {
                         TypedReturn::void(self.span.clone()).visit(context)?;
                     }
-                }
 
                 context.clear_current_function();
                 Ok(function)

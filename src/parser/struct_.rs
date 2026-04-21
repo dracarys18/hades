@@ -96,7 +96,7 @@ pub(super) fn parse_field_list(
                     kind,
                 });
                 let key = func.name.to_ident();
-                fields.insert(key, FieldKind::Func(func));
+                fields.insert(key, FieldKind::Func(Box::new(func)));
             }
             TokenKind::Ident(field_name) => {
                 let field_name = field_name.clone();

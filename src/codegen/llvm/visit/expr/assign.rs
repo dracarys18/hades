@@ -67,7 +67,7 @@ impl<'a> Assignment<'a> {
                 let array_ptr = ctx.get_ptr(&index.expr)?;
                 let index_val = index.index.visit(ctx)?;
                 let elem_type = index.typ.get_array_elem_type();
-                let symbols = ctx.symbols();
+                let _symbols = ctx.symbols();
                 let array_type = ctx
                     .type_converter()
                     .to_llvm_type(&index.typ, ctx.module())?;
@@ -89,7 +89,7 @@ impl<'a> Assignment<'a> {
                 // Evaluate the pointer expression, then load the pointer value stored in it.
                 // The result is the address we write through.
                 let ptr_holder = ctx.get_ptr(inner)?;
-                let symbols = ctx.symbols();
+                let _symbols = ctx.symbols();
                 let pointee_type = match inner.get_type() {
                     crate::ast::Types::Pointer(t) => *t,
                     other => {
@@ -191,7 +191,7 @@ impl Visit for TypedAssignTarget {
                         });
                     }
                 };
-                let symbols = context.symbols();
+                let _symbols = context.symbols();
                 let llvm_pointee = context
                     .type_converter()
                     .to_llvm_type(&pointee_type, context.module())?;

@@ -12,7 +12,7 @@ impl WalkAst for FieldKind {
     ) -> Result<Self::Output, SemanticError> {
         match self {
             FieldKind::Var(typ) => Ok(TypedFieldKind::Var(typ.qualify(ctx.module_name()))),
-            FieldKind::Func(func_def) => Ok(TypedFieldKind::Func(func_def.walk(ctx, span)?)),
+            FieldKind::Func(func_def) => Ok(TypedFieldKind::Func(Box::new(func_def.walk(ctx, span)?))),
         }
     }
 }

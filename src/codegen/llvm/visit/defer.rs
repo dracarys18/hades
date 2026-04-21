@@ -1,4 +1,3 @@
-use crate::codegen::error::CodegenError;
 use crate::codegen::{LLVMContext, error::CodegenResult, traits::Visit};
 use crate::typed_ast::TypedDefer;
 

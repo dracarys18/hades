@@ -110,7 +110,7 @@ impl<'ctx> LLVMContext<'ctx> {
                 )
             }
             FuncKind::Intrinsic(llvm_name) => {
-                let symbols = self.symbols();
+                let _symbols = self.symbols();
                 let param_types = self
                     .type_converter
                     .params_to_llvm_types(sig, &self.module)?;
@@ -224,8 +224,8 @@ impl<'ctx> LLVMContext<'ctx> {
         value: BasicValueEnum<'ctx>,
         typ: &Types,
     ) -> CodegenResult<()> {
-        if let Types::Array(_) = typ {
-            if let BasicValueEnum::PointerValue(src_ptr) = value {
+        if let Types::Array(_) = typ
+            && let BasicValueEnum::PointerValue(src_ptr) = value {
                 let llvm_type = self.type_converter.to_llvm_type(typ, &self.module)?;
                 let size_bytes = llvm_type.size_of().ok_or(CodegenError::LLVMBuild {
                     message: "Could not compute aggregate size".to_string(),
@@ -240,7 +240,6 @@ impl<'ctx> LLVMContext<'ctx> {
                     .map_err(CodegenError::from)?;
                 return Ok(());
             }
-        }
         self.builder
             .build_store(dest, value)
             .map_err(|_| CodegenError::LLVMBuild {
@@ -336,7 +335,7 @@ impl<'ctx> LLVMContext<'ctx> {
                 .void_type()
                 .fn_type(param_types, variadic))
         } else {
-            let symbols = self.symbols();
+            let _symbols = self.symbols();
             let ret = self
                 .type_converter()
                 .to_llvm_type(return_type, &self.module)?;
@@ -350,7 +349,7 @@ impl<'ctx> LLVMContext<'ctx> {
                 match &fn_sig.kind {
                     FuncKind::Intrinsic(llvm_name) => {
                         let llvm_name = llvm_name.clone();
-                        let symbols = self.symbols();
+                        let _symbols = self.symbols();
                         let param_types = self
                             .type_converter()
                             .params_to_llvm_types(fn_sig, &self.module)?;
@@ -376,7 +375,7 @@ impl<'ctx> LLVMContext<'ctx> {
                             continue;
                         }
                         let variadic = *variadic;
-                        let symbols = self.symbols();
+                        let _symbols = self.symbols();
                         let param_types = self
                             .type_converter()
                             .params_to_llvm_types(fn_sig, &self.module)?;
@@ -392,7 +391,7 @@ impl<'ctx> LLVMContext<'ctx> {
                         if self.module().get_function(name.inner()).is_some() {
                             continue;
                         }
-                        let symbols = self.symbols();
+                        let _symbols = self.symbols();
                         let param_types = self
                             .type_converter()
                             .params_to_llvm_types(fn_sig, &self.module)?;

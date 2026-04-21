@@ -9,7 +9,7 @@ pub struct Span {
 
 impl Span {
     pub fn new(filename: PathBuf, start: usize, end: usize) -> Self {
-        let path = PathBuf::from(filename);
+        let path = filename;
         let range = start..end;
         Self { range, file: path }
     }

@@ -30,7 +30,7 @@ impl<'a> Visit for VariableAccess<'a> {
             ));
         }
 
-        let symbols = context.symbols();
+        let _symbols = context.symbols();
         let llvm_type = context
             .type_converter()
             .to_llvm_type(var_type, context.module())?;

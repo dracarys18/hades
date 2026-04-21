@@ -1,5 +1,5 @@
 use crate::{
-    ast::{DeferStmt, Stmt, WalkAst},
+    ast::{DeferStmt, WalkAst},
     typed_ast::TypedDefer,
 };
 
@@ -16,7 +16,7 @@ impl WalkAst for DeferStmt {
         }
 
         self.stmt.walk(ctx, span).map(|stmt| TypedDefer {
-            stmt: stmt,
+            stmt,
             span: self.span.clone(),
         })
     }

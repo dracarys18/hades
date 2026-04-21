@@ -5,7 +5,6 @@ use crate::codegen::traits::Visit;
 use crate::tokens::{Ident, Name};
 use crate::typed_ast::TypedExpr;
 use indexmap::IndexMap;
-use inkwell::types::BasicType;
 use inkwell::values::{BasicValueEnum, PointerValue, StructValue};
 
 pub struct StructInit<'a> {

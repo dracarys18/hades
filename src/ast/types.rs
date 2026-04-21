@@ -54,7 +54,7 @@ impl std::fmt::Display for Types {
 }
 
 impl Types {
-    pub fn from_str(type_str: &Ident) -> Self {
+    pub fn from_ident(type_str: &Ident) -> Self {
         match type_str.inner() {
             "int" => Types::Int,
             "float" => Types::Float,

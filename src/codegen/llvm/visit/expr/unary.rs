@@ -42,7 +42,7 @@ impl<'a> UnaryOp<'a> {
                 });
             }
         };
-        let symbols = context.symbols();
+        let _symbols = context.symbols();
         let llvm_type = context
             .type_converter()
             .to_llvm_type(&pointee_type, context.module())?;

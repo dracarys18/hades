@@ -36,7 +36,7 @@ impl WalkAst for Expr {
                     _ => {
                         return Err(SemanticError::undefined_struct(
                             path.last()
-                                .map(|i| i.clone())
+                                .cloned()
                                 .unwrap_or_else(|| Ident::new("?".to_string(), span.clone())),
                             span.clone(),
                         ));
@@ -223,7 +223,7 @@ impl WalkAst for FieldAccessExpr {
         let strc = typed_expr.get_type();
 
         let walk_struct = |struct_name: &Name| {
-            ctx.get_struct_type(&struct_name, span.clone())
+            ctx.get_struct_type(struct_name, span.clone())
                 .and_then(|field_map| {
                     field_map
                         .get(&self.field)

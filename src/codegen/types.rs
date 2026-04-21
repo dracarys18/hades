@@ -2,7 +2,7 @@ use std::num::NonZeroU32;
 
 use crate::ast::{ArrayType, Types};
 use crate::codegen::error::{CodegenError, CodegenResult};
-use crate::tokens::{Ident, Name, ParamKind};
+use crate::tokens::{Name, ParamKind};
 use crate::typed_ast::FunctionSignature;
 use inkwell::AddressSpace;
 use inkwell::context::Context;
@@ -170,13 +170,15 @@ impl<'ctx> TypeConverter<'ctx> {
     }
 
     pub fn are_compatible(&self, left: &Types, right: &Types) -> bool {
-        match (left, right) {
-            (Types::Int, Types::Int) | (Types::Float, Types::Float) => true,
-            (Types::Bool, Types::Bool) => true,
-            (Types::String, Types::String) => true,
-            (Types::Int, Types::Float) | (Types::Float, Types::Int) => true,
-            _ => false,
-        }
+        matches!(
+            (left, right),
+            (Types::Int, Types::Int)
+                | (Types::Float, Types::Float)
+                | (Types::Bool, Types::Bool)
+                | (Types::String, Types::String)
+                | (Types::Int, Types::Float)
+                | (Types::Float, Types::Int)
+        )
     }
 
     pub fn get_promotion_type(&self, left: &Types, right: &Types) -> Types {

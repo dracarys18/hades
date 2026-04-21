@@ -4,7 +4,7 @@ use crate::parser::ParserCtx;
 use crate::parser::error::ParseResult;
 use crate::parser::expr::parse_assignment;
 use crate::token_matches;
-use crate::tokens::{Ident, TokenKind};
+use crate::tokens::TokenKind;
 
 pub(super) struct ArrayLiteral;
 
@@ -48,7 +48,7 @@ impl Parse for ArrayLiteral {
         let mut elem = vec![first];
         if ctx.consume_if(&TokenKind::Comma) {
             let rest =
-                ctx.parse_comma_separated(|c| parse_assignment(c), &TokenKind::RightBracket)?;
+                ctx.parse_comma_separated(parse_assignment, &TokenKind::RightBracket)?;
             elem.extend(rest);
         }
         ctx.expect(&TokenKind::RightBracket)?;
@@ -58,13 +58,3 @@ impl Parse for ArrayLiteral {
     }
 }
 
-pub(super) fn parse_array_index(ctx: &mut ParserCtx, name: Ident) -> ParseResult<Expr> {
-    ctx.expect(&TokenKind::LeftBracket)?;
-    let index_expr = parse_assignment(ctx)?;
-    ctx.expect(&TokenKind::RightBracket)?;
-
-    Ok(Expr::ArrayIndex(ArrayIndexExpr {
-        expr: Box::new(Expr::Ident(name)),
-        index: Box::new(index_expr),
-    }))
-}

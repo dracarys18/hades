@@ -16,7 +16,7 @@ impl WalkAst for Stmt {
             Stmt::Expr(expr) => expr.walk(ctx, span).map(TypedStmt::TypedExpr),
             Stmt::If(i) => i.walk(ctx, span).map(TypedStmt::If),
             Stmt::While(whil) => whil.walk(ctx, span).map(TypedStmt::While),
-            Stmt::For(fo) => fo.walk(ctx, span).map(TypedStmt::For),
+            Stmt::For(fo) => fo.walk(ctx, span).map(|f| TypedStmt::For(Box::new(f))),
             Stmt::StructDef(st) => st.walk(ctx, span).map(TypedStmt::StructDef),
             Stmt::FuncDef(f) => f.walk(ctx, span).map(TypedStmt::FuncDef),
             Stmt::Block(block) => block.walk(ctx, span).map(TypedStmt::Block),

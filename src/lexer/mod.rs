@@ -9,7 +9,6 @@ use crate::tokens::{Ident, Token, TokenKind};
 pub use error::{LexError, LexResult};
 use simd::bytes::{Byte, ByteSlice, Bytes};
 
-use memchr::memchr3;
 use phf::phf_map;
 
 static KEYWORDS: phf::Map<&'static str, TokenKind> = phf_map! {
@@ -82,7 +81,7 @@ impl Lexer {
         self.tokens.push(token);
     }
 
-    fn consume_while<F>(&mut self, mut f: F) -> &ByteSlice
+    fn consume_while<F>(&mut self, f: F) -> &ByteSlice
     where
         F: FnMut(Byte) -> bool,
     {
@@ -230,8 +229,8 @@ impl Lexer {
     fn parse_keyword_or_identifier(&mut self) {
         let start_pos = self.pos;
 
-        if let Some(c) = self.peek() {
-            if c.is_alphanumeric() || c.eq(&b'_') {
+        if let Some(c) = self.peek()
+            && (c.is_alphanumeric() || c.eq(&b'_')) {
                 let ident = self.consume_while(|ch| ch.is_alphanumeric() || ch.eq(&b'_'));
                 let ident_str = ident.to_string();
                 if let Some(keyword_token) = KEYWORDS.get(&ident_str) {
@@ -251,7 +250,6 @@ impl Lexer {
                     ));
                 }
             }
-        }
     }
 
     fn parse_number(&mut self) -> LexResult<()> {

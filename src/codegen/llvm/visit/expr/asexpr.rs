@@ -3,7 +3,7 @@ use inkwell::values::BasicValueEnum;
 
 use crate::ast::Types;
 use crate::codegen::context::LLVMContext;
-use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
+use crate::codegen::error::{CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
 use crate::typed_ast::TypedAsExpression;
 
@@ -14,7 +14,7 @@ impl Visit for TypedAsExpression {
         context: &mut LLVMContext<'ctx>,
     ) -> crate::codegen::error::CodegenResult<crate::codegen::error::CodegenValue<'ctx>> {
         let target_type = {
-            let symbols = context.symbols();
+            let _symbols = context.symbols();
             let converter = context.type_converter();
             converter.to_llvm_type(&self.target_type, context.module())?
         };

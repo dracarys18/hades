@@ -5,9 +5,9 @@ use crate::parser::Parse;
 use crate::parser::ParserCtx;
 use crate::parser::error::ParseResult;
 use crate::parser::struct_::parse_struct_literal;
-use crate::tokens::{Assoc, Ident, Name, Op, TokenKind};
-use crate::{token_matches, token_matches_opt};
-use array::{ArrayLiteral, parse_array_index};
+use crate::tokens::{Assoc, Name, Op, TokenKind};
+use crate::token_matches;
+use array::ArrayLiteral;
 
 impl Parse for Expr {
     type Output = Expr;
@@ -238,7 +238,7 @@ fn parse_postfix_chain(
                 {
                     ctx.next();
                     let args =
-                        ctx.parse_comma_separated(|c| parse_assignment(c), &TokenKind::RightParen)?;
+                        ctx.parse_comma_separated(parse_assignment, &TokenKind::RightParen)?;
                     ctx.expect(&TokenKind::RightParen)?;
                     expr = Expr::Call(CallKind::Method(MethodCall {
                         receiver: Box::new(expr),
@@ -282,7 +282,7 @@ fn parse_postfix_chain(
                     {
                         ctx.next(); // consume (
                         let args = ctx.parse_comma_separated(
-                            |c| parse_assignment(c),
+                            parse_assignment,
                             &TokenKind::RightParen,
                         )?;
                         ctx.expect(&TokenKind::RightParen)?;
@@ -320,7 +320,7 @@ fn parse_postfix_chain(
                 if let Expr::Ident(func_name) = expr {
                     ctx.next();
                     let args =
-                        ctx.parse_comma_separated(|c| parse_assignment(c), &TokenKind::RightParen)?;
+                        ctx.parse_comma_separated(parse_assignment, &TokenKind::RightParen)?;
                     ctx.expect(&TokenKind::RightParen)?;
                     expr = Expr::Call(CallKind::Function(FunctionCall {
                         func: Name::new(func_name.inner().to_string(), func_name.span().clone()),

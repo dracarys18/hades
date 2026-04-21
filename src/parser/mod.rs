@@ -9,11 +9,9 @@ mod struct_;
 use crate::ast::*;
 use crate::error::Span;
 use crate::parser::error::FinalParseResult;
-use crate::tokens::{Assoc, Ident, Name, Op, ParamKind, Selff, Token, TokenKind};
-use crate::{token_matches, token_matches_opt};
+use crate::tokens::{Ident, Token, TokenKind};
+use crate::token_matches;
 use error::{ParseError, ParseResult};
-use indexmap::IndexMap;
-use std::ops::Range;
 
 pub trait Parse {
     type Output;
@@ -98,15 +96,6 @@ impl ParserCtx {
         if let Some(tok) = self.tokens.get(self.pos).cloned() {
             self.pos += 1;
             Some(tok)
-        } else {
-            None
-        }
-    }
-
-    pub(crate) fn prev(&mut self) -> Option<Token> {
-        if self.pos > 0 {
-            self.pos -= 1;
-            self.tokens.get(self.pos).cloned()
         } else {
             None
         }
@@ -244,7 +233,7 @@ impl ParserCtx {
 
                     Ok(Types::Array(self.expect_type()?.array_type(size)))
                 }
-                TokenKind::Ident(name) => Ok(Types::from_str(name)),
+                TokenKind::Ident(name) => Ok(Types::from_ident(name)),
                 TokenKind::Self_ => Ok(Types::Self_),
                 TokenKind::BooleanAnd | TokenKind::And => {
                     let inner = self.expect_type()?;

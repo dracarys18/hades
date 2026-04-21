@@ -1,4 +1,3 @@
-use crate::ast::Types;
 use crate::ast::{For, WalkAst};
 use crate::typed_ast::TypedFor;
 

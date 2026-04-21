@@ -55,7 +55,7 @@ pub enum CodegenValue<'ctx> {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct ConcreteValue<'ctx> {
+pub struct ConcreteValue<'ctx> {
     value: inkwell::values::BasicValueEnum<'ctx>,
     type_info: Types,
 }

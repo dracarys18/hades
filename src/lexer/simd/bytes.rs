@@ -18,10 +18,6 @@ impl Bytes {
         Bytes { inner: bytes }
     }
 
-    pub fn to_string(&self) -> String {
-        self.inner.iter().map(|b| b.as_char()).collect()
-    }
-
     pub fn consume_while<F>(&self, start_pos: usize, mut predicate: F) -> (usize, &ByteSlice)
     where
         F: FnMut(Byte) -> bool,
@@ -39,6 +35,13 @@ impl Bytes {
             }
         }
         (pos, &self[start_pos..pos])
+    }
+}
+
+impl std::fmt::Display for Bytes {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s: String = self.inner.iter().map(|b| b.as_char()).collect();
+        write!(f, "{}", s)
     }
 }
 
@@ -76,18 +79,11 @@ impl PartialEq<u8> for Byte {
     fn eq(&self, other: &u8) -> bool {
         self.needle == *other
     }
-
-    fn ne(&self, other: &u8) -> bool {
-        self.needle != *other
-    }
 }
 
 impl PartialEq<char> for Byte {
     fn eq(&self, other: &char) -> bool {
         self.needle == *other as u8
-    }
-    fn ne(&self, other: &char) -> bool {
-        self.needle != *other as u8
     }
 }
 
@@ -149,18 +145,21 @@ impl ByteSlice {
     }
 
     pub fn contains(&self, byte: Byte) -> bool {
-        self.inner.iter().any(|&b| b == byte)
+        self.inner.contains(&byte)
     }
 
     pub fn contains_byte(&self, byte: u8) -> bool {
         self.inner.iter().any(|&b| b.eq(&byte))
     }
 
-    pub fn to_string(&self) -> String {
-        self.inner.iter().map(|b| b.as_char()).collect()
-    }
-
     pub fn iter(&self) -> std::slice::Iter<'_, Byte> {
         self.inner.iter()
+    }
+}
+
+impl std::fmt::Display for ByteSlice {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s: String = self.inner.iter().map(|b| b.as_char()).collect();
+        write!(f, "{}", s)
     }
 }

@@ -78,12 +78,12 @@ impl Loader {
         module_path: &ModulePath,
     ) -> Result<Module, ModuleError> {
         if let Some(source) = self.lib.get_module(name) {
-            return self.parse_source(source, module_path, format!("std::{}", name));
+            self.parse_source(source, module_path, format!("std::{}", name))
         } else {
-            return Err(ModuleError::NotFound(format!(
+            Err(ModuleError::NotFound(format!(
                 "Standard library module '{}' not found",
                 name
-            )));
+            )))
         }
     }
 

@@ -1,5 +1,5 @@
 mod args;
-mod cmd;
+mod run;
 
-pub use cmd::Cli;
-pub use cmd::Commands;
+pub use run::Cli;
+pub use run::Commands;

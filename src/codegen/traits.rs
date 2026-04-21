@@ -1,6 +1,5 @@
 use crate::codegen::context::LLVMContext;
-use crate::codegen::error::{CodegenResult, CodegenValue};
-use inkwell::values::FunctionValue;
+use crate::codegen::error::CodegenResult;
 
 pub trait Visit {
     type Output<'ctx>;
@@ -33,32 +32,6 @@ impl CodegenVisitor {
         stmt.visit(context)
     }
 
-    pub fn visit_expr<'ctx>(
-        &self,
-        expr: &crate::typed_ast::TypedExprAst,
-        context: &mut LLVMContext<'ctx>,
-    ) -> CodegenResult<CodegenValue<'ctx>> {
-        expr.expr().visit(context)
-    }
-
-    pub fn visit_block<'ctx>(
-        &self,
-        block: &crate::typed_ast::TypedBlock,
-        context: &mut LLVMContext<'ctx>,
-    ) -> CodegenResult<()> {
-        context.enter_scope();
-        let result = block.visit(context);
-        context.exit_scope();
-        result
-    }
-
-    pub fn visit_function<'ctx>(
-        &self,
-        function: &crate::typed_ast::TypedFuncDef,
-        context: &mut LLVMContext<'ctx>,
-    ) -> CodegenResult<FunctionValue<'ctx>> {
-        function.visit(context)
-    }
 }
 
 impl Default for CodegenVisitor {

@@ -31,7 +31,7 @@ impl ArrayLiteral {
 
     pub fn new_fill(fill: Expr, count: usize) -> Self {
         Self {
-            elem: std::iter::repeat(fill.clone()).take(count).collect(),
+            elem: std::iter::repeat_n(fill.clone(), count).collect(),
             size: count,
             declared_type: None,
             fill: Some(Box::new(fill)),

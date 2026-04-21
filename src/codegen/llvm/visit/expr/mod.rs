@@ -1,5 +1,4 @@
 use crate::ast::Types;
-use crate::codegen::VisitOptions;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
@@ -64,7 +63,7 @@ impl<'ctx> LLVMContext<'ctx> {
         if let TypedExpr::FieldAccess(field) = expr {
             let raw_ptr = self.get_ptr(field.expr.as_ref())?;
             let struct_ptr = self.deref_if_pointer(raw_ptr, &field.expr.get_type())?;
-            let symbols = self.symbols();
+            let _symbols = self.symbols();
             let struct_type = self
                 .type_converter()
                 .to_llvm_type(&field.struct_type, self.module())?;
@@ -93,7 +92,7 @@ impl<'ctx> LLVMContext<'ctx> {
         if let TypedExpr::ArrayIndex(index) = expr {
             let array_ptr = self.get_ptr(&index.expr)?;
             let index_value = index.index.visit(self)?;
-            let symbols = self.symbols();
+            let _symbols = self.symbols();
             let array_type = self
                 .type_converter()
                 .to_llvm_type(&index.typ, self.module())?;
@@ -115,10 +114,10 @@ impl<'ctx> LLVMContext<'ctx> {
             return Ok(ptr);
         }
         let type_info = val.unwrap_concrete()?.type_info();
-        let symbols = self.symbols();
+        let _symbols = self.symbols();
         let t = self
             .type_converter()
-            .to_llvm_type(&type_info, self.module())?;
+            .to_llvm_type(type_info, self.module())?;
         let ptr = self.create_alloca("tmp_ptr", t)?;
         self.builder()
             .build_store(ptr, val.value()?)
@@ -195,7 +194,7 @@ impl Visit for TypedArrayIndex {
     fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
         let array_ptr = context.get_ptr(&self.expr)?;
         let index_value = self.index.visit(context)?;
-        let symbols = context.symbols();
+        let _symbols = context.symbols();
         let elem_type = context
             .type_converter()
             .to_llvm_type(&self.typ.get_array_elem_type(), context.module())?;
@@ -233,7 +232,7 @@ impl Visit for TypedFieldAccess {
         let raw_ptr = context.get_ptr(self.expr.as_ref())?;
         let struct_ptr = context.deref_if_pointer(raw_ptr, &self.expr.get_type())?;
 
-        let compiler_context = context.symbols();
+        let _compiler_context = context.symbols();
 
         let struct_type = context
             .type_converter()

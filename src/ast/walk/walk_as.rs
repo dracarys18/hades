@@ -1,10 +1,9 @@
 use crate::ast::Types;
-use crate::ast::{AsExpression, WalkAst, walk::CompilerContext};
-use crate::error::{SemanticError, Span};
+use crate::ast::{AsExpression, WalkAst};
+use crate::error::SemanticError;
 use crate::typed_ast::TypedAsExpression;
-use std::collections::HashMap;
 
-const ConvertMap: phf::Map<&'static str, &'static [Types]> = phf::phf_map! {
+const CONVERT_MAP: phf::Map<&'static str, &'static [Types]> = phf::phf_map! {
     "int" => &[Types::Float],
     "float" => &[Types::Int],
     "char" => &[Types::Int, Types::Float],
@@ -20,7 +19,7 @@ impl WalkAst for AsExpression {
         let expr = self.expr.walk(ctx, span.clone())?;
         let source_type = expr.get_type();
 
-        ConvertMap
+        CONVERT_MAP
             .get(&source_type.to_string())
             .ok_or_else(|| {
                 SemanticError::invalid_type_cast(

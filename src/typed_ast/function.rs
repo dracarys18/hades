@@ -1,7 +1,7 @@
 use super::builtins::BUILTIN_FUNCTIONS;
 use crate::ast::{ReceiverKind, Types};
 use crate::error::SemanticError;
-use crate::tokens::{Ident, Name, ParamKind};
+use crate::tokens::{Name, ParamKind};
 use indexmap::IndexMap;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -179,10 +179,6 @@ impl Functions {
         }
         self.inner.insert(name, sig);
         Ok(())
-    }
-
-    pub fn get_unchecked(&self, name: &Name) -> &FunctionSignature {
-        self.inner.get(name).expect("Function not found")
     }
 
     pub fn get(&self, name: &Name) -> Result<&FunctionSignature, SemanticError> {

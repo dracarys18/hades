@@ -302,7 +302,7 @@ fn generate_float_binary_op<'ctx>(
         }
     };
 
-    Ok(result.into())
+    Ok(result)
 }
 
 fn generate_bool_binary_op<'ctx>(

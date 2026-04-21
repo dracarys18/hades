@@ -1,8 +1,6 @@
-use std::str::FromStr;
-
 use crate::{
     ast::{AssignExpr, BinaryExpr, Program, Types},
-    error::{SemanticError, Span},
+    error::Span,
     impl_span,
     tokens::{Ident, Name, ParamKind},
 };
@@ -96,7 +94,7 @@ pub struct StructDef {
 #[derive(Clone, PartialEq, Debug)]
 pub enum FieldKind {
     Var(Types),
-    Func(FuncDef),
+    Func(Box<FuncDef>),
 }
 
 #[derive(Clone, PartialEq, Debug)]

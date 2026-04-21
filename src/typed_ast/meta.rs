@@ -105,15 +105,14 @@ impl CompilerContext {
     }
 
     pub fn check_return_type(&self, return_type: Types, span: Span) -> Result<(), SemanticError> {
-        if let Some((_, expected_return_type)) = &self.current_function {
-            if *expected_return_type != return_type {
+        if let Some((_, expected_return_type)) = &self.current_function
+            && *expected_return_type != return_type {
                 return Err(SemanticError::return_type_mismatch(
                     expected_return_type.clone().to_string(),
                     return_type.to_string(),
                     span,
                 ));
             }
-        }
         Ok(())
     }
 

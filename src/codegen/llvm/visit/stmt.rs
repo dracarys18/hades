@@ -7,7 +7,6 @@ use crate::typed_ast::{
 };
 use inkwell::values::BasicValueEnum;
 
-
 impl Visit for TypedStmt {
     type Output<'ctx> = ();
 
@@ -314,36 +313,7 @@ impl Visit for TypedFuncDef {
 
                 if !context.is_block_terminated() {
                     if self.signature.return_type == crate::ast::Types::Void {
-                        let defer_stmts: Vec<TypedBlock> = context
-                            .current_function_unchecked()
-                            .defer_iter()
-                            .map(|d| d.stmt.clone())
-                            .collect();
-                        for block in defer_stmts {
-                            block.visit(context)?;
-                        }
-                        context.build_return(None)?;
-                    } else {
-                        let default_val = match self.signature.return_type {
-                            crate::ast::Types::Int => {
-                                context.context().i64_type().const_zero().into()
-                            }
-                            crate::ast::Types::Float => {
-                                context.context().f64_type().const_zero().into()
-                            }
-                            crate::ast::Types::Bool => {
-                                context.context().bool_type().const_zero().into()
-                            }
-                            _ => {
-                                return Err(CodegenError::LLVMBuild {
-                                    message: format!(
-                                        "Cannot generate default return value for type {:?}",
-                                        self.signature.return_type
-                                    ),
-                                });
-                            }
-                        };
-                        context.build_return(Some(default_val))?;
+                        TypedReturn::void(self.span.clone()).visit(context)?;
                     }
                 }
 

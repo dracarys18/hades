@@ -9,4 +9,5 @@ fn early_return():int {
 fn main(): int {
     let f = early_return();
     io::printf("%d", f);
+    return 0;
 }

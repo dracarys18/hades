@@ -216,6 +216,13 @@ impl SemanticError {
             span,
         }
     }
+
+    pub fn missing_return(span: Span) -> Self {
+        Self {
+            message: String::from("Missing return statement in function with non-void return type"),
+            span,
+        }
+    }
 }
 
 impl std::fmt::Display for SemanticError {

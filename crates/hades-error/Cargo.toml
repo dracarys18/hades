@@ -1,0 +1,7 @@
+[package]
+name = "hades-error"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+ariadne = { workspace = true }

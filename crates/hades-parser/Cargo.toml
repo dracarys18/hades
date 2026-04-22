@@ -1,0 +1,11 @@
+[package]
+name = "hades-parser"
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+hades-common  = { workspace = true }
+hades-tokens  = { workspace = true }
+hades-error   = { workspace = true }
+hades-ast     = { workspace = true }
+indexmap      = { workspace = true }

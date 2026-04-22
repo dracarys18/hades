@@ -1,0 +1,15 @@
+[package]
+name = "hades-codegen"
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+hades-common   = { workspace = true }
+hades-tokens   = { workspace = true }
+hades-error    = { workspace = true }
+hades-ast      = { workspace = true }
+hades-semantic = { workspace = true }
+inkwell        = { workspace = true }
+indexmap       = { workspace = true }
+once_cell      = { workspace = true }
+thiserror      = { workspace = true }

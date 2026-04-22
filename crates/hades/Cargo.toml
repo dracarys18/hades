@@ -1,0 +1,14 @@
+[package]
+name = "hades"
+edition.workspace = true
+version.workspace = true
+
+[[bin]]
+name = "hades"
+path = "src/main.rs"
+
+[dependencies]
+hades-common   = { workspace = true }
+hades-compiler = { workspace = true }
+inkwell        = { workspace = true }
+clap           = { workspace = true }

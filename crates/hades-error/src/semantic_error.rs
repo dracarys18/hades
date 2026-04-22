@@ -1,0 +1,228 @@
+use crate::{Error, Span};
+
+#[derive(Debug)]
+pub struct SemanticError {
+    message: String,
+    span: Span,
+}
+
+impl SemanticError {
+    pub fn type_mismatch(expected: String, found: String, span: Span) -> Self {
+        Self {
+            message: format!("Type mismatch: expected {}, found {}", expected, found),
+            span,
+        }
+    }
+
+    pub fn undefined_variable(name: String, span: Span) -> Self {
+        Self {
+            message: format!("Undefined variable: {}", name),
+            span,
+        }
+    }
+
+    pub fn undefined_function(name: String, span: Span) -> Self {
+        Self {
+            message: format!("Undefined function: {}", name),
+            span,
+        }
+    }
+
+    pub fn undefined_struct(name: String, span: Span) -> Self {
+        Self {
+            message: format!("Undefined struct: {}", name),
+            span,
+        }
+    }
+
+    pub fn not_a_struct(name: String, span: Span) -> Self {
+        Self {
+            message: format!("{} is not a struct", name),
+            span,
+        }
+    }
+
+    pub fn unknown_field(struct_name: String, field_name: String, span: Span) -> Self {
+        Self {
+            message: format!(
+                "Unknown field '{}' in struct '{}'",
+                field_name, struct_name
+            ),
+            span,
+        }
+    }
+
+    pub fn argument_count_mismatch(
+        expected: usize,
+        found: usize,
+        function: String,
+        span: Span,
+    ) -> Self {
+        Self {
+            message: format!(
+                "Function {} expects {} arguments, found {}",
+                function, expected, found
+            ),
+            span,
+        }
+    }
+
+    pub fn return_type_mismatch(expected: String, found: String, span: Span) -> Self {
+        Self {
+            message: format!(
+                "Return type mismatch: expected {}, found {}",
+                expected, found
+            ),
+            span,
+        }
+    }
+
+    pub fn invalid_binary_operation(left: String, op: String, right: String, span: Span) -> Self {
+        Self {
+            message: format!("Invalid binary operation: {} {} {}", left, op, right),
+            span,
+        }
+    }
+
+    pub fn invalid_unary_operation(op: String, operand: String, span: Span) -> Self {
+        Self {
+            message: format!("Invalid unary operation: {} {}", op, operand),
+            span,
+        }
+    }
+
+    pub fn redefined_variable(name: String, span: Span) -> Self {
+        Self {
+            message: format!("Variable {} is already defined", name),
+            span,
+        }
+    }
+
+    pub fn redefined_function(name: String, span: Span) -> Self {
+        Self {
+            message: format!("Function {} is already defined", name),
+            span,
+        }
+    }
+
+    pub fn redefined_struct(name: String, span: Span) -> Self {
+        Self {
+            message: format!("Struct {} is already defined", name),
+            span,
+        }
+    }
+
+    pub fn invalid_type(name: String, span: Span) -> Self {
+        Self {
+            message: format!("Invalid type: {}", name),
+            span,
+        }
+    }
+
+    pub fn invalid_module_name(name: String, span: Span) -> Self {
+        Self {
+            message: format!("Invalid module name: {}", name),
+            span,
+        }
+    }
+
+    pub fn invalid_import(name: String, span: Span) -> Self {
+        Self {
+            message: format!("Invalid import: {}", name),
+            span,
+        }
+    }
+
+    pub fn self_outside_method(span: Span) -> Self {
+        Self {
+            message: String::from("'self' parameter is only valid inside a method"),
+            span,
+        }
+    }
+
+    pub fn null_without_type(span: Span) -> Self {
+        Self {
+            message: String::from(
+                "null requires an explicit pointer type annotation (e.g. let x: &T = null)",
+            ),
+            span,
+        }
+    }
+
+    pub fn null_non_pointer(declared: String, span: Span) -> Self {
+        Self {
+            message: format!(
+                "null can only be assigned to a pointer type, but declared type is {}",
+                declared
+            ),
+            span,
+        }
+    }
+
+    pub fn invalid_dereference(typ: String, span: Span) -> Self {
+        Self {
+            message: format!("Cannot dereference type {}", typ),
+            span,
+        }
+    }
+
+    pub fn into_error(self) -> Error {
+        Error::new_with_span(self.message, self.span)
+    }
+
+    pub fn intrinsic_outside_stdlib(name: String, span: Span) -> Self {
+        Self {
+            message: format!(
+                "'intrinsic fn {}' is only allowed in standard library modules",
+                name
+            ),
+            span,
+        }
+    }
+
+    pub fn extern_outside_stdlib(name: String, span: Span) -> Self {
+        Self {
+            message: format!(
+                "'extern fn {}' is only allowed in standard library modules",
+                name
+            ),
+            span,
+        }
+    }
+
+    pub fn invalid_type_cast(source: String, target: String, span: Span) -> Self {
+        Self {
+            message: format!("Cannot cast type {} to {}", source, target),
+            span,
+        }
+    }
+
+    pub fn return_not_allowed_in_defer(span: Span) -> Self {
+        Self {
+            message: String::from("Return statements are not allowed inside defer blocks"),
+            span,
+        }
+    }
+
+    pub fn defer_outside_function(span: Span) -> Self {
+        Self {
+            message: String::from("Defer statements are only allowed inside functions"),
+            span,
+        }
+    }
+
+    pub fn missing_return(span: Span) -> Self {
+        Self {
+            message: String::from("Missing return statement in function with non-void return type"),
+            span,
+        }
+    }
+}
+
+impl std::fmt::Display for SemanticError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl std::error::Error for SemanticError {}

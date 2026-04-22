@@ -1,0 +1,7 @@
+[package]
+name = "hades-tokens"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+hades-error = { workspace = true }

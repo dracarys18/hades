@@ -1,0 +1,164 @@
+use crate::{
+    ast::{ImportPrefix, Types},
+    typed_ast::{
+        expr::{TypedAssignExpr, TypedBinaryExpr},
+        function::FunctionSignature,
+    },
+};
+use hades_error::Span;
+use hades_tokens::{Ident, Name};
+use derive_more::Debug;
+use indexmap::IndexMap;
+
+use super::{TypedProgram, expr::TypedExpr};
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypedBlock {
+    pub stmts: TypedProgram,
+    #[debug(skip)]
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedLet {
+    pub name: Ident,
+    pub typ: Types,
+    pub value: TypedExprAst,
+    #[debug(skip)]
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedContinue {
+    #[debug(skip)]
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedBreak {
+    #[debug(skip)]
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedImport {
+    pub module: String,
+    pub prefix: ImportPrefix,
+    #[debug(skip)]
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedExprAst {
+    pub expr: TypedExpr,
+    pub span: Span,
+}
+
+impl TypedExprAst {
+    pub fn get_type(&self) -> Types {
+        self.expr.get_type()
+    }
+
+    pub fn expr(&self) -> &TypedExpr {
+        &self.expr
+    }
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedIf {
+    pub cond: TypedExprAst,
+    pub then_branch: TypedBlock,
+    pub else_branch: Option<TypedBlock>,
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedWhile {
+    pub cond: TypedExpr,
+    pub body: TypedBlock,
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedFor {
+    pub init: TypedLet,
+    pub cond: TypedBinaryExpr,
+    pub update: TypedAssignExpr,
+    pub body: TypedBlock,
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedStructDef {
+    pub name: Name,
+    pub fields: IndexMap<Ident, TypedFieldKind>,
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum TypedFieldKind {
+    Var(Types),
+    Func(Box<TypedFuncDef>),
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedFuncDef {
+    pub name: Name,
+    pub signature: FunctionSignature,
+    pub body: Option<TypedBlock>,
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedReturn {
+    pub expr: Option<TypedExprAst>,
+    pub span: Span,
+}
+
+impl TypedReturn {
+    pub fn void(span: Span) -> Self {
+        Self {
+            expr: None,
+            span,
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedModuleDecl {
+    pub name: Ident,
+    pub span: Span,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct TypedDefer {
+    pub stmt: TypedBlock,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum TypedStmt {
+    Let(TypedLet),
+    Continue(TypedContinue),
+    Break(TypedBreak),
+    TypedExpr(TypedExprAst),
+    If(TypedIf),
+    While(TypedWhile),
+    For(Box<TypedFor>),
+    StructDef(TypedStructDef),
+    FuncDef(TypedFuncDef),
+    Block(TypedBlock),
+    Return(TypedReturn),
+    ModuleDecl(TypedModuleDecl),
+    Import(TypedImport),
+    Defer(TypedDefer),
+}
+
+impl TypedFieldKind {
+    pub fn get_type(&self) -> Types {
+        match self {
+            TypedFieldKind::Var(typ) => typ.clone(),
+            TypedFieldKind::Func(func_def) => func_def.signature.return_type().clone(),
+        }
+    }
+}

@@ -1,0 +1,16 @@
+[package]
+name = "hades-module"
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+hades-common  = { workspace = true }
+hades-tokens  = { workspace = true }
+hades-error   = { workspace = true }
+hades-ast     = { workspace = true }
+hades-lexer   = { workspace = true }
+hades-parser  = { workspace = true }
+petgraph      = { workspace = true }
+thiserror     = { workspace = true }
+ariadne       = { workspace = true }
+indexmap      = { workspace = true }

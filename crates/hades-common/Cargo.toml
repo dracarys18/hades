@@ -1,0 +1,4 @@
+[package]
+name = "hades-common"
+version.workspace = true
+edition.workspace = true

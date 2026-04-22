@@ -4,11 +4,8 @@ use indexmap::IndexMap;
 
 use hades_ast::{ModulePath as AstModulePath, WalkAst, CompilerContext};
 use hades_error::{SemanticError, Span};
-use hades_module::{Module, ModulePath};
-
+use hades_module::{Module, ModulePath, ModuleSignatures, TypedModule};
 use crate::evaluator::graph::EvaluationGraph;
-use crate::signatures::ModuleSignatures;
-use crate::typed_module::TypedModule;
 
 pub struct Unprepared;
 pub struct Prepared;

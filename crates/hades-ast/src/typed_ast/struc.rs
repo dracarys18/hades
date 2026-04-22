@@ -10,6 +10,12 @@ pub struct Structs {
     inner: IndexMap<Name, Field>,
 }
 
+impl Default for Structs {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Structs {
     pub fn new() -> Self {
         Self {

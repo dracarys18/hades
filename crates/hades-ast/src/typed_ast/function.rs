@@ -154,6 +154,12 @@ pub struct Functions {
     inner: IndexMap<Name, FunctionSignature>,
 }
 
+impl Default for Functions {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Functions {
     pub fn new() -> Self {
         let built_ins = BUILTIN_FUNCTIONS

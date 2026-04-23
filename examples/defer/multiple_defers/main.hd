@@ -1,9 +1,7 @@
 import std::io
 
 fn run(): int {
-    defer {
-        io::printf("first deferred\n");
-    }
+    defer io::printf("first deferred\n");
 
     defer {
         io::printf("second deferred\n");

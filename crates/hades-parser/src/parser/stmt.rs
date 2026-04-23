@@ -1,10 +1,10 @@
-use hades_ast::*;
 use crate::parser::Parse;
 use crate::parser::ParserCtx;
 use crate::parser::error::ParseResult;
 use crate::parser::expr::parse_assignment;
 use crate::parser::func::{FuncDef, parse_extern_fn, parse_intrinsic_fn};
 use crate::parser::struct_::StructDef;
+use hades_ast::*;
 use hades_common::token_matches;
 use hades_tokens::TokenKind;
 
@@ -194,6 +194,14 @@ impl Parse for Break {
 }
 
 pub(super) fn parse_block(ctx: &mut ParserCtx) -> ParseResult<Vec<Stmt>> {
+    if !ctx
+        .peek()
+        .map(|t| t.kind().eq(&TokenKind::LeftBrace))
+        .unwrap_or_default()
+    {
+        return Ok(vec![Stmt::parse(ctx)?]);
+    }
+
     ctx.expect(&TokenKind::LeftBrace)?;
     let mut stmts = Vec::new();
 

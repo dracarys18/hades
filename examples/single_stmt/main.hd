@@ -1,0 +1,18 @@
+import std::io
+
+fn main():int {
+    let x = 5;
+    if(x > 3) io::printf("x is greater than 3\n");
+
+    let y = 2;
+    if(y > 3) io::printf("y is greater than 3\n");
+    else io::printf("y is not greater than 3\n");
+
+    let i = 0;
+    while(i < 3) i = i + 1;
+    io::printf("i is %d\n", i);
+
+    for let j=0;j<3;j+=1 io::printf("j is %d\n", j);
+
+    return 0;
+}

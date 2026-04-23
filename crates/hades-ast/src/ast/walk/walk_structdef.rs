@@ -1,6 +1,6 @@
 use crate::ast::{FieldKind, StructDef, WalkAst};
-use hades_error::SemanticError;
 use crate::typed_ast::{TypedFieldKind, TypedStructDef};
+use hades_error::SemanticError;
 use indexmap::IndexMap;
 
 impl WalkAst for FieldKind {
@@ -12,7 +12,9 @@ impl WalkAst for FieldKind {
     ) -> Result<Self::Output, SemanticError> {
         match self {
             FieldKind::Var(typ) => Ok(TypedFieldKind::Var(typ.qualify(ctx.module_name()))),
-            FieldKind::Func(func_def) => Ok(TypedFieldKind::Func(Box::new(func_def.walk(ctx, span)?))),
+            FieldKind::Func(func_def) => {
+                Ok(TypedFieldKind::Func(Box::new(func_def.walk(ctx, span)?)))
+            }
         }
     }
 }

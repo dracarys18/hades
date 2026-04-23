@@ -1,8 +1,8 @@
-use hades_ast::*;
 use crate::parser::Parse;
 use crate::parser::ParserCtx;
 use crate::parser::error::ParseResult;
 use crate::parser::stmt::parse_block;
+use hades_ast::*;
 use hades_tokens::{Name, ParamKind, Selff, TokenKind};
 
 pub(super) struct FuncDef;

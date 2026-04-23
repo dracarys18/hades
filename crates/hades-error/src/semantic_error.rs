@@ -44,10 +44,7 @@ impl SemanticError {
 
     pub fn unknown_field(struct_name: String, field_name: String, span: Span) -> Self {
         Self {
-            message: format!(
-                "Unknown field '{}' in struct '{}'",
-                field_name, struct_name
-            ),
+            message: format!("Unknown field '{}' in struct '{}'", field_name, struct_name),
             span,
         }
     }

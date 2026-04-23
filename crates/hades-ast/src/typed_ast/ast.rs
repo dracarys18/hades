@@ -5,9 +5,9 @@ use crate::{
         function::FunctionSignature,
     },
 };
+use derive_more::Debug;
 use hades_error::Span;
 use hades_tokens::{Ident, Name};
-use derive_more::Debug;
 use indexmap::IndexMap;
 
 use super::{TypedProgram, expr::TypedExpr};
@@ -117,10 +117,7 @@ pub struct TypedReturn {
 
 impl TypedReturn {
     pub fn void(span: Span) -> Self {
-        Self {
-            expr: None,
-            span,
-        }
+        Self { expr: None, span }
     }
 }
 

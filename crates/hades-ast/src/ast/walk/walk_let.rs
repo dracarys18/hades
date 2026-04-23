@@ -1,6 +1,6 @@
 use crate::ast::{Let, Types, WalkAst};
-use hades_error::{SemanticError, Span};
 use crate::typed_ast::{CompilerContext, TypedExprAst, TypedLet};
+use hades_error::{SemanticError, Span};
 
 use super::walk_possibly_null;
 
@@ -37,7 +37,10 @@ impl WalkAst for Let {
         };
 
         if final_type == Types::Void {
-            return Err(SemanticError::invalid_type(name.inner().to_string(), span.clone()));
+            return Err(SemanticError::invalid_type(
+                name.inner().to_string(),
+                span.clone(),
+            ));
         }
 
         ctx.insert_variable(name.clone(), final_type.clone());

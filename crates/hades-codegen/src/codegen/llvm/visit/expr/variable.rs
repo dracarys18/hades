@@ -1,7 +1,7 @@
-use hades_common::VisitOptions;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
+use hades_common::VisitOptions;
 use hades_tokens::Ident;
 
 pub struct VariableAccess<'a> {

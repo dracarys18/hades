@@ -6,12 +6,12 @@ mod module;
 mod stmt;
 mod struct_;
 
-use hades_ast::*;
-use hades_error::Span;
 use crate::parser::error::FinalParseResult;
-use hades_tokens::{Ident, Token, TokenKind};
-use hades_common::token_matches;
 use error::{ParseError, ParseResult};
+use hades_ast::*;
+use hades_common::token_matches;
+use hades_error::Span;
+use hades_tokens::{Ident, Token, TokenKind};
 
 pub trait Parse {
     type Output;

@@ -1,9 +1,9 @@
-use hades_ast::*;
 use crate::parser::Parse;
 use crate::parser::ParserCtx;
 use crate::parser::error::ParseResult;
 use crate::parser::expr::parse_assignment;
 use crate::parser::func::FuncDef;
+use hades_ast::*;
 use hades_common::token_matches;
 use hades_tokens::Name;
 use hades_tokens::{Ident, ParamKind, TokenKind};

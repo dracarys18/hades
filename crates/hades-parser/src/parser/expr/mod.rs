@@ -1,13 +1,13 @@
 mod array;
 
-use hades_ast::*;
 use crate::parser::Parse;
 use crate::parser::ParserCtx;
 use crate::parser::error::ParseResult;
 use crate::parser::struct_::parse_struct_literal;
-use hades_tokens::{Assoc, Name, Op, TokenKind};
-use hades_common::token_matches;
 use array::ArrayLiteral;
+use hades_ast::*;
+use hades_common::token_matches;
+use hades_tokens::{Assoc, Name, Op, TokenKind};
 
 impl Parse for Expr {
     type Output = Expr;
@@ -281,10 +281,8 @@ fn parse_postfix_chain(
                         .is_some_and(|t| token_matches!(t, TokenKind::LeftParen))
                     {
                         ctx.next(); // consume (
-                        let args = ctx.parse_comma_separated(
-                            parse_assignment,
-                            &TokenKind::RightParen,
-                        )?;
+                        let args =
+                            ctx.parse_comma_separated(parse_assignment, &TokenKind::RightParen)?;
                         ctx.expect(&TokenKind::RightParen)?;
                         expr = Expr::Call(CallKind::Qualified(QualifiedCall {
                             path,

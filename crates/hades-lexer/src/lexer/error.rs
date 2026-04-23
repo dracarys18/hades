@@ -1,5 +1,5 @@
-use hades_error::{Error, Span};
 use super::simd::bytes::Byte;
+use hades_error::{Error, Span};
 use std::{ops::Range, path::PathBuf};
 
 #[derive(Debug)]

@@ -1,8 +1,8 @@
 use super::{CodegenValue, CompileTimeBuiltin};
-use hades_ast::Types;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult};
 use hades_ast::TypedExpr;
+use hades_ast::Types;
 
 pub struct Len;
 

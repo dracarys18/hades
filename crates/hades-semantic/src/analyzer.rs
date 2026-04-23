@@ -2,10 +2,10 @@ use std::marker::PhantomData;
 
 use indexmap::IndexMap;
 
-use hades_ast::{ModulePath as AstModulePath, WalkAst, CompilerContext};
+use crate::evaluator::graph::EvaluationGraph;
+use hades_ast::{CompilerContext, ModulePath as AstModulePath, WalkAst};
 use hades_error::{SemanticError, Span};
 use hades_module::{Module, ModulePath, ModuleSignatures, TypedModule};
-use crate::evaluator::graph::EvaluationGraph;
 
 pub struct Unprepared;
 pub struct Prepared;

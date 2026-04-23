@@ -1,8 +1,8 @@
-mod span;
 mod semantic_error;
+mod span;
 
-pub use span::*;
 pub use semantic_error::SemanticError;
+pub use span::*;
 
 use ariadne::{Cache, Label, Report, ReportKind};
 use std::path::PathBuf;

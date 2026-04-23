@@ -31,7 +31,6 @@ impl CodegenVisitor {
     ) -> CodegenResult<()> {
         stmt.visit(context)
     }
-
 }
 
 impl Default for CodegenVisitor {

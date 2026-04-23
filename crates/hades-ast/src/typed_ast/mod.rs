@@ -13,8 +13,8 @@ pub use expr::{
     TypedExpr, TypedFieldAccess,
 };
 pub use function::{FuncKind, FunctionSignature, Functions, Params, TypedReceiver};
-pub use struc::{Field, Structs};
 pub use meta::{CompilerContext, ModulePath};
+pub use struc::{Field, Structs};
 pub use value::{TypedArrayLiteral, TypedValue};
 
 #[derive(Debug, Clone, PartialEq)]

@@ -3,10 +3,10 @@ mod simd;
 
 use std::path::PathBuf;
 
-use hades_error::Span;
-use hades_common::tok;
-use hades_tokens::{Ident, Token, TokenKind};
 pub use error::{LexError, LexResult};
+use hades_common::tok;
+use hades_error::Span;
+use hades_tokens::{Ident, Token, TokenKind};
 use simd::bytes::{Byte, ByteSlice, Bytes};
 
 use phf::phf_map;
@@ -230,26 +230,27 @@ impl Lexer {
         let start_pos = self.pos;
 
         if let Some(c) = self.peek()
-            && (c.is_alphanumeric() || c.eq(&b'_')) {
-                let ident = self.consume_while(|ch| ch.is_alphanumeric() || ch.eq(&b'_'));
-                let ident_str = ident.to_string();
-                if let Some(keyword_token) = KEYWORDS.get(&ident_str) {
-                    self.push_token(tok!(
-                        &self.source_id,
-                        keyword_token.clone(),
-                        start_pos,
-                        self.pos
-                    ));
-                } else {
-                    let span = Span::new(PathBuf::from(&self.source_id), start_pos, self.pos);
-                    self.push_token(tok!(
-                        &self.source_id,
-                        TokenKind::Ident(Ident::new(ident_str, span)),
-                        start_pos,
-                        self.pos
-                    ));
-                }
+            && (c.is_alphanumeric() || c.eq(&b'_'))
+        {
+            let ident = self.consume_while(|ch| ch.is_alphanumeric() || ch.eq(&b'_'));
+            let ident_str = ident.to_string();
+            if let Some(keyword_token) = KEYWORDS.get(&ident_str) {
+                self.push_token(tok!(
+                    &self.source_id,
+                    keyword_token.clone(),
+                    start_pos,
+                    self.pos
+                ));
+            } else {
+                let span = Span::new(PathBuf::from(&self.source_id), start_pos, self.pos);
+                self.push_token(tok!(
+                    &self.source_id,
+                    TokenKind::Ident(Ident::new(ident_str, span)),
+                    start_pos,
+                    self.pos
+                ));
             }
+        }
     }
 
     fn parse_number(&mut self) -> LexResult<()> {

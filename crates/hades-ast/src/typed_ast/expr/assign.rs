@@ -1,6 +1,6 @@
 use crate::ast::Types;
-use hades_tokens::{Ident, Op};
 use crate::typed_ast::expr::{TypedArrayIndex, TypedExpr, TypedFieldAccess};
+use hades_tokens::{Ident, Op};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypedAssignTarget {

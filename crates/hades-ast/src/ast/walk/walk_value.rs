@@ -2,9 +2,9 @@ use crate::ast::ArrayLiteral;
 use crate::ast::Types;
 use crate::ast::Value;
 use crate::ast::WalkAst;
+use crate::typed_ast::{CompilerContext, TypedArrayLiteral, TypedValue};
 use hades_error::SemanticError;
 use hades_error::Span;
-use crate::typed_ast::{CompilerContext, TypedArrayLiteral, TypedValue};
 
 use super::walk_possibly_null;
 

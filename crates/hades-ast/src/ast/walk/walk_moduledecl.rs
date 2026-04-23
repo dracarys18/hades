@@ -1,9 +1,9 @@
 use crate::ast::ModuleDecl;
 use crate::ast::WalkAst;
+use crate::typed_ast::{CompilerContext, TypedModuleDecl};
 use hades_common::consts::ENTRY_POINT;
 use hades_error::SemanticError;
 use hades_error::Span;
-use crate::typed_ast::{CompilerContext, TypedModuleDecl};
 
 const DISALLOWED_MODULE_NAMES: &[&str] = &[ENTRY_POINT, "std", "core"];
 

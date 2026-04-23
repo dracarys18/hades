@@ -1,10 +1,10 @@
-use hades_ast::Types;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
+use hades_ast::TypedExpr;
+use hades_ast::Types;
 use hades_error::Span;
 use hades_tokens::Op;
-use hades_ast::TypedExpr;
 use inkwell::values::BasicValueEnum;
 
 pub struct UnaryOp<'a> {

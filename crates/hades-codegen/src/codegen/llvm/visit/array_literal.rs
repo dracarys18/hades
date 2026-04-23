@@ -1,7 +1,7 @@
-use hades_ast::Types;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
+use hades_ast::Types;
 use hades_ast::{TypedArrayLiteral, TypedExpr};
 use inkwell::module::Linkage;
 use inkwell::types::{ArrayType, BasicTypeEnum, StructType};

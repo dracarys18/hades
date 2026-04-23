@@ -1,5 +1,5 @@
-use hades_ast::Types;
 use crate::codegen::error::{CodegenError, CodegenResult};
+use hades_ast::Types;
 use hades_ast::scope::Scope;
 use hades_tokens::Ident;
 use inkwell::values::PointerValue;
@@ -49,9 +49,11 @@ impl<'ctx> CodegenSymbols<'ctx> {
         typ: Types,
     ) -> CodegenResult<()> {
         let variable = LLVMVariable { value: ptr, typ };
-        self.variables.on_scope_mut(|node: &mut hades_ast::scope::SymbolNode<LLVMVariable<'ctx>>| {
-            node.insert(name, variable);
-        });
+        self.variables.on_scope_mut(
+            |node: &mut hades_ast::scope::SymbolNode<LLVMVariable<'ctx>>| {
+                node.insert(name, variable);
+            },
+        );
         Ok(())
     }
 

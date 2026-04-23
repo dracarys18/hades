@@ -1,6 +1,6 @@
 use crate::ast::{Program, WalkAst};
-use hades_error::SemanticError;
 use crate::typed_ast::{CompilerContext, TypedProgram};
+use hades_error::SemanticError;
 
 impl WalkAst for Program {
     type Output = TypedProgram;

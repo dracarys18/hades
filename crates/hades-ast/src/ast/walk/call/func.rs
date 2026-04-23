@@ -1,6 +1,6 @@
 use crate::ast::{Expr, FunctionCall, WalkAst};
-use hades_error::{SemanticError, Span};
 use crate::typed_ast::{CompilerContext, TypedExpr};
+use hades_error::{SemanticError, Span};
 
 impl WalkAst for FunctionCall {
     type Output = TypedExpr;

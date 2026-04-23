@@ -1,6 +1,6 @@
 use crate::ast::{Block, WalkAst};
-use hades_error::SemanticError;
 use crate::typed_ast::{CompilerContext, TypedBlock};
+use hades_error::SemanticError;
 
 impl WalkAst for Block {
     type Output = TypedBlock;

@@ -1,8 +1,8 @@
-use hades_ast::{Block, Stmt};
-use crate::parser::{ParserCtx, error::ParseResult, stmt};
-use hades_tokens::TokenKind::Defer;
-use hades_ast::DeferStmt;
 use crate::parser::Parse;
+use crate::parser::{ParserCtx, error::ParseResult, stmt};
+use hades_ast::DeferStmt;
+use hades_ast::{Block, Stmt};
+use hades_tokens::TokenKind::Defer;
 
 impl Parse for DeferStmt {
     type Output = Stmt;

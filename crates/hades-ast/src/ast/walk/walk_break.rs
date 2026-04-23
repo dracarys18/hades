@@ -1,6 +1,6 @@
 use crate::ast::{Break, WalkAst};
-use hades_error::{SemanticError, Span};
 use crate::typed_ast::{CompilerContext, TypedBreak};
+use hades_error::{SemanticError, Span};
 
 impl WalkAst for Break {
     type Output = TypedBreak;

@@ -1,10 +1,10 @@
-use hades_error::SemanticError;
 use crate::typed_ast::{
     TypedFieldKind,
     function::{FunctionSignature, Functions},
     ident::IdentMap,
     struc::{Field, Structs},
 };
+use hades_error::SemanticError;
 
 use crate::ast::Types;
 use hades_error::Span;
@@ -119,7 +119,10 @@ impl CompilerContext {
         if let Some(fields) = self.structs.fields(name) {
             Ok(fields.clone())
         } else {
-            Err(SemanticError::undefined_struct(name.inner().to_string(), span))
+            Err(SemanticError::undefined_struct(
+                name.inner().to_string(),
+                span,
+            ))
         }
     }
 
@@ -129,13 +132,14 @@ impl CompilerContext {
 
     pub fn check_return_type(&self, return_type: Types, span: Span) -> Result<(), SemanticError> {
         if let Some((_, expected_return_type)) = &self.current_function
-            && *expected_return_type != return_type {
-                return Err(SemanticError::return_type_mismatch(
-                    expected_return_type.clone().to_string(),
-                    return_type.to_string(),
-                    span,
-                ));
-            }
+            && *expected_return_type != return_type
+        {
+            return Err(SemanticError::return_type_mismatch(
+                expected_return_type.clone().to_string(),
+                return_type.to_string(),
+                span,
+            ));
+        }
         Ok(())
     }
 

@@ -1,11 +1,11 @@
-use hades_module::{Module, ModulePath, Registry};
+use ariadne::{Cache, Source};
 use hades_ast::ModulePath as AstModulePath;
-use hades_semantic::analyzer::{Analyzer, Unprepared};
 use hades_codegen::llvm::visit::program as codegen;
 use hades_common as consts;
 use hades_lexer as lexer;
+use hades_module::{Module, ModulePath, Registry};
 use hades_parser as parser;
-use ariadne::{Cache, Source};
+use hades_semantic::analyzer::{Analyzer, Unprepared};
 use inkwell::context::Context;
 use std::path::PathBuf;
 use std::{

@@ -1,8 +1,8 @@
-use hades_ast::Types;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
 use hades_ast::TypedValue;
+use hades_ast::Types;
 use inkwell::module::Linkage;
 
 impl Visit for TypedValue {

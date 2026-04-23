@@ -1,6 +1,6 @@
-use hades_ast::{Import, ImportPrefix};
 use crate::module::error::ModuleError;
 use crate::module::path::ModulePath;
+use hades_ast::{Import, ImportPrefix};
 use std::path::{Path, PathBuf};
 
 #[derive(Clone)]

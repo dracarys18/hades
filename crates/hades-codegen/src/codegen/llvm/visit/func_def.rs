@@ -102,9 +102,10 @@ impl Visit for TypedFuncDef {
                 body.visit(context)?;
 
                 if !context.is_block_terminated()
-                    && self.signature.return_type == hades_ast::Types::Void {
-                        TypedReturn::void(self.span.clone()).visit(context)?;
-                    }
+                    && self.signature.return_type == hades_ast::Types::Void
+                {
+                    TypedReturn::void(self.span.clone()).visit(context)?;
+                }
 
                 context.clear_current_function();
                 Ok(function)

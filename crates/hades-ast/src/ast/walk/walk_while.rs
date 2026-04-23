@@ -1,7 +1,7 @@
 use crate::ast::Types;
 use crate::ast::{WalkAst, While};
-use hades_error::SemanticError;
 use crate::typed_ast::TypedWhile;
+use hades_error::SemanticError;
 
 impl WalkAst for While {
     type Output = TypedWhile;

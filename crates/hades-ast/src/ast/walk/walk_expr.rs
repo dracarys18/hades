@@ -2,12 +2,12 @@ use crate::ast::{
     ArrayIndexExpr, ArrayType, AssignExpr, AssignTarget, BinaryExpr, CallKind, Expr,
     FieldAccessExpr, NullExpr, StructInitExpr, Types, WalkAst,
 };
-use hades_error::{SemanticError, Span};
-use hades_tokens::{Ident, Name};
 use crate::typed_ast::{
     CompilerContext, TypedArrayIndex, TypedAssignExpr, TypedAssignTarget, TypedBinaryExpr,
     TypedExpr, TypedExprAst, TypedFieldAccess,
 };
+use hades_error::{SemanticError, Span};
+use hades_tokens::{Ident, Name};
 use indexmap::IndexMap;
 
 use super::walk_possibly_null;

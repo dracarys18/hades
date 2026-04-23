@@ -1,7 +1,7 @@
 use crate::ast::Types;
 use crate::ast::{AsExpression, WalkAst};
-use hades_error::SemanticError;
 use crate::typed_ast::TypedAsExpression;
+use hades_error::SemanticError;
 
 const CONVERT_MAP: phf::Map<&'static str, &'static [Types]> = phf::phf_map! {
     "int" => &[Types::Float],

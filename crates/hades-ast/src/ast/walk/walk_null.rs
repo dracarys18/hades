@@ -1,6 +1,6 @@
 use crate::ast::{NullExpr, Types, WalkAst};
-use hades_error::{SemanticError, Span};
 use crate::typed_ast::{CompilerContext, TypedExpr};
+use hades_error::{SemanticError, Span};
 
 impl WalkAst for NullExpr {
     type Output = TypedExpr;

@@ -1,11 +1,11 @@
 use inkwell::types::BasicTypeEnum;
 use inkwell::values::BasicValueEnum;
 
-use hades_ast::Types;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
 use hades_ast::TypedAsExpression;
+use hades_ast::Types;
 
 impl Visit for TypedAsExpression {
     type Output<'ctx> = CodegenValue<'ctx>;

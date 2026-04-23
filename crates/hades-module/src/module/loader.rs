@@ -1,11 +1,11 @@
-use hades_ast::{Program, Stmt};
-use hades_lexer::Lexer;
 use crate::module::error::ModuleError;
 use crate::module::path::ModulePath;
 use crate::module::resolver::Resolver;
-use hades_parser::Parser;
-use hades_lexer::Library;
 use ariadne::{Cache, Source};
+use hades_ast::{Program, Stmt};
+use hades_lexer::Lexer;
+use hades_lexer::Library;
+use hades_parser::Parser;
 use std::path::PathBuf;
 
 pub struct Module {

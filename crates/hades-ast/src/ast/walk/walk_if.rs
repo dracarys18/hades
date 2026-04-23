@@ -1,7 +1,7 @@
 use crate::ast::If;
 use crate::ast::{Types, WalkAst};
-use hades_error::SemanticError;
 use crate::typed_ast::{CompilerContext, TypedIf};
+use hades_error::SemanticError;
 
 impl WalkAst for If {
     type Output = TypedIf;

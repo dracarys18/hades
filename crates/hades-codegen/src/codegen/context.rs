@@ -1,12 +1,10 @@
-use hades_ast::Types;
 use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::codegen::symbols::{CodegenSymbols, LLVMVariable};
 use crate::codegen::types::TypeConverter;
-use hades_tokens::{Ident, Name};
-use hades_ast::{
-    CompilerContext, FuncKind, FunctionSignature, TypedDefer,
-};
+use hades_ast::Types;
+use hades_ast::{CompilerContext, FuncKind, FunctionSignature, TypedDefer};
 use hades_semantic::ModuleSignatures;
+use hades_tokens::{Ident, Name};
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
 use inkwell::context::Context;
@@ -226,21 +224,22 @@ impl<'ctx> LLVMContext<'ctx> {
         typ: &Types,
     ) -> CodegenResult<()> {
         if let Types::Array(_) = typ
-            && let BasicValueEnum::PointerValue(src_ptr) = value {
-                let llvm_type = self.type_converter.to_llvm_type(typ, &self.module)?;
-                let size_bytes = llvm_type.size_of().ok_or(CodegenError::LLVMBuild {
-                    message: "Could not compute aggregate size".to_string(),
-                })?;
-                let align = llvm_type
-                    .size_of()
-                    .and_then(|s| s.get_zero_extended_constant())
-                    .map(|s| (s as u32).min(8).next_power_of_two())
-                    .unwrap_or(8);
-                self.builder
-                    .build_memcpy(dest, align, src_ptr, align, size_bytes)
-                    .map_err(CodegenError::from)?;
-                return Ok(());
-            }
+            && let BasicValueEnum::PointerValue(src_ptr) = value
+        {
+            let llvm_type = self.type_converter.to_llvm_type(typ, &self.module)?;
+            let size_bytes = llvm_type.size_of().ok_or(CodegenError::LLVMBuild {
+                message: "Could not compute aggregate size".to_string(),
+            })?;
+            let align = llvm_type
+                .size_of()
+                .and_then(|s| s.get_zero_extended_constant())
+                .map(|s| (s as u32).min(8).next_power_of_two())
+                .unwrap_or(8);
+            self.builder
+                .build_memcpy(dest, align, src_ptr, align, size_bytes)
+                .map_err(CodegenError::from)?;
+            return Ok(());
+        }
         self.builder
             .build_store(dest, value)
             .map_err(|_| CodegenError::LLVMBuild {

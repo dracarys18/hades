@@ -1,8 +1,8 @@
 mod assign;
 
 use crate::ast::Types;
-use hades_error::{SemanticError, Span};
 pub use assign::*;
+use hades_error::{SemanticError, Span};
 use indexmap::IndexMap;
 
 use super::value::TypedValue;

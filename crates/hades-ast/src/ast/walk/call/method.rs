@@ -1,7 +1,7 @@
 use crate::ast::{MethodCall, WalkAst};
+use crate::typed_ast::{CompilerContext, TypedExpr};
 use hades_error::{SemanticError, Span};
 use hades_tokens::Ident;
-use crate::typed_ast::{CompilerContext, TypedExpr};
 
 use super::func::walk_typed_args;
 

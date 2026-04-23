@@ -1,7 +1,7 @@
-use hades_ast::{Import, ImportPrefix, ModuleDecl, Stmt};
 use crate::parser::Parse;
 use crate::parser::ParserCtx;
 use crate::parser::error::ParseResult;
+use hades_ast::{Import, ImportPrefix, ModuleDecl, Stmt};
 use hades_common::token_matches;
 use hades_tokens::TokenKind;
 

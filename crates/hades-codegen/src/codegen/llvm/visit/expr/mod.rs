@@ -1,11 +1,9 @@
-use hades_ast::Types;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
+use hades_ast::Types;
+use hades_ast::{TypedArrayIndex, TypedAssignExpr, TypedBinaryExpr, TypedExpr, TypedFieldAccess};
 use hades_tokens::Op;
-use hades_ast::{
-    TypedArrayIndex, TypedAssignExpr, TypedBinaryExpr, TypedExpr, TypedFieldAccess,
-};
 use inkwell::AddressSpace;
 use inkwell::values::PointerValue;
 

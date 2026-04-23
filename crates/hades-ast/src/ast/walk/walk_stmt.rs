@@ -1,6 +1,6 @@
 use crate::ast::{Stmt, WalkAst};
-use hades_error::SemanticError;
 use crate::typed_ast::{CompilerContext, TypedStmt};
+use hades_error::SemanticError;
 
 impl WalkAst for Stmt {
     type Output = TypedStmt;

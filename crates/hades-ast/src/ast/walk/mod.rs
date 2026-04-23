@@ -20,8 +20,8 @@ mod walk_value;
 mod walk_while;
 
 use crate::ast::{Expr, NullExpr, Types, Value};
-use hades_error::{SemanticError, Span};
 use crate::typed_ast::*;
+use hades_error::{SemanticError, Span};
 
 pub trait WalkAst {
     type Output;

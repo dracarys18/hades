@@ -1,9 +1,9 @@
 use std::num::NonZeroU32;
 
-use hades_ast::{ArrayType, Types};
 use crate::codegen::error::{CodegenError, CodegenResult};
-use hades_tokens::{Name, ParamKind};
 use hades_ast::FunctionSignature;
+use hades_ast::{ArrayType, Types};
+use hades_tokens::{Name, ParamKind};
 use inkwell::AddressSpace;
 use inkwell::context::Context;
 use inkwell::module::Module;

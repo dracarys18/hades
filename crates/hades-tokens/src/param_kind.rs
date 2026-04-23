@@ -1,5 +1,5 @@
-use hades_error::Span;
 use crate::{Ident, Selff};
+use hades_error::Span;
 use std::fmt::Debug;
 use std::hash::Hash;
 

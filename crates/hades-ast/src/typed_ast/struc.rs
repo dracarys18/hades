@@ -1,6 +1,6 @@
+use crate::typed_ast::TypedFieldKind;
 use hades_common::consts::GOOLAG_MESSAGE;
 use hades_tokens::{Ident, Name};
-use crate::typed_ast::TypedFieldKind;
 use indexmap::IndexMap;
 
 pub type Field = IndexMap<Ident, TypedFieldKind>;

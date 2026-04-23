@@ -1,10 +1,10 @@
 use crate::ast::{FuncBody, FuncDef, ReceiverKind, Types, WalkAst};
-use hades_common::consts::ENTRY_POINT;
-use hades_error::SemanticError;
-use hades_tokens::{Ident, Name, ParamKind};
 use crate::typed_ast::{
     CompilerContext, FunctionSignature, TypedBlock, TypedFuncDef, TypedReceiver, TypedStmt,
 };
+use hades_common::consts::ENTRY_POINT;
+use hades_error::SemanticError;
+use hades_tokens::{Ident, Name, ParamKind};
 use indexmap::IndexMap;
 
 impl FuncDef {
@@ -149,9 +149,10 @@ fn check_return_path(body: &TypedBlock) -> Result<(), SemanticError> {
             TypedStmt::If(if_stmt) => {
                 if check_return_path(&if_stmt.then_branch).is_ok()
                     && let Some(else_branch) = &if_stmt.else_branch
-                        && check_return_path(else_branch).is_ok() {
-                            return Ok(());
-                        }
+                    && check_return_path(else_branch).is_ok()
+                {
+                    return Ok(());
+                }
             }
             TypedStmt::Block(block) if check_return_path(block).is_ok() => {
                 return Ok(());

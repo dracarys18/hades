@@ -1,13 +1,13 @@
 use inkwell::values::BasicValueEnum;
 
-use hades_common::VisitOptions;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use crate::codegen::traits::Visit;
 use crate::codegen::{
     context::LLVMContext, llvm::visit::expr::variable::VariableAccess, symbols::LLVMVariable,
 };
-use hades_tokens::Op;
 use hades_ast::{TypedAssignTarget, TypedExpr};
+use hades_common::VisitOptions;
+use hades_tokens::Op;
 
 pub struct Assignment<'a> {
     pub target: &'a TypedAssignTarget,
@@ -27,9 +27,7 @@ impl<'a> Assignment<'a> {
                 let symbols = ctx.symbols();
 
                 let raw_ptr = match field.expr.as_ref() {
-                    hades_ast::TypedExpr::Ident { ident, .. } => {
-                        ctx.get_variable(ident)?.value()
-                    }
+                    hades_ast::TypedExpr::Ident { ident, .. } => ctx.get_variable(ident)?.value(),
                     other => ctx.get_ptr(other)?,
                 };
 

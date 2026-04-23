@@ -1,8 +1,8 @@
 use crate::ast::ArrayType;
 use crate::ast::Types;
+use crate::typed_ast::function::FunctionSignature;
 use hades_error::Span;
 use hades_tokens::{Ident, ParamKind};
-use crate::typed_ast::function::FunctionSignature;
 use indexmap::{IndexMap, indexmap};
 use once_cell::sync::Lazy;
 

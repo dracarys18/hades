@@ -1,8 +1,8 @@
 use crate::ast::{AssignExpr, BinaryExpr, Program, Types};
+use derive_more::Debug;
 use hades_common::impl_span;
 use hades_error::Span;
 use hades_tokens::{Ident, Name, ParamKind};
-use derive_more::Debug;
 use indexmap::IndexMap;
 
 use super::expr::Expr;

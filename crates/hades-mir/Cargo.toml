@@ -1,0 +1,5 @@
+[package]
+name = "hades-mir"
+edition.workspace = true
+version.workspace = true
+

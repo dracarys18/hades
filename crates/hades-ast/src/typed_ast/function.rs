@@ -17,6 +17,17 @@ pub enum Params {
     Variadic(IndexMap<ParamKind, Types>),
 }
 
+impl IntoIterator for Params {
+    type Item = (ParamKind, Types);
+    type IntoIter = std::vec::IntoIter<(ParamKind, Types)>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        match self {
+            Params::Fixed(m) | Params::Variadic(m) => m.into_iter().collect::<Vec<_>>().into_iter(),
+        }
+    }
+}
+
 impl Params {
     fn map(&self) -> &IndexMap<ParamKind, Types> {
         match self {

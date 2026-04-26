@@ -211,9 +211,10 @@ impl ToMir for TypedReturn {
         let span = self.span.clone();
 
         // Inline all pending defer blocks (LIFO) before the return instruction.
-        let deferred = builder.deferred_stmts();
-        for stmt in deferred {
-            builder.emit(stmt);
+        // Re-lower each deferred AST block directly into the current block.
+        let deferred = builder.deferred_blocks();
+        for block in deferred {
+            block.to_mir(builder);
         }
 
         // Write return value into `_0`.
@@ -264,24 +265,8 @@ impl ToMir for TypedDefer {
     type Output = ();
 
     fn to_mir(&self, builder: &mut MirBuilder) {
-        // Lower the deferred block into a scratch block, collect its stmts,
-        // and push them onto the defer stack for inlining at every Return site.
-        let scratch = builder.new_block();
-        let saved = builder.current_block();
-
-        builder.switch_to(scratch);
-        self.stmt.to_mir(builder);
-
-        // Terminate the scratch block so Cfg::finish doesn't panic.
-        if !builder.is_terminated() {
-            builder.terminate(Terminator::new(
-                TerminatorKind::Unreachable,
-                self.span.clone(),
-            ));
-        }
-
-        let stmts = builder.drain_scratch_block(scratch);
-        builder.push_defer(stmts, self.span.clone());
-        builder.switch_to(saved);
+        // Push the deferred AST block onto the defer stack.
+        // It will be re-lowered at each Return site (LIFO order).
+        builder.push_defer(self.stmt.clone(), self.span.clone());
     }
 }

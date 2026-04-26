@@ -97,16 +97,41 @@ impl ToMir for TypedExpr {
                 struct_type,
                 field_type,
             }) => {
-                let base_operand = expr.to_mir(builder);
-                let base_local =
-                    materialize_operand(base_operand, struct_type.clone(), builder, span.clone());
-                let place = Place {
-                    local: base_local,
-                    projection: vec![PlaceElem::Field {
-                        name: field.clone(),
-                        index: 0, // codegen resolves from ctx
-                        ty: field_type.clone(),
-                    }],
+                let base_type = expr.get_type();
+                let place = if let TypedExpr::Unary { op: Op::Deref, expr: ptr_expr, .. } = expr.as_ref() {
+                    // `(*ptr).field` — build [Deref, Field] on the pointer local.
+                    let ptr_op = ptr_expr.to_mir(builder);
+                    let ptr_ty = ptr_expr.get_type();
+                    let ptr_local = materialize_operand(ptr_op, ptr_ty, builder, span.clone());
+                    Place {
+                        local: ptr_local,
+                        projection: vec![
+                            PlaceElem::Deref,
+                            PlaceElem::Field { name: field.clone(), index: 0, ty: field_type.clone() },
+                        ],
+                    }
+                } else if matches!(base_type, hades_ast::Types::Pointer(_)) {
+                    // Auto-deref: `ptr.field` where ptr: &Struct.
+                    let ptr_op = expr.to_mir(builder);
+                    let ptr_local = materialize_operand(ptr_op, base_type, builder, span.clone());
+                    Place {
+                        local: ptr_local,
+                        projection: vec![
+                            PlaceElem::Deref,
+                            PlaceElem::Field { name: field.clone(), index: 0, ty: field_type.clone() },
+                        ],
+                    }
+                } else {
+                    let base_operand = expr.to_mir(builder);
+                    let base_local = materialize_operand(base_operand, struct_type.clone(), builder, span.clone());
+                    Place {
+                        local: base_local,
+                        projection: vec![PlaceElem::Field {
+                            name: field.clone(),
+                            index: 0,
+                            ty: field_type.clone(),
+                        }],
+                    }
                 };
                 let temp = builder.new_local(field_type.clone(), span.clone());
                 builder.emit(Statement::assign(
@@ -244,9 +269,45 @@ fn lower_assign_target_place(
             Place::local(local)
         }
         TypedAssignTarget::FieldAccess(fa) => {
-            let base_op = fa.expr.to_mir(builder);
-            let base_local = materialize_operand(base_op, fa.struct_type.clone(), builder, span);
-            Place::with_field(base_local, fa.field.clone(), 0, fa.field_type.clone())
+            // If the base expression is a pointer deref (`*ptr`), build a
+            // [Deref, Field] projection on the pointer local instead of
+            // materialising a copy of the dereffed struct value.
+            if let TypedExpr::Unary { op: Op::Deref, expr: ptr_expr, .. } = fa.expr.as_ref() {
+                let ptr_op = ptr_expr.to_mir(builder);
+                let ptr_ty = ptr_expr.get_type();
+                let ptr_local = materialize_operand(ptr_op, ptr_ty, builder, span);
+                Place {
+                    local: ptr_local,
+                    projection: vec![
+                        PlaceElem::Deref,
+                        PlaceElem::Field {
+                            name: fa.field.clone(),
+                            index: 0,
+                            ty: fa.field_type.clone(),
+                        },
+                    ],
+                }
+            } else if matches!(fa.expr.get_type(), hades_ast::Types::Pointer(_)) {
+                // Auto-deref: `ptr.field` where ptr: &Struct — same as `(*ptr).field`.
+                let ptr_op = fa.expr.to_mir(builder);
+                let ptr_ty = fa.expr.get_type();
+                let ptr_local = materialize_operand(ptr_op, ptr_ty, builder, span);
+                Place {
+                    local: ptr_local,
+                    projection: vec![
+                        PlaceElem::Deref,
+                        PlaceElem::Field {
+                            name: fa.field.clone(),
+                            index: 0,
+                            ty: fa.field_type.clone(),
+                        },
+                    ],
+                }
+            } else {
+                let base_op = fa.expr.to_mir(builder);
+                let base_local = materialize_operand(base_op, fa.struct_type.clone(), builder, span);
+                Place::with_field(base_local, fa.field.clone(), 0, fa.field_type.clone())
+            }
         }
         TypedAssignTarget::ArrayIndex(ai) => {
             let base_op = ai.expr.to_mir(builder);

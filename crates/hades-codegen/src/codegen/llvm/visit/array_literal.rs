@@ -1,70 +1,24 @@
 use crate::codegen::context::LLVMContext;
-use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
-use crate::codegen::traits::Visit;
+use crate::codegen::error::{CodegenError, CodegenResult};
 use hades_ast::Types;
-use hades_ast::{TypedArrayLiteral, TypedExpr};
 use inkwell::module::Linkage;
 use inkwell::types::{ArrayType, BasicTypeEnum, StructType};
 use inkwell::values::{BasicValue, BasicValueEnum, PointerValue};
 
-impl Visit for TypedArrayLiteral {
-    type Output<'ctx> = CodegenValue<'ctx>;
-
-    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
-        let _symbols = context.symbols();
-        let array_type = context
-            .type_converter()
-            .to_llvm_type(&self.elem_typ, context.module())?;
-        let elem_type = self.elem_typ.get_array_elem_type();
-        let llvm_elem_type = context
-            .type_converter()
-            .to_llvm_type(&elem_type, context.module())?;
-        let llvm_array_type = array_type.into_array_type();
-
-        let elems = resolve_elements(context, &self.elements, &elem_type, llvm_elem_type)?;
-
-        let ptr = match llvm_elem_type {
-            BasicTypeEnum::StructType(t) => {
-                build_struct_array(context, &elems, llvm_array_type, t)?
-            }
-            _ => build_primitive_array(context, &elems, llvm_array_type, llvm_elem_type)?,
-        };
-
-        Ok(CodegenValue::new(ptr.into(), self.elem_typ.clone()))
-    }
-}
-
-fn resolve_elements<'ctx>(
+pub(crate) fn build_array<'ctx>(
     context: &mut LLVMContext<'ctx>,
-    elements: &[TypedExpr],
-    elem_type: &Types,
+    elems: Vec<BasicValueEnum<'ctx>>,
+    elem_ty: &Types,
+    llvm_array_type: ArrayType<'ctx>,
     llvm_elem_type: BasicTypeEnum<'ctx>,
-) -> CodegenResult<Vec<BasicValueEnum<'ctx>>> {
-    let mut out = Vec::with_capacity(elements.len());
-    for element in elements {
-        let val = element.visit(context)?.value()?;
-        let resolved = match (elem_type, val) {
-            (Types::Struct(_), v) => {
-                let tmp = context.create_alloca("struct_elem", llvm_elem_type)?;
-                context
-                    .builder()
-                    .build_store(tmp, v)
-                    .map_err(|e| CodegenError::LLVMBuild {
-                        message: format!("Failed to store struct elem: {e}"),
-                    })?;
-                tmp.into()
-            }
-            (Types::Pointer(_), v) => v,
-            (Types::String, v) => v,
-            (_, BasicValueEnum::PointerValue(ptr)) => context.load(ptr, llvm_elem_type, "elem")?,
-            (_, v) => v,
-        };
-        out.push(resolved);
+) -> CodegenResult<PointerValue<'ctx>> {
+    match llvm_elem_type {
+        BasicTypeEnum::StructType(t) => build_struct_array(context, &elems, llvm_array_type, t),
+        _ => build_primitive_array(context, &elems, llvm_array_type, llvm_elem_type),
     }
-    Ok(out)
 }
 
-fn build_struct_array<'ctx>(
+pub(crate) fn build_struct_array<'ctx>(
     context: &mut LLVMContext<'ctx>,
     elems: &[BasicValueEnum<'ctx>],
     llvm_array_type: ArrayType<'ctx>,
@@ -100,7 +54,7 @@ fn build_struct_array<'ctx>(
     Ok(array_alloca)
 }
 
-fn build_primitive_array<'ctx>(
+pub(crate) fn build_primitive_array<'ctx>(
     context: &mut LLVMContext<'ctx>,
     elems: &[BasicValueEnum<'ctx>],
     llvm_array_type: ArrayType<'ctx>,
@@ -128,12 +82,10 @@ fn build_primitive_array<'ctx>(
                 });
             }
         };
-
         let global = context.module().add_global(llvm_array_type, None, "arr");
         global.set_initializer(&const_array);
         global.set_constant(true);
         global.set_linkage(Linkage::Private);
-
         return Ok(global.as_pointer_value());
     }
 

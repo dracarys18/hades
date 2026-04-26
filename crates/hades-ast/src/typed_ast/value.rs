@@ -19,7 +19,7 @@ impl TypedValue {
             Self::Boolean(_) => Types::Bool,
             Self::String(_) => Types::String,
             Self::Char(_) => Types::Char,
-            Self::Array(arr) => arr.elem_typ.clone(),
+            Self::Array(arr) => Types::Array(arr.elem_typ.array_type(arr.size)),
         }
     }
 }

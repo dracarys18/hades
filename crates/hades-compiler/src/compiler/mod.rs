@@ -205,10 +205,12 @@ impl<'a> Compiler {
             let import_sigs: Vec<_> = typed_module
                 .imports
                 .iter()
-                .filter_map(|p| sig_map.get(p).copied())
+                .filter_map(|p| sig_map.get(p).copied().cloned())
                 .collect();
 
-            if let Err(err) = codegen::compile(typed_module, &import_sigs, &llvm_ctx, &obj_path) {
+            let mir_module = hades_mir::lower(typed_module.clone(), import_sigs);
+
+            if let Err(err) = codegen::compile(&mir_module, &llvm_ctx, &obj_path) {
                 eprintln!("Compilation failed for {}: {err}", typed_module.path);
                 return false;
             }
@@ -265,11 +267,12 @@ impl<'a> Compiler {
             let import_sigs: Vec<_> = typed_module
                 .imports
                 .iter()
-                .filter_map(|p| sig_map.get(p).copied())
+                .filter_map(|p| sig_map.get(p).copied().cloned())
                 .collect();
 
-            let ir =
-                codegen::emit_ir(typed_module, &import_sigs, context).map_err(|e| e.to_string())?;
+            let mir_module = hades_mir::lower(typed_module.clone(), import_sigs);
+
+            let ir = codegen::emit_ir(&mir_module, context).map_err(|e| e.to_string())?;
 
             println!("; === module: {} ===", typed_module.path);
             println!("{}", ir);

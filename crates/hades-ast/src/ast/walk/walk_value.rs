@@ -62,7 +62,7 @@ pub(super) fn walk_array_with_hint(
     Ok(TypedArrayLiteral {
         elements: typed_expr,
         size: arr.size,
-        elem_typ: Types::Array(expected_type.array_type(arr.size)),
+        elem_typ: expected_type,
         fill: typed_fill,
     })
 }

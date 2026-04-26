@@ -13,8 +13,8 @@ impl Visit for TypedStructDef {
                 .fields
                 .iter()
                 .filter_map(|(_, field)| match field {
-                    TypedFieldKind::Func(method) => {
-                        method.visit(context).ok()?;
+                    TypedFieldKind::Func(_method) => {
+                        // Method bodies are emitted by MirModule via MirFunction visits.
                         None
                     }
                     TypedFieldKind::Var(_) => {

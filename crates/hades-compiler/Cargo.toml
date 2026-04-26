@@ -13,5 +13,6 @@ hades-parser   = { workspace = true }
 hades-module   = { workspace = true }
 hades-semantic = { workspace = true }
 hades-codegen  = { workspace = true }
+hades-mir      = { workspace = true }
 inkwell        = { workspace = true }
 ariadne        = { workspace = true }

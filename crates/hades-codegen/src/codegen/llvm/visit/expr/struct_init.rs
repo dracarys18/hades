@@ -1,74 +1,11 @@
 use crate::codegen::context::LLVMContext;
-use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
-use crate::codegen::traits::Visit;
-use hades_ast::TypedExpr;
+use crate::codegen::error::{CodegenError, CodegenResult};
 use hades_ast::Types;
-use hades_tokens::{Ident, Name};
-use indexmap::IndexMap;
-use inkwell::values::{BasicValueEnum, PointerValue, StructValue};
+use inkwell::values::{BasicValueEnum, PointerValue};
 
-pub struct StructInit<'a> {
-    pub name: &'a Name,
-    pub fields: &'a IndexMap<Ident, TypedExpr>,
-    pub is_const: bool,
-}
-
-impl<'a> StructInit<'a> {
-    pub fn new(name: &'a Name, fields: &'a IndexMap<Ident, TypedExpr>, is_const: bool) -> Self {
-        Self {
-            name,
-            fields,
-            is_const,
-        }
-    }
-}
-
-impl<'a> Visit for StructInit<'a> {
-    type Output<'ctx> = CodegenValue<'ctx>;
-
-    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
-        let struct_type = context
-            .module()
-            .get_struct_type(&self.name.to_string())
-            .expect("Struct type should be defined at this point");
-
-        if self.is_const {
-            let struct_val = build_const_struct_value(context, struct_type, self.fields)?;
-            return Ok(CodegenValue::new(
-                struct_val.into(),
-                Types::Struct(self.name.clone()),
-            ));
-        }
-
-        let mut values: Vec<(BasicValueEnum, Types)> = Vec::new();
-        for (_field_name, field_expr) in self.fields.iter() {
-            let field_val = field_expr.visit(context)?;
-            values.push((field_val.value()?, field_expr.get_type()));
-        }
-        let ptr = build_alloca_struct(context, struct_type, &values)?;
-        let struct_val = context.load(ptr, struct_type.into(), "struct_val")?;
-
-        Ok(CodegenValue::new(
-            struct_val,
-            Types::Struct(self.name.clone()),
-        ))
-    }
-}
-
-fn build_const_struct_value<'ctx>(
-    context: &mut LLVMContext<'ctx>,
-    struct_type: inkwell::types::StructType<'ctx>,
-    fields: &IndexMap<Ident, TypedExpr>,
-) -> CodegenResult<StructValue<'ctx>> {
-    let mut resolved: Vec<BasicValueEnum<'ctx>> = Vec::new();
-    for (_field_name, field_expr) in fields.iter() {
-        let val = field_expr.visit(context)?.value()?;
-        resolved.push(val);
-    }
-    Ok(struct_type.const_named_struct(&resolved))
-}
-
-fn build_alloca_struct<'ctx>(
+/// Build a struct on the stack from a list of (field_value, field_type) pairs
+/// in declaration order.
+pub(crate) fn build_alloca_struct<'ctx>(
     context: &mut LLVMContext<'ctx>,
     struct_type: inkwell::types::StructType<'ctx>,
     values: &[(BasicValueEnum<'ctx>, Types)],
@@ -89,4 +26,12 @@ fn build_alloca_struct<'ctx>(
         context.create_store(field_ptr, *field_val, field_ast_type)?;
     }
     Ok(struct_ptr)
+}
+
+/// Build a const struct value from already-evaluated field values.
+pub(crate) fn build_const_struct<'ctx>(
+    struct_type: inkwell::types::StructType<'ctx>,
+    field_vals: &[BasicValueEnum<'ctx>],
+) -> inkwell::values::StructValue<'ctx> {
+    struct_type.const_named_struct(field_vals)
 }

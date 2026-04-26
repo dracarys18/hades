@@ -2,8 +2,9 @@ use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::codegen::symbols::{CodegenSymbols, LLVMVariable};
 use crate::codegen::types::TypeConverter;
 use hades_ast::Types;
-use hades_ast::{CompilerContext, FuncKind, FunctionSignature, TypedDefer};
+use hades_ast::{CompilerContext, FuncKind, FunctionSignature};
 use hades_semantic::ModuleSignatures;
+use hades_mir::mir::local::LocalDecl;
 use hades_tokens::{Ident, Name};
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
@@ -29,8 +30,13 @@ pub struct LLVMContext<'ctx> {
 
 pub struct FunctionContext<'ctx> {
     pub function: FunctionValue<'ctx>,
-    pub defer: Vec<TypedDefer>,
     pub loop_stack: Vec<LoopContext<'ctx>>,
+    /// Alloca for each MIR local, indexed by `LocalId`.
+    pub alloca_map: Vec<PointerValue<'ctx>>,
+    /// One LLVM BasicBlock per MIR BlockId, indexed by `BlockId::index()`.
+    pub llvm_blocks: Vec<BasicBlock<'ctx>>,
+    /// Clone of `MirFunction::locals` — needed for type lookups during codegen.
+    pub locals: Vec<LocalDecl>,
 }
 
 impl<'ctx> LLVMContext<'ctx> {
@@ -139,7 +145,9 @@ impl<'ctx> LLVMContext<'ctx> {
         let func_ctx = FunctionContext {
             function: func,
             loop_stack: Vec::new(),
-            defer: Vec::new(),
+            alloca_map: Vec::new(),
+            llvm_blocks: Vec::new(),
+            locals: Vec::new(),
         };
 
         self.current_function = Some(func_ctx);
@@ -226,18 +234,12 @@ impl<'ctx> LLVMContext<'ctx> {
         if let Types::Array(_) = typ
             && let BasicValueEnum::PointerValue(src_ptr) = value
         {
-            let llvm_type = self.type_converter.to_llvm_type(typ, &self.module)?;
-            let size_bytes = llvm_type.size_of().ok_or(CodegenError::LLVMBuild {
-                message: "Could not compute aggregate size".to_string(),
-            })?;
-            let align = llvm_type
-                .size_of()
-                .and_then(|s| s.get_zero_extended_constant())
-                .map(|s| (s as u32).min(8).next_power_of_two())
-                .unwrap_or(8);
+            // Array locals hold a pointer alloca — store the source pointer directly.
             self.builder
-                .build_memcpy(dest, align, src_ptr, align, size_bytes)
-                .map_err(CodegenError::from)?;
+                .build_store(dest, src_ptr)
+                .map_err(|_| CodegenError::LLVMBuild {
+                    message: "Failed to store array pointer".to_string(),
+                })?;
             return Ok(());
         }
         self.builder
@@ -407,16 +409,4 @@ impl<'ctx> LLVMContext<'ctx> {
     }
 }
 
-impl FunctionContext<'_> {
-    pub fn push_defer(&mut self, defer: TypedDefer) {
-        self.defer.push(defer);
-    }
-
-    pub fn pop_defer(&mut self) -> Option<TypedDefer> {
-        self.defer.pop()
-    }
-
-    pub fn defer_iter(&self) -> impl Iterator<Item = &TypedDefer> {
-        self.defer.iter().rev()
-    }
-}
+impl FunctionContext<'_> {}

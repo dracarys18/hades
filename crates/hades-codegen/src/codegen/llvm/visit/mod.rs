@@ -1,16 +1,7 @@
 pub mod array_literal;
-pub mod block;
-pub mod break_stmt;
-pub mod continue_stmt;
-pub mod defer;
 pub mod expr;
-pub mod for_stmt;
 pub mod func_def;
-pub mod if_stmt;
-pub mod let_stmt;
 pub mod program;
-pub mod return_stmt;
 pub mod stmt;
 pub mod struct_def;
 pub mod value;
-pub mod while_stmt;

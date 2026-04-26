@@ -1,14 +1,10 @@
-pub mod func;
-pub mod method;
-
-pub use func::FunctionCall;
-pub use method::MethodCall;
-
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
 use inkwell::values::BasicMetadataValueEnum;
 
-pub fn build_call<'ctx>(
+/// Build an LLVM call to a named function, looking up its signature in the
+/// compiler context. Used from `stmt.rs` for `TerminatorKind::Call`.
+pub(crate) fn build_call<'ctx>(
     name: &str,
     arg_values: &[BasicMetadataValueEnum<'ctx>],
     context: &mut LLVMContext<'ctx>,

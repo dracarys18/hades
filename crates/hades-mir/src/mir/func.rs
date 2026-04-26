@@ -83,12 +83,15 @@ impl ToMir for TypedFuncDef {
             use hades_tokens::ParamKind;
             match &param_kind {
                 ParamKind::Self_(_) => {
-                    // `self` param — allocate as a named local "self".
+                    // `self` param — resolve Self_ to the concrete receiver type.
                     let self_ident = hades_tokens::Ident::new(
                         "self".to_string(),
                         span.clone(),
                     );
-                    builder.new_named_local(self_ident, param_ty, span.clone());
+                    let resolved_ty = self.signature.receiver()
+                        .map(|r| r.typ.clone())
+                        .unwrap_or(param_ty);
+                    builder.new_named_local(self_ident, resolved_ty, span.clone());
                     arg_count += 1;
                 }
                 ParamKind::Ident(ident) => {
@@ -104,9 +107,9 @@ impl ToMir for TypedFuncDef {
         // If the last block has no terminator (void function), emit implicit return.
         if !builder.is_terminated() {
             // Inline any pending defers.
-            let deferred = builder.deferred_stmts();
-            for stmt in deferred {
-                builder.emit(stmt);
+            let deferred = builder.deferred_blocks();
+            for block in deferred {
+                block.to_mir(&mut builder);
             }
             builder.terminate(Terminator::new(TerminatorKind::Return, span.clone()));
         }

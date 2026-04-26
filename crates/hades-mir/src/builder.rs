@@ -1,4 +1,4 @@
-use hades_ast::Types;
+use hades_ast::{TypedBlock, Types};
 use hades_error::Span;
 use hades_tokens::Ident;
 use indexmap::IndexMap;
@@ -19,10 +19,10 @@ pub struct LoopContext {
 }
 
 /// Stack of pending defer blocks to be inlined at each `Return` site.
-/// Each entry is the list of `Statement`s that make up the deferred block.
+/// Each entry stores the AST block so it can be re-lowered at every return point.
 #[derive(Debug, Clone)]
 pub struct DeferEntry {
-    pub stmts: Vec<Statement>,
+    pub block: TypedBlock,
     pub span: Span,
 }
 
@@ -147,20 +147,20 @@ impl MirBuilder {
 
     // ── Defers ────────────────────────────────────────────────────────────
 
-    pub fn push_defer(&mut self, stmts: Vec<Statement>, span: Span) {
-        self.defer_stack.push(DeferEntry { stmts, span });
+    pub fn push_defer(&mut self, block: TypedBlock, span: Span) {
+        self.defer_stack.push(DeferEntry { block, span });
     }
 
     pub fn pop_defer(&mut self) {
         self.defer_stack.pop().expect("pop_defer: stack is empty");
     }
 
-    /// Clone the current defer stack in LIFO order (last-in, first-out at return).
-    pub fn deferred_stmts(&self) -> Vec<Statement> {
+    /// Clone the deferred blocks in LIFO order (last-in, first-out at return).
+    pub fn deferred_blocks(&self) -> Vec<TypedBlock> {
         self.defer_stack
             .iter()
             .rev()
-            .flat_map(|d| d.stmts.iter().cloned())
+            .map(|d| d.block.clone())
             .collect()
     }
 
@@ -170,11 +170,5 @@ impl MirBuilder {
     pub fn finish(self) -> (Cfg, Vec<LocalDecl>) {
         let cfg = Cfg::finish(BlockId::new(0), self.blocks);
         (cfg, self.locals)
-    }
-
-    /// Drain the statements from a scratch block (used for defer collection).
-    /// The block is left with no stmts and no terminator after this call.
-    pub fn drain_scratch_block(&mut self, id: BlockId) -> Vec<Statement> {
-        std::mem::take(&mut self.blocks[id.index()].stmts)
     }
 }

@@ -1,3 +1,4 @@
+mod id;
 mod mir;
 
 use hades_ast::TypedStmt;
@@ -10,6 +11,7 @@ pub trait ToMir {
     fn to_mir(&self, builder: &mut MirBuilder) -> Self::Output;
 }
 
-pub fn lower(module: TypedModule, import_sigs: Vec<ModuleSignatures>) {
-    let mut dummy_builder = MirBuilder::new(hades_ast::Types::Void, hades_error::Span::default());
+pub fn lower(module: &TypedModule) {
+    let mut build = MirBuilder::new(&module.ctx);
+    build.build()
 }

@@ -1,0 +1,11 @@
+[package]
+name = "hades-mir"
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+hades-ast     = { workspace = true }
+hades-tokens  = { workspace = true }
+hades-error   = { workspace = true }
+hades-module  = { workspace = true }
+indexmap      = { workspace = true }

@@ -10,6 +10,7 @@ members = [
     "crates/hades-semantic",
     "crates/hades-codegen",
     "crates/hades-compiler",
+    "crates/hades-mir",
     "crates/hades",
 ]
 resolver = "2"
@@ -30,6 +31,7 @@ hades-module  = { path = "crates/hades-module" }
 hades-semantic = { path = "crates/hades-semantic" }
 hades-codegen  = { path = "crates/hades-codegen" }
 hades-compiler = { path = "crates/hades-compiler" }
+hades-mir = { path = "crates/hades-mir" }
 
 # External crates
 anyhow        = "1.0.100"

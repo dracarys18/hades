@@ -62,6 +62,17 @@ impl Params {
     }
 }
 
+impl IntoIterator for Params {
+    type Item = (ParamKind, Types);
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        match self {
+            Params::Fixed(m) | Params::Variadic(m) => m.into_iter().collect::<Vec<_>>().into_iter(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum FuncKind {
     Normal,

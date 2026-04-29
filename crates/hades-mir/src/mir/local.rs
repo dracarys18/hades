@@ -1,20 +1,17 @@
 use hades_ast::Types;
-
-use crate::id::Id;
+use hades_tokens::Ident;
 
 pub(crate) struct Local {
-    id: Id,
-    typ: Types,
+    pub name: Ident,
+    pub typ: Types,
 }
 
 impl Local {
-    pub(crate) fn new(typ: Types) -> Self {
-        Self { id: Id::new(), typ }
+    pub(crate) fn new(name: Ident, typ: Types) -> Self {
+        Self { name, typ }
     }
 
-    pub(crate) fn next(&mut self, typ: Types) -> Self {
-        let id = self.id.next();
-        let local = Self { id, typ };
-        local
+    pub(crate) fn name(&self) -> &Ident {
+        &self.name
     }
 }

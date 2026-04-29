@@ -1,1 +1,3 @@
-pub struct Terminator {}
+pub(crate) enum Terminator {
+    Return,
+}

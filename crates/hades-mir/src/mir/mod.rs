@@ -1,7 +1,10 @@
 pub(crate) mod block;
 pub(crate) mod builder;
+pub(crate) mod decl;
+pub(crate) mod expr;
 pub(crate) mod func;
 pub(crate) mod guard;
 pub(crate) mod local;
+pub(crate) mod place;
 pub(crate) mod stmt;
 pub(crate) mod terminator;

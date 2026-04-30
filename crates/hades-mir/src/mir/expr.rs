@@ -3,15 +3,15 @@ use hades_ast::{
     TypedFieldAccess, TypedValue, Types,
 };
 
-use crate::{BasicBlock, BlockAnd, BlockAndExt, ToMir, unpack};
 use crate::mir::builder::MirBuilder;
 use crate::mir::place::{ConstVal, Operand, Place, PlaceElem};
 use crate::mir::stmt::{MirStmt, Rvalue};
+use crate::{BasicBlock, BlockAnd, BlockAndExt, ToMir, unpack};
 
 impl ToMir for TypedExpr {
     type Output = Rvalue;
 
-    fn to_mir(&self, builder: &mut MirBuilder, block: BasicBlock) -> BlockAnd<Rvalue> {
+    fn to_mir(&self, builder: &mut MirBuilder, mut block: BasicBlock) -> BlockAnd<Rvalue> {
         match self {
             TypedExpr::Value(v) => block.and(lower_value(v)),
 
@@ -20,7 +20,9 @@ impl ToMir for TypedExpr {
                 block.and(Rvalue::Use(Operand::Copy(Place::local(idx))))
             }
 
-            TypedExpr::Binary(TypedBinaryExpr { left, op, right, .. }) => {
+            TypedExpr::Binary(TypedBinaryExpr {
+                left, op, right, ..
+            }) => {
                 let mut block = block;
 
                 let lhs_rvalue = unpack!(block = left.to_mir(builder, block));
@@ -58,13 +60,11 @@ impl ToMir for TypedExpr {
             }
 
             TypedExpr::FieldAccess(fa) => {
-                let mut block = block;
                 let (block2, place) = lower_field_access(builder, block, fa);
                 block2.and(Rvalue::Use(Operand::Copy(place)))
             }
 
             TypedExpr::ArrayIndex(ai) => {
-                let mut block = block;
                 let (block2, place) = lower_array_index(builder, block, ai);
                 block2.and(Rvalue::Use(Operand::Copy(place)))
             }
@@ -73,8 +73,27 @@ impl ToMir for TypedExpr {
                 block.and(Rvalue::Use(Operand::Constant(ConstVal::Null(typ.clone()))))
             }
 
-            TypedExpr::StructInit { .. } | TypedExpr::Call { .. } => {
-                todo!("StructInit / Call lowering")
+            TypedExpr::StructInit { name, fields, .. } => {
+                let aggregates = fields
+                    .iter()
+                    .map(|(_, field_expr)| {
+                        let rvalue = unpack!(block = field_expr.to_mir(builder, block));
+                        let (block2, operand) =
+                            emit_temp(builder, block, rvalue, &field_expr.get_type());
+                        block = block2;
+                        operand
+                    })
+                    .collect();
+
+                block.and(Rvalue::Aggregate(name.clone(), aggregates))
+            }
+
+            TypedExpr::Call {
+                func,
+                args,
+                receiver,
+                typ,
+            } => {
             }
         }
     }

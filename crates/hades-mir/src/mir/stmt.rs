@@ -8,7 +8,7 @@ use crate::{BasicBlock, BlockAnd, BlockAndExt, ToMir, unpack};
 
 #[derive(Debug, Clone)]
 pub enum StatementKind {
-    Assign(Place, Rvalue),
+    Assign(Place, Box<Rvalue>),
     Nop,
 }
 
@@ -21,7 +21,7 @@ pub struct Statement {
 impl Statement {
     pub fn assign(place: Place, rvalue: Rvalue, span: Span) -> Self {
         Self {
-            kind: StatementKind::Assign(place, rvalue),
+            kind: StatementKind::Assign(place, Box::new(rvalue)),
             span,
         }
     }

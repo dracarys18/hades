@@ -1,33 +1,31 @@
-use hades_ast::TypedBlock;
+use crate::BasicBlock;
+use super::stmt::Statement;
+use super::terminator::Terminator;
 
-use crate::{BasicBlock, BlockAnd, BlockAndExt, ToMir, unpack};
-use crate::mir::builder::MirBuilder;
-use crate::mir::stmt::MirStmt;
-use crate::mir::terminator::Terminator;
-
-pub(crate) struct BasicBlockData {
-    pub stmts: Vec<MirStmt>,
+#[derive(Debug, Clone)]
+pub struct BasicBlockData {
+    pub stmts: Vec<Statement>,
     pub terminator: Option<Terminator>,
+    pub successors: Vec<BasicBlock>,
+    pub predecessors: Vec<BasicBlock>,
 }
 
 impl BasicBlockData {
     pub fn new() -> Self {
-        Self { stmts: Vec::new(), terminator: None }
+        Self { stmts: vec![], terminator: None, successors: vec![], predecessors: vec![] }
     }
 
-    pub fn push(&mut self, stmt: MirStmt) {
+    pub fn emit(&mut self, stmt: Statement) {
+        debug_assert!(self.terminator.is_none(), "emitting into already-terminated block");
         self.stmts.push(stmt);
     }
-}
 
-impl ToMir for TypedBlock {
-    type Output = ();
+    pub fn terminate(&mut self, t: Terminator) {
+        debug_assert!(self.terminator.is_none(), "block already terminated");
+        self.terminator = Some(t);
+    }
 
-    fn to_mir(&self, builder: &mut MirBuilder, block: BasicBlock) -> BlockAnd<()> {
-        let mut block = block;
-        for stmt in &self.stmts {
-            unpack!(block = stmt.to_mir(builder, block));
-        }
-        block.unit()
+    pub fn is_terminated(&self) -> bool {
+        self.terminator.is_some()
     }
 }

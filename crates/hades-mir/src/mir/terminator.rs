@@ -2,9 +2,9 @@ use hades_ast::Types;
 use hades_error::Span;
 use hades_tokens::Name;
 
-use crate::BasicBlock;
 use super::operand::Operand;
 use super::place::Place;
+use crate::BasicBlock;
 
 #[derive(Debug, Clone)]
 pub struct SwitchTargets {
@@ -26,14 +26,8 @@ impl SwitchTargets {
 #[derive(Debug, Clone)]
 pub enum CallTarget {
     Function(Name),
-    Method {
-        receiver: Operand,
-        method: Name,
-    },
-    Qualified {
-        ty: Types,
-        method: Name,
-    },
+    Method { receiver: Operand, method: Name },
+    Qualified { ty: Types, method: Name },
 }
 
 #[derive(Debug, Clone)]

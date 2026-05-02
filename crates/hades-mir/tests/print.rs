@@ -65,9 +65,8 @@ fn test__add(_1: int, _2: int) -> int {
 
 #[test]
 fn test_if_else() {
-    let mir = parse_and_lower(
-        "fn sign(x: int): int { if (x > 0) { return 1; } else { return -1; } }",
-    );
+    let mir =
+        parse_and_lower("fn sign(x: int): int { if (x > 0) { return 1; } else { return -1; } }");
     let out = mir.to_string();
     println!("{out}");
     let expected = "\

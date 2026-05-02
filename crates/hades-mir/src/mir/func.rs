@@ -2,10 +2,10 @@ use hades_ast::{FuncKind, FunctionSignature, TypedFuncDef, TypedReceiver, Types}
 use hades_error::Span;
 use hades_tokens::{Ident, Name, ParamKind};
 
-use crate::{BasicBlock, BlockAnd, BlockAndExt, ToMir, unpack};
 use crate::mir::builder::MirBuilder;
 use crate::mir::guard::Guard;
 use crate::mir::terminator::{Terminator, TerminatorKind};
+use crate::{BasicBlock, BlockAnd, BlockAndExt, ToMir, unpack};
 
 pub struct MirFunction {
     pub name: Name,
@@ -20,7 +20,11 @@ pub struct MirFunction {
 impl ToMir for TypedFuncDef {
     type Output = Option<MirFunction>;
 
-    fn to_mir(&self, builder: &mut MirBuilder, _block: BasicBlock) -> BlockAnd<Option<MirFunction>> {
+    fn to_mir(
+        &self,
+        builder: &mut MirBuilder,
+        _block: BasicBlock,
+    ) -> BlockAnd<Option<MirFunction>> {
         match self.signature.kind {
             FuncKind::Extern { .. } | FuncKind::Intrinsic(_) => {
                 return BasicBlock(0).and(None);
@@ -45,10 +49,7 @@ impl ToMir for TypedFuncDef {
         for (param_kind, param_ty) in self.signature.params() {
             match &param_kind {
                 ParamKind::Self_(_) => {
-                    builder.build_local(
-                        Ident::new("self".to_string(), span.clone()),
-                        param_ty,
-                    );
+                    builder.build_local(Ident::new("self".to_string(), span.clone()), param_ty);
                     arg_count += 1;
                 }
                 ParamKind::Ident(ident) => {

@@ -30,6 +30,12 @@ pub struct Guard {
     pub defer_stack: Vec<DeferEntry>,
 }
 
+impl Default for Guard {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Guard {
     pub fn new() -> Self {
         Self {
@@ -107,7 +113,10 @@ impl Guard {
     }
 
     pub fn push_loop(&mut self, continue_block: BasicBlock, break_block: BasicBlock) {
-        self.loop_stack.push(LoopContext { continue_block, break_block });
+        self.loop_stack.push(LoopContext {
+            continue_block,
+            break_block,
+        });
     }
 
     pub fn pop_loop(&mut self) {

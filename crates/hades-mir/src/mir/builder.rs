@@ -12,9 +12,17 @@ pub struct MirBuilder {
     pub current_guard: Option<Guard>,
 }
 
+impl Default for MirBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MirBuilder {
     pub fn new() -> Self {
-        Self { current_guard: None }
+        Self {
+            current_guard: None,
+        }
     }
 
     pub fn enter_guard(&mut self) {

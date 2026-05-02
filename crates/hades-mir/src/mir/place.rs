@@ -20,18 +20,30 @@ pub struct Place {
 
 impl Place {
     pub fn local(local: usize) -> Self {
-        Self { local, projection: vec![] }
+        Self {
+            local,
+            projection: vec![],
+        }
     }
 
     pub fn with_deref(local: usize) -> Self {
-        Self { local, projection: vec![PlaceElem::Deref] }
+        Self {
+            local,
+            projection: vec![PlaceElem::Deref],
+        }
     }
 
     pub fn with_field(local: usize, name: Ident, index: usize, ty: Types) -> Self {
-        Self { local, projection: vec![PlaceElem::Field { name, index, ty }] }
+        Self {
+            local,
+            projection: vec![PlaceElem::Field { name, index, ty }],
+        }
     }
 
     pub fn with_index(local: usize, index_local: usize) -> Self {
-        Self { local, projection: vec![PlaceElem::Index(index_local)] }
+        Self {
+            local,
+            projection: vec![PlaceElem::Index(index_local)],
+        }
     }
 }

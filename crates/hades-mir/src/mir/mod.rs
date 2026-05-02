@@ -1,5 +1,4 @@
 pub mod block;
-pub mod print;
 pub mod builder;
 pub mod expr;
 pub mod func;
@@ -9,6 +8,7 @@ pub mod lower_stmt;
 pub mod module;
 pub mod operand;
 pub mod place;
+pub mod print;
 pub mod rvalue;
 pub mod stmt;
 pub mod terminator;

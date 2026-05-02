@@ -325,6 +325,7 @@ dependencies = [
  "hades-ast",
  "hades-common",
  "hades-error",
+ "hades-mir",
  "hades-module",
  "hades-tokens",
  "indexmap",

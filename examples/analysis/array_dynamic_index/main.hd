@@ -1,0 +1,6 @@
+fn main(): int {
+    let a = [10, 20, 30];
+    let i: int = 1;
+    let x = a[i];
+    return x;
+}

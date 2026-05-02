@@ -148,3 +148,73 @@ fn test__count(_1: int) -> int {
 ";
     assert_eq!(out, expected);
 }
+
+#[test]
+fn test_null_deref_mir() {
+    let mir = parse_and_lower("fn main(): int { let p: &int = null; let x = *p; return x; }");
+    println!("{}", mir);
+}
+
+#[test]
+fn test_array_bounds_mir() {
+    let mir = parse_and_lower("fn main(): int { let a = [10, 20, 30]; let x = a[5]; return x; }");
+    println!("{}", mir);
+}
+
+#[test]
+fn test_array_bounds_lint_debug() {
+    use hades_mir::mir::place::PlaceElem;
+    use hades_mir::mir::stmt::StatementKind;
+    use hades_mir::mir::rvalue::Rvalue;
+    use hades_mir::mir::operand::Operand;
+
+    let mir = parse_and_lower("fn main(): int { let a = [10, 20, 30]; let x = a[5]; return x; }");
+    let func = &mir.functions[0];
+    for (bi, block) in func.guard.basic_blocks.iter().enumerate() {
+        for stmt in &block.stmts {
+            if let StatementKind::Assign(place, rvalue) = &stmt.kind {
+                // print any Index projections
+                for elem in &place.projection {
+                    if let PlaceElem::Index(idx_local) = elem {
+                        println!("PLACE INDEX: base_local={} idx_local={} base_type={:?}", place.local, idx_local, func.guard.locals[place.local].typ);
+                    }
+                }
+                // print rvalue Copy with Index projections
+                let ops: Vec<&Operand> = match rvalue.as_ref() {
+                    Rvalue::Use(op) => vec![op],
+                    _ => vec![],
+                };
+                for op in ops {
+                    if let Operand::Copy(p) | Operand::Ref(p) = op {
+                        for elem in &p.projection {
+                            if let PlaceElem::Index(idx_local) = elem {
+                                println!("RVALUE INDEX: base_local={} idx_local={} base_type={:?}", p.local, idx_local, func.guard.locals[p.local].typ);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn test_null_deref_lint_debug() {
+    use hades_mir::mir::place::PlaceElem;
+    use hades_mir::mir::stmt::StatementKind;
+    use hades_mir::mir::rvalue::Rvalue;
+    use hades_mir::mir::operand::Operand;
+
+    let mir = parse_and_lower("fn main(): int { let p: &int = null; let x = *p; return x; }");
+    let func = &mir.functions[0];
+    for local in &func.guard.locals {
+        println!("LOCAL: {} type={:?}", local.name.inner(), local.typ);
+    }
+    for (bi, block) in func.guard.basic_blocks.iter().enumerate() {
+        for stmt in &block.stmts {
+            if let StatementKind::Assign(place, rvalue) = &stmt.kind {
+                println!("STMT: place.local={} proj={:?} rvalue={:?}", place.local, place.projection, rvalue);
+            }
+        }
+    }
+}

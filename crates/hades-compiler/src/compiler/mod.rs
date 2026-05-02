@@ -6,6 +6,8 @@ use hades_lexer as lexer;
 use hades_module::{Module, ModulePath, Registry};
 use hades_parser as parser;
 use hades_semantic::analyzer::{Analyzer, Unprepared};
+use hades_semantic::lint::LintDiagnostic;
+use hades_error::ErrorSeverity;
 use inkwell::context::Context;
 use std::path::PathBuf;
 use std::{
@@ -154,9 +156,16 @@ impl<'a> Compiler {
             }
         };
 
-        if let Err(err) = analyzer.analyze() {
-            eprintln!("Error during semantic analysis: {err}");
-            return false;
+        match analyzer.analyze() {
+            Err(err) => {
+                eprintln!("Error during semantic analysis: {err}");
+                return false;
+            }
+            Ok(diags) => {
+                if report_diagnostics(diags, &mut cache) {
+                    return false;
+                }
+            }
         }
 
         true
@@ -185,9 +194,16 @@ impl<'a> Compiler {
             }
         };
 
-        if let Err(err) = prepared.analyze() {
-            eprintln!("Error during semantic analysis: {err}");
-            return false;
+        match prepared.analyze() {
+            Err(err) => {
+                eprintln!("Error during semantic analysis: {err}");
+                return false;
+            }
+            Ok(diags) => {
+                if report_diagnostics(diags, &mut cache) {
+                    return false;
+                }
+            }
         }
 
         let typed_modules = prepared.modules();
@@ -300,4 +316,15 @@ impl<'a> Compiler {
         };
         println!("{:#?}", program);
     }
+}
+
+fn report_diagnostics(diags: Vec<LintDiagnostic>, cache: &mut impl ariadne::Cache<PathBuf>) -> bool {
+    let mut has_error = false;
+    for diag in diags {
+        diag.error.eprint(&mut *cache);
+        if diag.error.severity == ErrorSeverity::Error {
+            has_error = true;
+        }
+    }
+    has_error
 }

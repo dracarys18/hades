@@ -9,3 +9,8 @@ hades-tokens  = { workspace = true }
 hades-error   = { workspace = true }
 hades-module  = { workspace = true }
 indexmap      = { workspace = true }
+
+[dev-dependencies]
+hades-lexer    = { workspace = true }
+hades-parser   = { workspace = true }
+hades-semantic = { workspace = true }

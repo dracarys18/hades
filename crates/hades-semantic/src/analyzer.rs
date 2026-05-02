@@ -3,6 +3,9 @@ use std::marker::PhantomData;
 use indexmap::IndexMap;
 
 use crate::evaluator::graph::EvaluationGraph;
+use crate::lint::array_bounds::ArrayBoundsLint;
+use crate::lint::null_deref::NullDerefLint;
+use crate::lint::{LintDiagnostic, LintRunner};
 use hades_ast::{CompilerContext, ModulePath as AstModulePath, WalkAst};
 use hades_error::{SemanticError, Span};
 use hades_module::{Module, ModulePath, ModuleSignatures, TypedModule};
@@ -30,7 +33,6 @@ impl Default for Analyzer<Unprepared> {
     }
 }
 
-/// Convert a `hades_module::ModulePath` into the `hades_ast`-internal `ModulePath`.
 fn to_ast_path(path: &ModulePath) -> AstModulePath {
     match path {
         ModulePath::Std(name) => AstModulePath::Std(name.clone()),
@@ -87,13 +89,25 @@ impl Analyzer<Prepared> {
         &self.modules
     }
 
-    pub fn analyze(&self) -> Result<(), String> {
-        let mut evaluator = EvaluationGraph::new();
-        evaluator.eval(|_program: &hades_ast::TypedProgram| Ok(()));
+    pub fn analyze(&self) -> Result<Vec<LintDiagnostic>, String> {
+        let mut ast_graph = EvaluationGraph::new();
+        ast_graph.eval(|_program: &hades_ast::TypedProgram| Ok(()));
 
         for typed_module in &self.modules {
-            evaluator.execute(&typed_module.program)?;
+            ast_graph.execute(&typed_module.program)?;
         }
-        Ok(())
+
+        let mut runner = LintRunner::new();
+        runner.register(ArrayBoundsLint);
+        runner.register(NullDerefLint);
+
+        let mut all_diags = Vec::new();
+        for typed_module in &self.modules {
+            let mir = hades_mir::lower(typed_module.clone());
+            let diags = runner.run(&mir);
+            all_diags.extend(diags);
+        }
+
+        Ok(all_diags)
     }
 }

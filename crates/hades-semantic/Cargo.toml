@@ -9,5 +9,6 @@ hades-tokens   = { workspace = true }
 hades-error    = { workspace = true }
 hades-ast      = { workspace = true }
 hades-module   = { workspace = true }
+hades-mir      = { workspace = true }
 rayon          = { workspace = true }
 indexmap       = { workspace = true }

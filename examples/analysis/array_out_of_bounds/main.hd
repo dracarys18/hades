@@ -1,0 +1,5 @@
+fn main(): int {
+    let a = [10, 20, 30];
+    let x = a[5];
+    return x;
+}

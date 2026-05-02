@@ -7,8 +7,8 @@ engine: "nixery"
 dependencies:
   nixpkgs:
     - rustup
-    - llvmPackages_21.llvm.dev
-    - llvmPackages_21.clang
+    - llvmpackages_21.llvm.dev
+    - llvmpackages_21.clang
     - zlib
     - zstd
 

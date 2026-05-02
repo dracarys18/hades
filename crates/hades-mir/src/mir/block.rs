@@ -1,6 +1,6 @@
-use crate::BasicBlock;
 use super::stmt::Statement;
 use super::terminator::Terminator;
+use crate::BasicBlock;
 
 #[derive(Debug, Clone)]
 pub struct BasicBlockData {
@@ -10,13 +10,27 @@ pub struct BasicBlockData {
     pub predecessors: Vec<BasicBlock>,
 }
 
+impl Default for BasicBlockData {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BasicBlockData {
     pub fn new() -> Self {
-        Self { stmts: vec![], terminator: None, successors: vec![], predecessors: vec![] }
+        Self {
+            stmts: vec![],
+            terminator: None,
+            successors: vec![],
+            predecessors: vec![],
+        }
     }
 
     pub fn emit(&mut self, stmt: Statement) {
-        debug_assert!(self.terminator.is_none(), "emitting into already-terminated block");
+        debug_assert!(
+            self.terminator.is_none(),
+            "emitting into already-terminated block"
+        );
         self.stmts.push(stmt);
     }
 

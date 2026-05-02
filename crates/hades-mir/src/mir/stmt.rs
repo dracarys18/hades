@@ -20,11 +20,17 @@ pub struct Statement {
 
 impl Statement {
     pub fn assign(place: Place, rvalue: Rvalue, span: Span) -> Self {
-        Self { kind: StatementKind::Assign(place, rvalue), span }
+        Self {
+            kind: StatementKind::Assign(place, rvalue),
+            span,
+        }
     }
 
     pub fn nop(span: Span) -> Self {
-        Self { kind: StatementKind::Nop, span }
+        Self {
+            kind: StatementKind::Nop,
+            span,
+        }
     }
 }
 

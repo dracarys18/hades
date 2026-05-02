@@ -7,7 +7,7 @@ use crate::mir::builder::MirBuilder;
 use crate::mir::expr::emit_temp;
 use crate::mir::place::Place;
 use crate::mir::stmt::Statement;
-use crate::mir::terminator::{Terminator, TerminatorKind, SwitchTargets, RETURN_LOCAL};
+use crate::mir::terminator::{RETURN_LOCAL, SwitchTargets, Terminator, TerminatorKind};
 use crate::{BasicBlock, BlockAnd, BlockAndExt, ToMir, unpack};
 
 impl ToMir for TypedBlock {
@@ -68,7 +68,13 @@ impl ToMir for TypedIf {
         let span = self.span.clone();
 
         let cond_rvalue = unpack!(block = self.cond.expr.to_mir(builder, block));
-        let (block2, cond_op) = emit_temp(builder, block, cond_rvalue, &self.cond.expr.get_type(), span.clone());
+        let (block2, cond_op) = emit_temp(
+            builder,
+            block,
+            cond_rvalue,
+            &self.cond.expr.get_type(),
+            span.clone(),
+        );
         block = block2;
 
         let then_block = builder.start_block();
@@ -87,18 +93,27 @@ impl ToMir for TypedIf {
         let BlockAnd(then_exit, _) = self.then_branch.to_mir(builder, then_block);
         if !builder.is_block_terminated(then_exit) {
             builder.switch_to(then_exit);
-            builder.terminate(Terminator::new(TerminatorKind::Goto(merge_block), span.clone()));
+            builder.terminate(Terminator::new(
+                TerminatorKind::Goto(merge_block),
+                span.clone(),
+            ));
         }
 
         if let Some(else_b) = &self.else_branch {
             let BlockAnd(else_exit, _) = else_b.to_mir(builder, else_block);
             if !builder.is_block_terminated(else_exit) {
                 builder.switch_to(else_exit);
-                builder.terminate(Terminator::new(TerminatorKind::Goto(merge_block), span.clone()));
+                builder.terminate(Terminator::new(
+                    TerminatorKind::Goto(merge_block),
+                    span.clone(),
+                ));
             }
         } else {
             builder.switch_to(else_block);
-            builder.terminate(Terminator::new(TerminatorKind::Goto(merge_block), span.clone()));
+            builder.terminate(Terminator::new(
+                TerminatorKind::Goto(merge_block),
+                span.clone(),
+            ));
         }
 
         merge_block.unit()
@@ -116,11 +131,20 @@ impl ToMir for TypedWhile {
         let exit_block = builder.start_block();
 
         builder.switch_to(block);
-        builder.terminate(Terminator::new(TerminatorKind::Goto(header_block), span.clone()));
+        builder.terminate(Terminator::new(
+            TerminatorKind::Goto(header_block),
+            span.clone(),
+        ));
 
         builder.switch_to(header_block);
         let cond_rvalue = unpack!(block = self.cond.to_mir(builder, header_block));
-        let (block2, cond_op) = emit_temp(builder, block, cond_rvalue, &self.cond.get_type(), span.clone());
+        let (block2, cond_op) = emit_temp(
+            builder,
+            block,
+            cond_rvalue,
+            &self.cond.get_type(),
+            span.clone(),
+        );
         builder.switch_to(block2);
         builder.terminate(Terminator::new(
             TerminatorKind::SwitchInt {
@@ -135,7 +159,10 @@ impl ToMir for TypedWhile {
         builder.pop_loop();
         if !builder.is_block_terminated(body_exit) {
             builder.switch_to(body_exit);
-            builder.terminate(Terminator::new(TerminatorKind::Goto(header_block), span.clone()));
+            builder.terminate(Terminator::new(
+                TerminatorKind::Goto(header_block),
+                span.clone(),
+            ));
         }
 
         exit_block.unit()
@@ -156,10 +183,15 @@ impl ToMir for TypedFor {
         let exit_block = builder.start_block();
 
         builder.switch_to(block);
-        builder.terminate(Terminator::new(TerminatorKind::Goto(header_block), span.clone()));
+        builder.terminate(Terminator::new(
+            TerminatorKind::Goto(header_block),
+            span.clone(),
+        ));
 
         builder.switch_to(header_block);
-        let cond_rvalue = unpack!(block = hades_ast::TypedExpr::Binary(self.cond.clone()).to_mir(builder, header_block));
+        let cond_rvalue = unpack!(
+            block = hades_ast::TypedExpr::Binary(self.cond.clone()).to_mir(builder, header_block)
+        );
         let cond_ty = hades_ast::TypedExpr::Binary(self.cond.clone()).get_type();
         let (block2, cond_op) = emit_temp(builder, block, cond_rvalue, &cond_ty, span.clone());
         builder.switch_to(block2);
@@ -176,7 +208,10 @@ impl ToMir for TypedFor {
         builder.pop_loop();
         if !builder.is_block_terminated(body_exit) {
             builder.switch_to(body_exit);
-            builder.terminate(Terminator::new(TerminatorKind::Goto(update_block), span.clone()));
+            builder.terminate(Terminator::new(
+                TerminatorKind::Goto(update_block),
+                span.clone(),
+            ));
         }
 
         builder.switch_to(update_block);
@@ -184,7 +219,10 @@ impl ToMir for TypedFor {
         let BlockAnd(update_exit, _) = update_expr.to_mir(builder, update_block);
         if !builder.is_block_terminated(update_exit) {
             builder.switch_to(update_exit);
-            builder.terminate(Terminator::new(TerminatorKind::Goto(header_block), span.clone()));
+            builder.terminate(Terminator::new(
+                TerminatorKind::Goto(header_block),
+                span.clone(),
+            ));
         }
 
         exit_block.unit()
@@ -209,7 +247,10 @@ impl ToMir for TypedContinue {
     type Output = ();
 
     fn to_mir(&self, builder: &mut MirBuilder, block: BasicBlock) -> BlockAnd<()> {
-        let loop_ctx = builder.current_loop().expect("continue outside loop").clone();
+        let loop_ctx = builder
+            .current_loop()
+            .expect("continue outside loop")
+            .clone();
         builder.switch_to(block);
         builder.terminate(Terminator::new(
             TerminatorKind::Goto(loop_ctx.continue_block),

@@ -150,7 +150,10 @@ fn fmt_block(
             TerminatorKind::Goto(bb) => writeln!(f, "        goto -> bb{};", bb.0)?,
             TerminatorKind::Return => writeln!(f, "        return;")?,
             TerminatorKind::Unreachable => writeln!(f, "        unreachable;")?,
-            TerminatorKind::SwitchInt { discriminant, targets } => {
+            TerminatorKind::SwitchInt {
+                discriminant,
+                targets,
+            } => {
                 writeln!(f, "        switchInt({discriminant}) {{")?;
                 for (val, bb) in targets.values.iter().zip(targets.blocks.iter()) {
                     writeln!(f, "            {val} => bb{},", bb.0)?;
@@ -158,7 +161,12 @@ fn fmt_block(
                 writeln!(f, "            otherwise => bb{},", targets.otherwise.0)?;
                 writeln!(f, "        }};")?;
             }
-            TerminatorKind::Call { target, args, dest, successor } => {
+            TerminatorKind::Call {
+                target,
+                args,
+                dest,
+                successor,
+            } => {
                 write!(f, "        {dest} = {target}(")?;
                 for (i, arg) in args.iter().enumerate() {
                     if i > 0 {
@@ -185,7 +193,10 @@ impl fmt::Display for MirFunction {
             if i > 1 {
                 write!(f, ", ")?;
             }
-            let ty = locals.get(i).map(|l| l.typ.to_string()).unwrap_or_else(|| "?".to_string());
+            let ty = locals
+                .get(i)
+                .map(|l| l.typ.to_string())
+                .unwrap_or_else(|| "?".to_string());
             write!(f, "_{i}: {ty}")?;
         }
         writeln!(f, ") -> {return_ty} {{")?;

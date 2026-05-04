@@ -250,11 +250,13 @@ fn lower_array_index(
     };
 
     let idx_rvalue = unpack!(block = ai.index.to_mir(builder, block));
-    let (mut block3, idx_op) = builder.as_operand(block, idx_rvalue, &ai.index.get_type(), span.clone());
+    let (block3, idx_op) =
+        builder.as_operand(block, idx_rvalue, &ai.index.get_type(), span.clone());
     let idx_local = match idx_op {
         Operand::Copy(ref p) | Operand::Ref(ref p) => p.local,
         Operand::Const(_) => {
-            let tmp = hades_tokens::Ident::new(format!("_tmp{}", builder.local_count()), span.clone());
+            let tmp =
+                hades_tokens::Ident::new(format!("_tmp{}", builder.local_count()), span.clone());
             let local = builder.build_local(tmp, ai.index.get_type());
             let dest = Place::local(local);
             builder.push_stmt(block3, Statement::assign(dest, Rvalue::Use(idx_op), span));

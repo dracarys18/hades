@@ -26,10 +26,10 @@ impl Lint for ArrayBoundsLint {
 
             for stmt in &block.stmts {
                 if let StatementKind::Assign(place, rvalue) = &stmt.kind {
-                    if place.projection.is_empty() {
-                        if let Rvalue::Use(Operand::Const(MirConst::Int(n))) = rvalue.as_ref() {
-                            const_map.insert(place.local, *n);
-                        }
+                    if place.projection.is_empty()
+                        && let Rvalue::Use(Operand::Const(MirConst::Int(n))) = rvalue.as_ref()
+                    {
+                        const_map.insert(place.local, *n);
                     }
 
                     check_projections(
@@ -80,18 +80,18 @@ fn check_projections(
             let len = array_len(locals, base_local);
             match const_map.get(idx_local) {
                 Some(&idx_val) => {
-                    if let Some(len) = len {
-                        if idx_val < 0 || idx_val as usize >= len {
-                            diags.push(LintDiagnostic::error(
-                                lint_name,
-                                Error::new_with_span(
-                                    format!(
-                                        "index out of bounds: index is {idx_val}, but length is {len}"
-                                    ),
-                                    span.clone(),
+                    if let Some(len) = len
+                        && (idx_val < 0 || idx_val as usize >= len)
+                    {
+                        diags.push(LintDiagnostic::error(
+                            lint_name,
+                            Error::new_with_span(
+                                format!(
+                                    "index out of bounds: index is {idx_val}, but length is {len}"
                                 ),
-                            ));
-                        }
+                                span.clone(),
+                            ),
+                        ));
                     }
                 }
                 None => {

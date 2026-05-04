@@ -4,7 +4,6 @@ use hades_ast::{
 };
 
 use crate::mir::builder::MirBuilder;
-use crate::mir::expr::emit_temp;
 use crate::mir::place::Place;
 use crate::mir::stmt::Statement;
 use crate::mir::terminator::{RETURN_LOCAL, SwitchTargets, Terminator, TerminatorKind};
@@ -68,13 +67,8 @@ impl ToMir for TypedIf {
         let span = self.span.clone();
 
         let cond_rvalue = unpack!(block = self.cond.expr.to_mir(builder, block));
-        let (block2, cond_op) = emit_temp(
-            builder,
-            block,
-            cond_rvalue,
-            &self.cond.expr.get_type(),
-            span.clone(),
-        );
+        let (block2, cond_op) =
+            builder.as_operand(block, cond_rvalue, &self.cond.expr.get_type(), span.clone());
         block = block2;
 
         let then_block = builder.start_block();
@@ -138,13 +132,9 @@ impl ToMir for TypedWhile {
 
         builder.switch_to(header_block);
         let cond_rvalue = unpack!(block = self.cond.to_mir(builder, header_block));
-        let (block2, cond_op) = emit_temp(
-            builder,
-            block,
-            cond_rvalue,
-            &self.cond.get_type(),
-            span.clone(),
-        );
+        let (block2, cond_op) =
+            builder.as_operand(block, cond_rvalue, &self.cond.get_type(), span.clone());
+
         builder.switch_to(block2);
         builder.terminate(Terminator::new(
             TerminatorKind::SwitchInt {
@@ -193,7 +183,7 @@ impl ToMir for TypedFor {
             block = hades_ast::TypedExpr::Binary(self.cond.clone()).to_mir(builder, header_block)
         );
         let cond_ty = hades_ast::TypedExpr::Binary(self.cond.clone()).get_type();
-        let (block2, cond_op) = emit_temp(builder, block, cond_rvalue, &cond_ty, span.clone());
+        let (block2, cond_op) = builder.as_operand(block, cond_rvalue, &cond_ty, span.clone());
         builder.switch_to(block2);
         builder.terminate(Terminator::new(
             TerminatorKind::SwitchInt {

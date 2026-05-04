@@ -28,6 +28,12 @@ pub struct EmitLlvmArgs {
 }
 
 #[derive(Debug, Args)]
+pub struct EmitMirArgs {
+    #[arg(required = true)]
+    pub source: PathBuf,
+}
+
+#[derive(Debug, Args)]
 pub struct PrintAstArgs {
     #[arg(required = true)]
     pub source: PathBuf,

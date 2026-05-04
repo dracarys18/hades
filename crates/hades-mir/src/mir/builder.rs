@@ -5,6 +5,9 @@ use hades_tokens::Ident;
 use crate::BasicBlock;
 use crate::mir::guard::{Guard, LoopContext};
 use crate::mir::local::Local;
+use crate::mir::operand::Operand;
+use crate::mir::place::Place;
+use crate::mir::rvalue::Rvalue;
 use crate::mir::stmt::Statement;
 use crate::mir::terminator::Terminator;
 
@@ -116,5 +119,23 @@ impl MirBuilder {
 
     pub fn drain_scratch_block(&mut self, id: BasicBlock) -> Vec<Statement> {
         self.guard_mut().drain_scratch_block(id)
+    }
+
+    pub fn as_operand(
+        &mut self,
+        block: BasicBlock,
+        rvalue: Rvalue,
+        typ: &Types,
+        span: Span,
+    ) -> (BasicBlock, Operand) {
+        if let Rvalue::Use(op) = rvalue {
+            return (block, op);
+        }
+        let tmp_name =
+            hades_tokens::Ident::new(format!("_tmp{}", self.local_count()), span.clone());
+        let idx = self.build_local(tmp_name, typ.clone());
+        let dest = Place::local(idx);
+        self.push_stmt(block, Statement::assign(dest.clone(), rvalue, span));
+        (block, Operand::Copy(dest))
     }
 }

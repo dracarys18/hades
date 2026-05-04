@@ -110,4 +110,13 @@ impl Analyzer<Prepared> {
 
         Ok(all_diags)
     }
+
+    pub fn emit_mir(&self) -> Result<(), String> {
+        for typed_module in &self.modules {
+            let mir = hades_mir::lower(typed_module.clone());
+            println!("; === module: {} ===", typed_module.path);
+            println!("{}", mir);
+        }
+        Ok(())
+    }
 }

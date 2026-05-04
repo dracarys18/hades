@@ -65,5 +65,14 @@ fn main() {
             compiler.prepare();
             compiler.print_ast(&source, args.source.to_str().unwrap());
         }
+
+        cmd::Commands::EmitMir(args) => {
+            let compiler = Compiler::new();
+            compiler.prepare();
+
+            if let Err(e) = compiler.emit_mir(&args.source) {
+                eprintln!("Failed to emit MIR: {e}");
+            }
+        }
     }
 }

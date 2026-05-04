@@ -178,16 +178,16 @@ fn check_terminator_deref(
 ) {
     if let TerminatorKind::Call { args, .. } = &term.kind {
         for op in args {
-            if let Operand::Copy(p) | Operand::Ref(p) = op {
-                if let Some(NullState::DefinitelyNull) = state.get(&p.local) {
-                    diags.push(LintDiagnostic::error(
-                        lint_name,
-                        Error::new_with_span(
-                            "null pointer passed to function call".to_string(),
-                            term.span.clone(),
-                        ),
-                    ));
-                }
+            if let Operand::Copy(p) | Operand::Ref(p) = op
+                && let Some(NullState::DefinitelyNull) = state.get(&p.local)
+            {
+                diags.push(LintDiagnostic::error(
+                    lint_name,
+                    Error::new_with_span(
+                        "null pointer passed to function call".to_string(),
+                        term.span.clone(),
+                    ),
+                ));
             }
         }
     }

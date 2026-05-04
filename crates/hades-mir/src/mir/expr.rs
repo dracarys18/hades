@@ -1,6 +1,6 @@
 use hades_ast::{
     TypedArrayIndex, TypedArrayLiteral, TypedAssignExpr, TypedAssignTarget, TypedBinaryExpr,
-    TypedExpr, TypedFieldAccess, TypedValue, Types,
+    TypedExpr, TypedFieldAccess, TypedValue,
 };
 use hades_error::Span;
 use hades_tokens::Op;
@@ -38,12 +38,12 @@ impl ToMir for TypedExpr {
             }) => {
                 let lhs_rvalue = unpack!(block = left.to_mir(builder, block));
                 let (block2, lhs) =
-                    emit_temp(builder, block, lhs_rvalue, &left.get_type(), span.clone());
+                    builder.as_operand(block, lhs_rvalue, &left.get_type(), span.clone());
                 block = block2;
 
                 let rhs_rvalue = unpack!(block = right.to_mir(builder, block));
                 let (block3, rhs) =
-                    emit_temp(builder, block, rhs_rvalue, &right.get_type(), span.clone());
+                    builder.as_operand(block, rhs_rvalue, &right.get_type(), span.clone());
                 block = block3;
 
                 block.and(Rvalue::BinaryOp(op.clone(), lhs, rhs))
@@ -53,7 +53,7 @@ impl ToMir for TypedExpr {
                 let rvalue = unpack!(block = expr.to_mir(builder, block));
                 if *op == Op::Ref {
                     let (block2, operand) =
-                        emit_temp(builder, block, rvalue, &expr.get_type(), span.clone());
+                        builder.as_operand(block, rvalue, &expr.get_type(), span.clone());
                     let place = match operand {
                         Operand::Copy(ref p) => p.clone(),
                         Operand::Ref(ref p) => p.clone(),
@@ -77,14 +77,14 @@ impl ToMir for TypedExpr {
                     block2.and(Rvalue::Use(Operand::Ref(place)))
                 } else {
                     let (block2, operand) =
-                        emit_temp(builder, block, rvalue, &expr.get_type(), span);
+                        builder.as_operand(block, rvalue, &expr.get_type(), span);
                     block2.and(Rvalue::UnaryOp(op.clone(), operand))
                 }
             }
 
             TypedExpr::As(a) => {
                 let rvalue = unpack!(block = a.expr.to_mir(builder, block));
-                let (block2, operand) = emit_temp(builder, block, rvalue, &a.expr.get_type(), span);
+                let (block2, operand) = builder.as_operand(block, rvalue, &a.expr.get_type(), span);
                 block2.and(Rvalue::Cast(operand, a.target_type.clone()))
             }
 
@@ -95,7 +95,7 @@ impl ToMir for TypedExpr {
                 let rvalue = match op {
                     Op::PlusEqual => {
                         let (block2, val_op) =
-                            emit_temp(builder, block, val_rvalue, &value.get_type(), span.clone());
+                            builder.as_operand(block, val_rvalue, &value.get_type(), span.clone());
                         block = block2;
                         let (block3, target_place) = lower_assign_target(builder, block, target);
                         block = block3;
@@ -114,7 +114,7 @@ impl ToMir for TypedExpr {
                     }
                     Op::MinusEqual => {
                         let (block2, val_op) =
-                            emit_temp(builder, block, val_rvalue, &value.get_type(), span.clone());
+                            builder.as_operand(block, val_rvalue, &value.get_type(), span.clone());
                         block = block2;
                         let (block3, target_place) = lower_assign_target(builder, block, target);
                         block = block3;
@@ -152,7 +152,7 @@ impl ToMir for TypedExpr {
                 for (_, field_expr) in fields {
                     let rvalue = unpack!(block = field_expr.to_mir(builder, block));
                     let (block2, op) =
-                        emit_temp(builder, block, rvalue, &field_expr.get_type(), span.clone());
+                        builder.as_operand(block, rvalue, &field_expr.get_type(), span.clone());
                     block = block2;
                     operands.push(op);
                 }
@@ -171,7 +171,7 @@ impl ToMir for TypedExpr {
                 let call_target = if let Some(recv) = receiver {
                     let recv_rvalue = unpack!(block = recv.to_mir(builder, block));
                     let (block2, recv_op) =
-                        emit_temp(builder, block, recv_rvalue, &recv.get_type(), span.clone());
+                        builder.as_operand(block, recv_rvalue, &recv.get_type(), span.clone());
                     block = block2;
                     CallTarget::Method {
                         receiver: recv_op,
@@ -185,7 +185,7 @@ impl ToMir for TypedExpr {
                 for arg in args {
                     let rvalue = unpack!(block = arg.to_mir(builder, block));
                     let (block2, op) =
-                        emit_temp(builder, block, rvalue, &arg.get_type(), span.clone());
+                        builder.as_operand(block, rvalue, &arg.get_type(), span.clone());
                     block = block2;
                     operands.push(op);
                 }
@@ -223,7 +223,7 @@ fn lower_field_access(
 ) -> (BasicBlock, Place) {
     let mut block = block;
     let base_rvalue = unpack!(block = fa.expr.to_mir(builder, block));
-    let (block2, base_op) = emit_temp(builder, block, base_rvalue, &fa.struct_type, span.clone());
+    let (block2, base_op) = builder.as_operand(block, base_rvalue, &fa.struct_type, span.clone());
     let base_idx = match base_op {
         Operand::Copy(ref p) | Operand::Ref(ref p) => p.local,
         Operand::Const(_) => unreachable!("struct base cannot be a constant"),
@@ -241,13 +241,8 @@ fn lower_array_index(
     let mut block = block;
 
     let base_rvalue = unpack!(block = ai.expr.to_mir(builder, block));
-    let (block2, base_op) = emit_temp(
-        builder,
-        block,
-        base_rvalue,
-        &ai.expr.get_type(),
-        span.clone(),
-    );
+    let (block2, base_op) =
+        builder.as_operand(block, base_rvalue, &ai.expr.get_type(), span.clone());
     block = block2;
     let base_idx = match base_op {
         Operand::Copy(ref p) | Operand::Ref(ref p) => p.local,
@@ -255,7 +250,7 @@ fn lower_array_index(
     };
 
     let idx_rvalue = unpack!(block = ai.index.to_mir(builder, block));
-    let (block3, idx_op) = emit_temp(builder, block, idx_rvalue, &ai.index.get_type(), span);
+    let (block3, idx_op) = builder.as_operand(block, idx_rvalue, &ai.index.get_type(), span);
     let idx_local = match idx_op {
         Operand::Copy(ref p) | Operand::Ref(ref p) => p.local,
         Operand::Const(_) => unreachable!("array index cannot be a constant"),
@@ -281,7 +276,7 @@ fn lower_assign_target(
         TypedAssignTarget::Deref(expr) => {
             let mut block = block;
             let rvalue = unpack!(block = expr.to_mir(builder, block));
-            let (block2, op) = emit_temp(builder, block, rvalue, &expr.get_type(), span);
+            let (block2, op) = builder.as_operand(block, rvalue, &expr.get_type(), span);
             let base_idx = match op {
                 Operand::Copy(ref p) | Operand::Ref(ref p) => p.local,
                 Operand::Const(_) => unreachable!("deref target cannot be a constant"),
@@ -312,7 +307,7 @@ fn lower_array_literal(
     let elem_ty = arr.elem_typ.clone();
     if let Some(fill) = &arr.fill {
         let fill_rvalue = unpack!(block = fill.to_mir(builder, block));
-        let (b, fill_op) = emit_temp(builder, block, fill_rvalue, &elem_ty, span.clone());
+        let (b, fill_op) = builder.as_operand(block, fill_rvalue, &elem_ty, span.clone());
         block = b;
         let operands = (0..arr.size).map(|_| fill_op.clone()).collect();
         block.and(Rvalue::Aggregate(AggregateKind::Array(elem_ty), operands))
@@ -320,24 +315,10 @@ fn lower_array_literal(
         let mut operands = Vec::with_capacity(arr.elements.len());
         for elem in &arr.elements {
             let rvalue = unpack!(block = elem.to_mir(builder, block));
-            let (b, op) = emit_temp(builder, block, rvalue, &elem_ty, span.clone());
+            let (b, op) = builder.as_operand(block, rvalue, &elem_ty, span.clone());
             block = b;
             operands.push(op);
         }
         block.and(Rvalue::Aggregate(AggregateKind::Array(elem_ty), operands))
     }
-}
-
-pub(crate) fn emit_temp(
-    builder: &mut MirBuilder,
-    block: BasicBlock,
-    rvalue: Rvalue,
-    typ: &Types,
-    span: Span,
-) -> (BasicBlock, Operand) {
-    let tmp_name = hades_tokens::Ident::new(format!("_tmp{}", builder.local_count()), span.clone());
-    let idx = builder.build_local(tmp_name, typ.clone());
-    let dest = Place::local(idx);
-    builder.push_stmt(block, Statement::assign(dest.clone(), rvalue, span));
-    (block, Operand::Copy(dest))
 }

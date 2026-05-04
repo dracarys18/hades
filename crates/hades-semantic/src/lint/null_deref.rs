@@ -151,7 +151,7 @@ fn check_deref_in_rvalue(
             NullState::DefinitelyNull => {
                 diags.push(LintDiagnostic::error(
                     lint_name,
-                    Error::new_with_span("".to_string(), span.clone())
+                    Error::new_with_span("Variable is always null consider assigning a value".to_string(), span.clone())
                         .with_help("consider adding a null check before dereferencing".to_string()),
                 ));
             }

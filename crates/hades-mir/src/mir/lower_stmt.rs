@@ -12,10 +12,10 @@ use crate::{BasicBlock, BlockAnd, BlockAndExt, ToMir, unpack};
 impl ToMir for TypedBlock {
     type Output = ();
 
-    fn to_mir(&self, builder: &mut MirBuilder, mut block: BasicBlock) -> BlockAnd<()> {
+    fn to_mir(&self, builder: &mut MirBuilder<'_>, mut block: BasicBlock) -> BlockAnd<()> {
         for stmt in &self.stmts {
             unpack!(block = stmt.to_mir(builder, block));
-            if builder.is_terminated() {
+            if builder.is_block_terminated(block) {
                 break;
             }
         }
@@ -26,7 +26,7 @@ impl ToMir for TypedBlock {
 impl ToMir for TypedLet {
     type Output = ();
 
-    fn to_mir(&self, builder: &mut MirBuilder, mut block: BasicBlock) -> BlockAnd<()> {
+    fn to_mir(&self, builder: &mut MirBuilder<'_>, mut block: BasicBlock) -> BlockAnd<()> {
         let span = self.span.clone();
         let rvalue = unpack!(block = self.value.expr.to_mir(builder, block));
         let local = builder.build_local(self.name.clone(), self.typ.clone());
@@ -38,7 +38,7 @@ impl ToMir for TypedLet {
 impl ToMir for TypedReturn {
     type Output = ();
 
-    fn to_mir(&self, builder: &mut MirBuilder, mut block: BasicBlock) -> BlockAnd<()> {
+    fn to_mir(&self, builder: &mut MirBuilder<'_>, mut block: BasicBlock) -> BlockAnd<()> {
         let span = self.span.clone();
 
         let deferred = builder.deferred_stmts();
@@ -63,7 +63,7 @@ impl ToMir for TypedReturn {
 impl ToMir for TypedIf {
     type Output = ();
 
-    fn to_mir(&self, builder: &mut MirBuilder, mut block: BasicBlock) -> BlockAnd<()> {
+    fn to_mir(&self, builder: &mut MirBuilder<'_>, mut block: BasicBlock) -> BlockAnd<()> {
         let span = self.span.clone();
 
         let cond_rvalue = unpack!(block = self.cond.expr.to_mir(builder, block));
@@ -117,7 +117,7 @@ impl ToMir for TypedIf {
 impl ToMir for TypedWhile {
     type Output = ();
 
-    fn to_mir(&self, builder: &mut MirBuilder, mut block: BasicBlock) -> BlockAnd<()> {
+    fn to_mir(&self, builder: &mut MirBuilder<'_>, mut block: BasicBlock) -> BlockAnd<()> {
         let span = self.span.clone();
 
         let header_block = builder.start_block();
@@ -162,7 +162,7 @@ impl ToMir for TypedWhile {
 impl ToMir for TypedFor {
     type Output = ();
 
-    fn to_mir(&self, builder: &mut MirBuilder, mut block: BasicBlock) -> BlockAnd<()> {
+    fn to_mir(&self, builder: &mut MirBuilder<'_>, mut block: BasicBlock) -> BlockAnd<()> {
         let span = self.span.clone();
 
         unpack!(block = self.init.to_mir(builder, block));
@@ -222,7 +222,7 @@ impl ToMir for TypedFor {
 impl ToMir for TypedBreak {
     type Output = ();
 
-    fn to_mir(&self, builder: &mut MirBuilder, block: BasicBlock) -> BlockAnd<()> {
+    fn to_mir(&self, builder: &mut MirBuilder<'_>, block: BasicBlock) -> BlockAnd<()> {
         let loop_ctx = builder.current_loop().expect("break outside loop").clone();
         builder.switch_to(block);
         builder.terminate(Terminator::new(
@@ -236,7 +236,7 @@ impl ToMir for TypedBreak {
 impl ToMir for TypedContinue {
     type Output = ();
 
-    fn to_mir(&self, builder: &mut MirBuilder, block: BasicBlock) -> BlockAnd<()> {
+    fn to_mir(&self, builder: &mut MirBuilder<'_>, block: BasicBlock) -> BlockAnd<()> {
         let loop_ctx = builder
             .current_loop()
             .expect("continue outside loop")
@@ -253,7 +253,7 @@ impl ToMir for TypedContinue {
 impl ToMir for TypedDefer {
     type Output = ();
 
-    fn to_mir(&self, builder: &mut MirBuilder, block: BasicBlock) -> BlockAnd<()> {
+    fn to_mir(&self, builder: &mut MirBuilder<'_>, block: BasicBlock) -> BlockAnd<()> {
         let span = self.span.clone();
         let scratch = builder.start_block();
         let saved = builder.current_block();

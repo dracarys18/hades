@@ -16,4 +16,5 @@ pub enum Rvalue {
     UnaryOp(Op, Operand),
     Cast(Operand, Types),
     Aggregate(AggregateKind, Vec<Operand>),
+    Repeat(Operand, usize),
 }

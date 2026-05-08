@@ -1,4 +1,4 @@
-use hades_ast::Types;
+use hades_ast::{CompilerContext, Types};
 use hades_error::Span;
 use hades_tokens::Ident;
 
@@ -11,21 +11,21 @@ use crate::mir::rvalue::Rvalue;
 use crate::mir::stmt::Statement;
 use crate::mir::terminator::Terminator;
 
-pub struct MirBuilder {
+pub struct MirBuilder<'ctx> {
     pub current_guard: Option<Guard>,
+    symbols: &'ctx CompilerContext,
 }
 
-impl Default for MirBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl MirBuilder {
-    pub fn new() -> Self {
+impl<'ctx> MirBuilder<'ctx> {
+    pub fn new(symbols: &'ctx CompilerContext) -> Self {
         Self {
             current_guard: None,
+            symbols,
         }
+    }
+
+    pub fn symbols(&self) -> &CompilerContext {
+        self.symbols
     }
 
     pub fn enter_guard(&mut self) {

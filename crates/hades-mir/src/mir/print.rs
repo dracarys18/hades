@@ -112,6 +112,7 @@ impl fmt::Display for Rvalue {
                     write!(f, "]")
                 }
             },
+            Rvalue::Repeat(op, size) => write!(f, "[{op}; {size}]"),
         }
     }
 }

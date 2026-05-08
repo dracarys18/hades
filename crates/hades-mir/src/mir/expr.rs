@@ -16,7 +16,7 @@ use crate::{BasicBlock, BlockAnd, BlockAndExt, ToMir, unpack};
 impl ToMir for TypedExpr {
     type Output = Rvalue;
 
-    fn to_mir(&self, builder: &mut MirBuilder, mut block: BasicBlock) -> BlockAnd<Rvalue> {
+    fn to_mir(&self, builder: &mut MirBuilder<'_>, mut block: BasicBlock) -> BlockAnd<Rvalue> {
         let span = Span::default();
         match self {
             TypedExpr::Value(TypedValue::Array(arr)) => {
@@ -216,7 +216,7 @@ impl ToMir for TypedExpr {
 }
 
 fn lower_field_access(
-    builder: &mut MirBuilder,
+    builder: &mut MirBuilder<'_>,
     block: BasicBlock,
     fa: &TypedFieldAccess,
     span: Span,
@@ -228,7 +228,9 @@ fn lower_field_access(
         Operand::Copy(ref p) | Operand::Ref(ref p) => p.local,
         Operand::Const(_) => unreachable!("struct base cannot be a constant"),
     };
-    let place = Place::with_field(base_idx, fa.field.clone(), 0, fa.field_type.clone());
+    let struct_name = fa.struct_type.unwrap_struct_name();
+    let field_index = builder.symbols().structs().field_index(struct_name, &fa.field);
+    let place = Place::with_field(base_idx, fa.field.clone(), field_index, fa.field_type.clone());
     (block2, place)
 }
 
@@ -308,7 +310,7 @@ fn lower_value(v: &TypedValue) -> Rvalue {
 
 fn lower_array_literal(
     arr: &TypedArrayLiteral,
-    builder: &mut MirBuilder,
+    builder: &mut MirBuilder<'_>,
     mut block: BasicBlock,
     span: Span,
 ) -> BlockAnd<Rvalue> {
@@ -316,9 +318,7 @@ fn lower_array_literal(
     if let Some(fill) = &arr.fill {
         let fill_rvalue = unpack!(block = fill.to_mir(builder, block));
         let (b, fill_op) = builder.as_operand(block, fill_rvalue, &elem_ty, span.clone());
-        block = b;
-        let operands = (0..arr.size).map(|_| fill_op.clone()).collect();
-        block.and(Rvalue::Aggregate(AggregateKind::Array(elem_ty), operands))
+        b.and(Rvalue::Repeat(fill_op, arr.size))
     } else {
         let mut operands = Vec::with_capacity(arr.elements.len());
         for elem in &arr.elements {

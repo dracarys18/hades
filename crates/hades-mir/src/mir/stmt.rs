@@ -37,7 +37,7 @@ impl Statement {
 impl ToMir for TypedStmt {
     type Output = ();
 
-    fn to_mir(&self, builder: &mut MirBuilder, block: BasicBlock) -> BlockAnd<()> {
+    fn to_mir(&self, builder: &mut MirBuilder<'_>, block: BasicBlock) -> BlockAnd<()> {
         match self {
             TypedStmt::Let(l) => l.to_mir(builder, block),
             TypedStmt::Return(r) => r.to_mir(builder, block),

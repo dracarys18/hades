@@ -22,7 +22,7 @@ impl ToMir for TypedFuncDef {
 
     fn to_mir(
         &self,
-        builder: &mut MirBuilder,
+        builder: &mut MirBuilder<'_>,
         _block: BasicBlock,
     ) -> BlockAnd<Option<MirFunction>> {
         match self.signature.kind {

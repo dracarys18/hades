@@ -124,6 +124,7 @@ fn check_rvalue_projections(
         Rvalue::UnaryOp(_, a) => vec![a],
         Rvalue::Cast(op, _) => vec![op],
         Rvalue::Aggregate(_, ops) => ops.iter().collect(),
+        Rvalue::Repeat(op, n) => std::iter::repeat_n(op, *n).collect(),
     };
 
     for op in operands {

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use hades_ast::Types;
-use hades_error::{Error, ErrorSeverity, Span};
+use hades_error::{Error, Span};
 use hades_mir::mir::func::MirFunction;
 use hades_mir::mir::local::Local;
 use hades_mir::mir::operand::{MirConst, Operand};
@@ -78,31 +78,17 @@ fn check_projections(
     for elem in projections {
         if let PlaceElem::Index(idx_local) = elem {
             let len = array_len(locals, base_local);
-            match const_map.get(idx_local) {
-                Some(&idx_val) => {
-                    if let Some(len) = len
-                        && (idx_val < 0 || idx_val as usize >= len)
-                    {
-                        diags.push(LintDiagnostic::error(
-                            lint_name,
-                            Error::new_with_span(
-                                format!(
-                                    "index out of bounds: index is {idx_val}, but length is {len}"
-                                ),
-                                span.clone(),
-                            ),
-                        ));
-                    }
-                }
-                None => {
+            if let Some(&idx_val) = const_map.get(idx_local)
+                && let Some(len) = len
+                && (idx_val < 0 || idx_val as usize >= len)
+            {
+                {
                     diags.push(LintDiagnostic::error(
                         lint_name,
                         Error::new_with_span(
-                            "array index is not a compile-time constant; bounds cannot be verified"
-                                .to_string(),
+                            format!("index out of bounds: index is {idx_val}, but length is {len}"),
                             span.clone(),
-                        )
-                        .with_severity(ErrorSeverity::Warning),
+                        ),
                     ));
                 }
             }

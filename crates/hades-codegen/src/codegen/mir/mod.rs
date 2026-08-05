@@ -7,9 +7,9 @@ mod terminator;
 
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult};
-use crate::codegen::traits::Visit;
 use hades_ast::{FuncKind, TypedFieldKind, TypedFuncDef, TypedStmt, TypedStructDef};
 use hades_mir::mir::module::MirModule;
+use hades_mir::visit::Visit;
 use hades_semantic::{ModuleSignatures, TypedModule};
 use inkwell::intrinsics::Intrinsic;
 use inkwell::module::Linkage;
@@ -19,10 +19,10 @@ use inkwell::{
     targets::{CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine},
 };
 
-impl Visit for MirModule {
-    type Output<'ctx> = ();
+impl<'ctx> Visit<LLVMContext<'ctx>> for MirModule {
+    type Output = ();
 
-    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
+    fn visit(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output> {
         for func in &self.functions {
             func.visit(context)?;
         }

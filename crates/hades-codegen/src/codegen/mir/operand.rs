@@ -1,17 +1,17 @@
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::CodegenResult;
-use crate::codegen::traits::Visit;
 use hades_ast::Types;
 use hades_mir::mir::operand::{MirConst, Operand};
+use hades_mir::visit::Visit;
 use inkwell::AddressSpace;
 use inkwell::values::BasicValueEnum;
 
 use super::place::place_type;
 
-impl Visit for Operand {
-    type Output<'ctx> = (BasicValueEnum<'ctx>, Types);
+impl<'ctx> Visit<LLVMContext<'ctx>> for Operand {
+    type Output = (BasicValueEnum<'ctx>, Types);
 
-    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
+    fn visit(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output> {
         match self {
             Operand::Copy(place) => {
                 let (ptr, ty) = place.visit(context)?;

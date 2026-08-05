@@ -1,14 +1,14 @@
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult};
-use crate::codegen::traits::Visit;
 use hades_ast::Types;
 use hades_mir::mir::place::{Place, PlaceElem};
+use hades_mir::visit::Visit;
 use inkwell::values::PointerValue;
 
-impl Visit for Place {
-    type Output<'ctx> = (PointerValue<'ctx>, Types);
+impl<'ctx> Visit<LLVMContext<'ctx>> for Place {
+    type Output = (PointerValue<'ctx>, Types);
 
-    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
+    fn visit(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output> {
         let mut ptr = context.mir_local_ptr(self.local);
         let mut ty = context.mir_local_type(self.local);
 

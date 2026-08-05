@@ -1,15 +1,15 @@
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::CodegenResult;
-use crate::codegen::traits::Visit;
 use hades_mir::mir::operand::Operand;
 use hades_mir::mir::place::Place;
 use hades_mir::mir::rvalue::Rvalue;
 use hades_mir::mir::stmt::{Statement, StatementKind};
+use hades_mir::visit::Visit;
 
-impl Visit for Statement {
-    type Output<'ctx> = ();
+impl<'ctx> Visit<LLVMContext<'ctx>> for Statement {
+    type Output = ();
 
-    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
+    fn visit(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output> {
         match &self.kind {
             StatementKind::Nop => Ok(()),
             StatementKind::Assign(place, rvalue) => match rvalue.as_ref() {

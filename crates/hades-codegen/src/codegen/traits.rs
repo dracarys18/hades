@@ -1,7 +1,7 @@
 use crate::codegen::context::LLVMContext;
-use crate::codegen::error::CodegenResult;
+use crate::codegen::error::CodegenError;
+use hades_mir::visit::Backend;
 
-pub trait Visit {
-    type Output<'ctx>;
-    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>>;
+impl Backend for LLVMContext<'_> {
+    type Error = CodegenError;
 }

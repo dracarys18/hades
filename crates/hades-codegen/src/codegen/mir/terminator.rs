@@ -1,19 +1,19 @@
 use crate::BuiltinRegistar;
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult, CodegenValue};
-use crate::codegen::traits::Visit;
 use hades_ast::Types;
 use hades_mir::mir::operand::Operand;
 use hades_mir::mir::place::Place;
 use hades_mir::mir::terminator::{CallTarget, SwitchTargets, Terminator, TerminatorKind};
+use hades_mir::visit::Visit;
 use inkwell::values::{BasicMetadataValueEnum, PointerValue};
 
 use super::operand::operand_type;
 
-impl Visit for Terminator {
-    type Output<'ctx> = ();
+impl<'ctx> Visit<LLVMContext<'ctx>> for Terminator {
+    type Output = ();
 
-    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
+    fn visit(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output> {
         match &self.kind {
             TerminatorKind::Goto(target) => {
                 let block = context.mir_block(target.0);

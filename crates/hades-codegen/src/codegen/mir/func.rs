@@ -1,15 +1,15 @@
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::{CodegenError, CodegenResult};
-use crate::codegen::traits::Visit;
 use hades_ast::{ReceiverKind, Types};
 use hades_mir::mir::func::MirFunction;
+use hades_mir::visit::Visit;
 use inkwell::basic_block::BasicBlock as LlvmBlock;
 use inkwell::values::PointerValue;
 
-impl Visit for MirFunction {
-    type Output<'ctx> = ();
+impl<'ctx> Visit<LLVMContext<'ctx>> for MirFunction {
+    type Output = ();
 
-    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
+    fn visit(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output> {
         let function = context.module().get_function(self.name.inner()).ok_or(
             CodegenError::FunctionNotFound {
                 name: self.name.inner().to_string(),

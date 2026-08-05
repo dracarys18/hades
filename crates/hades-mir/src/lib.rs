@@ -1,4 +1,5 @@
 pub mod mir;
+pub mod visit;
 
 use hades_ast::{TypedFieldKind, TypedStmt};
 use hades_module::TypedModule;

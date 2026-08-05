@@ -1,15 +1,15 @@
 use crate::codegen::context::LLVMContext;
 use crate::codegen::error::CodegenResult;
-use crate::codegen::traits::Visit;
 use hades_ast::Types;
 use hades_mir::mir::rvalue::Rvalue;
+use hades_mir::visit::Visit;
 use hades_tokens::Op;
 use inkwell::values::BasicValueEnum;
 
-impl Visit for Rvalue {
-    type Output<'ctx> = (BasicValueEnum<'ctx>, Types);
+impl<'ctx> Visit<LLVMContext<'ctx>> for Rvalue {
+    type Output = (BasicValueEnum<'ctx>, Types);
 
-    fn visit<'ctx>(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output<'ctx>> {
+    fn visit(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output> {
         match self {
             Rvalue::Use(operand) => operand.visit(context),
             Rvalue::BinaryOp(op, left, right) => {

@@ -1,0 +1,8 @@
+import std::io
+
+fn main(): int {
+    let a = [7; 100000];
+    a[50000] = 42;
+    io::printf("%d %d %d %d\n", a[0], a[99999], a[50000], a[12345]);
+    return 0;
+}

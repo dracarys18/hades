@@ -197,7 +197,8 @@ fn parse_primary_with_flags(ctx: &mut ParserCtx, allow_struct_literals: bool) ->
             }
             TokenKind::LeftBracket => ArrayLiteral::parse(ctx),
             TokenKind::Self_ => {
-                let self_ident = hades_tokens::Ident::new("self".to_string(), tok.span().clone());
+                let self_ident =
+                    hades_tokens::Ident::new(hades_tokens::SELF.to_string(), tok.span().clone());
                 parse_postfix_chain(ctx, Expr::Ident(self_ident), allow_struct_literals)
             }
             _ => {

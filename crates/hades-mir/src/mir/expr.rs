@@ -1,13 +1,13 @@
 use hades_ast::{
     TypedArrayIndex, TypedArrayLiteral, TypedAssignExpr, TypedAssignTarget, TypedBinaryExpr,
-    TypedExpr, TypedFieldAccess, TypedValue,
+    TypedExpr, TypedFieldAccess, TypedValue, Types,
 };
 use hades_error::Span;
 use hades_tokens::Op;
 
 use crate::mir::builder::MirBuilder;
 use crate::mir::operand::{MirConst, Operand};
-use crate::mir::place::Place;
+use crate::mir::place::{Place, PlaceElem};
 use crate::mir::rvalue::{AggregateKind, Rvalue};
 use crate::mir::stmt::Statement;
 use crate::mir::terminator::{CallTarget, Terminator, TerminatorKind};
@@ -138,12 +138,12 @@ impl ToMir for TypedExpr {
             }
 
             TypedExpr::FieldAccess(fa) => {
-                let (block2, place) = lower_field_access(builder, block, fa, span);
+                let (block2, place) = lower_field_place(builder, block, fa);
                 block2.and(Rvalue::Use(Operand::Copy(place)))
             }
 
             TypedExpr::ArrayIndex(ai) => {
-                let (block2, place) = lower_array_index(builder, block, ai, span);
+                let (block2, place) = lower_index_place(builder, block, ai);
                 block2.and(Rvalue::Use(Operand::Copy(place)))
             }
 
@@ -215,83 +215,102 @@ impl ToMir for TypedExpr {
     }
 }
 
-fn lower_field_access(
+fn lower_place(
+    builder: &mut MirBuilder<'_>,
+    mut block: BasicBlock,
+    expr: &TypedExpr,
+) -> (BasicBlock, Place) {
+    match expr {
+        TypedExpr::Ident { ident, .. } => (block, Place::local(builder.lookup_local(ident))),
+        TypedExpr::Unary {
+            op: Op::Deref,
+            expr: inner,
+            ..
+        } => {
+            let (block2, mut place) = lower_place(builder, block, inner);
+            place.projection.push(PlaceElem::Deref);
+            (block2, place)
+        }
+        TypedExpr::FieldAccess(fa) => lower_field_place(builder, block, fa),
+        TypedExpr::ArrayIndex(ai) => lower_index_place(builder, block, ai),
+        _ => {
+            let span = Span::default();
+            let rvalue = unpack!(block = expr.to_mir(builder, block));
+            let (block2, op) = builder.as_operand(block, rvalue, &expr.get_type(), span.clone());
+            let local = operand_to_local(builder, block2, op, &expr.get_type(), span);
+            (block2, Place::local(local))
+        }
+    }
+}
+
+fn lower_field_place(
     builder: &mut MirBuilder<'_>,
     block: BasicBlock,
     fa: &TypedFieldAccess,
-    span: Span,
 ) -> (BasicBlock, Place) {
-    let mut block = block;
-    let base_rvalue = unpack!(block = fa.expr.to_mir(builder, block));
-    let (block2, base_op) = builder.as_operand(block, base_rvalue, &fa.struct_type, span.clone());
-    let base_idx = match base_op {
-        Operand::Copy(ref p) | Operand::Ref(ref p) => p.local,
-        Operand::Const(_) => unreachable!("struct base cannot be a constant"),
-    };
+    let (block2, mut place) = lower_place(builder, block, &fa.expr);
+    if matches!(fa.expr.get_type(), Types::Pointer(_)) {
+        place.projection.push(PlaceElem::Deref);
+    }
     let struct_name = fa.struct_type.unwrap_struct_name();
     let field_index = builder.symbols().structs().field_index(struct_name, &fa.field);
-    let place = Place::with_field(base_idx, fa.field.clone(), field_index, fa.field_type.clone());
+    place.projection.push(PlaceElem::Field {
+        name: fa.field.clone(),
+        index: field_index,
+        ty: fa.field_type.clone(),
+    });
     (block2, place)
 }
 
-fn lower_array_index(
-    builder: &mut MirBuilder,
-    block: BasicBlock,
+fn lower_index_place(
+    builder: &mut MirBuilder<'_>,
+    mut block: BasicBlock,
     ai: &TypedArrayIndex,
-    span: Span,
 ) -> (BasicBlock, Place) {
-    let mut block = block;
-
-    let base_rvalue = unpack!(block = ai.expr.to_mir(builder, block));
-    let (block2, base_op) =
-        builder.as_operand(block, base_rvalue, &ai.expr.get_type(), span.clone());
+    let span = Span::default();
+    let (block2, mut place) = lower_place(builder, block, &ai.expr);
     block = block2;
-    let base_idx = match base_op {
-        Operand::Copy(ref p) | Operand::Ref(ref p) => p.local,
-        Operand::Const(_) => unreachable!("array base cannot be a constant"),
-    };
-
+    if matches!(ai.expr.get_type(), Types::Pointer(_)) {
+        place.projection.push(PlaceElem::Deref);
+    }
     let idx_rvalue = unpack!(block = ai.index.to_mir(builder, block));
-    let (block3, idx_op) =
-        builder.as_operand(block, idx_rvalue, &ai.index.get_type(), span.clone());
-    let idx_local = match idx_op {
-        Operand::Copy(ref p) | Operand::Ref(ref p) => p.local,
-        Operand::Const(_) => {
-            let tmp =
-                hades_tokens::Ident::new(format!("_tmp{}", builder.local_count()), span.clone());
-            let local = builder.build_local(tmp, ai.index.get_type());
-            let dest = Place::local(local);
-            builder.push_stmt(block3, Statement::assign(dest, Rvalue::Use(idx_op), span));
-            local
-        }
-    };
-
-    let place = Place::with_index(base_idx, idx_local);
+    let (block3, idx_op) = builder.as_operand(block, idx_rvalue, &ai.index.get_type(), span.clone());
+    let idx_local = operand_to_local(builder, block3, idx_op, &ai.index.get_type(), span);
+    place.projection.push(PlaceElem::Index(idx_local));
     (block3, place)
 }
 
+fn operand_to_local(
+    builder: &mut MirBuilder<'_>,
+    block: BasicBlock,
+    op: Operand,
+    ty: &Types,
+    span: Span,
+) -> usize {
+    if let Operand::Copy(p) = &op
+        && p.projection.is_empty()
+    {
+        return p.local;
+    }
+    let tmp = hades_tokens::Ident::new(format!("_tmp{}", builder.local_count()), span.clone());
+    let idx = builder.build_local(tmp, ty.clone());
+    builder.push_stmt(block, Statement::assign(Place::local(idx), Rvalue::Use(op), span));
+    idx
+}
+
 fn lower_assign_target(
-    builder: &mut MirBuilder,
+    builder: &mut MirBuilder<'_>,
     block: BasicBlock,
     target: &TypedAssignTarget,
 ) -> (BasicBlock, Place) {
-    let span = Span::default();
     match target {
-        TypedAssignTarget::Ident(ident) => {
-            let idx = builder.lookup_local(ident);
-            (block, Place::local(idx))
-        }
-        TypedAssignTarget::FieldAccess(fa) => lower_field_access(builder, block, fa, span),
-        TypedAssignTarget::ArrayIndex(ai) => lower_array_index(builder, block, ai, span),
+        TypedAssignTarget::Ident(ident) => (block, Place::local(builder.lookup_local(ident))),
+        TypedAssignTarget::FieldAccess(fa) => lower_field_place(builder, block, fa),
+        TypedAssignTarget::ArrayIndex(ai) => lower_index_place(builder, block, ai),
         TypedAssignTarget::Deref(expr) => {
-            let mut block = block;
-            let rvalue = unpack!(block = expr.to_mir(builder, block));
-            let (block2, op) = builder.as_operand(block, rvalue, &expr.get_type(), span);
-            let base_idx = match op {
-                Operand::Copy(ref p) | Operand::Ref(ref p) => p.local,
-                Operand::Const(_) => unreachable!("deref target cannot be a constant"),
-            };
-            (block2, Place::with_deref(base_idx))
+            let (block2, mut place) = lower_place(builder, block, expr);
+            place.projection.push(PlaceElem::Deref);
+            (block2, place)
         }
     }
 }
@@ -314,7 +333,7 @@ fn lower_array_literal(
     mut block: BasicBlock,
     span: Span,
 ) -> BlockAnd<Rvalue> {
-    let elem_ty = arr.elem_typ.clone();
+    let elem_ty = arr.elem_typ.get_array_elem_type();
     if let Some(fill) = &arr.fill {
         let fill_rvalue = unpack!(block = fill.to_mir(builder, block));
         let (b, fill_op) = builder.as_operand(block, fill_rvalue, &elem_ty, span.clone());

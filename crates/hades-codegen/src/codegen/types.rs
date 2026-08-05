@@ -85,7 +85,7 @@ impl<'ctx> TypeConverter<'ctx> {
             // Self_ must be resolved to actual type before this pass
             Types::Self_ => {
                 return Err(CodegenError::TypeConversion {
-                    from: "self".to_string(),
+                    from: hades_tokens::SELF.to_string(),
                     to: "LLVM type".to_string(),
                 });
             }

@@ -1,6 +1,6 @@
 use ariadne::{Cache, Source};
 use hades_ast::ModulePath as AstModulePath;
-use hades_codegen::llvm::visit::program as codegen;
+use hades_codegen::mir as codegen;
 use hades_common as consts;
 use hades_error::ErrorSeverity;
 use hades_lexer as lexer;

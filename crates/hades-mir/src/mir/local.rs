@@ -1,6 +1,7 @@
 use hades_ast::Types;
 use hades_tokens::Ident;
 
+#[derive(Debug)]
 pub struct Local {
     pub name: Ident,
     pub typ: Types,

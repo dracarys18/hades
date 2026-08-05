@@ -2,7 +2,7 @@ use crate::codegen::error::{CodegenError, CodegenResult};
 use crate::codegen::symbols::{CodegenSymbols, LLVMVariable};
 use crate::codegen::types::TypeConverter;
 use hades_ast::Types;
-use hades_ast::{CompilerContext, FuncKind, FunctionSignature, TypedDefer};
+use hades_ast::{CompilerContext, FuncKind, FunctionSignature};
 use hades_semantic::ModuleSignatures;
 use hades_tokens::{Ident, Name};
 use inkwell::basic_block::BasicBlock;
@@ -11,11 +11,6 @@ use inkwell::context::Context;
 use inkwell::module::{Linkage, Module};
 use inkwell::types::{BasicType, BasicTypeEnum, FunctionType};
 use inkwell::values::{BasicValueEnum, FunctionValue, PointerValue};
-
-pub struct LoopContext<'ctx> {
-    pub continue_block: BasicBlock<'ctx>,
-    pub break_block: BasicBlock<'ctx>,
-}
 
 pub struct LLVMContext<'ctx> {
     context: &'ctx Context,
@@ -29,8 +24,8 @@ pub struct LLVMContext<'ctx> {
 
 pub struct FunctionContext<'ctx> {
     pub function: FunctionValue<'ctx>,
-    pub defer: Vec<TypedDefer>,
-    pub loop_stack: Vec<LoopContext<'ctx>>,
+    pub locals: Vec<(PointerValue<'ctx>, Types)>,
+    pub blocks: Vec<BasicBlock<'ctx>>,
 }
 
 impl<'ctx> LLVMContext<'ctx> {
@@ -138,11 +133,31 @@ impl<'ctx> LLVMContext<'ctx> {
     pub fn set_current_function(&mut self, func: FunctionValue<'ctx>) {
         let func_ctx = FunctionContext {
             function: func,
-            loop_stack: Vec::new(),
-            defer: Vec::new(),
+            locals: Vec::new(),
+            blocks: Vec::new(),
         };
 
         self.current_function = Some(func_ctx);
+    }
+
+    pub fn set_mir_locals(&mut self, locals: Vec<(PointerValue<'ctx>, Types)>) {
+        self.current_fn_mut_unchecked().locals = locals;
+    }
+
+    pub fn set_mir_blocks(&mut self, blocks: Vec<BasicBlock<'ctx>>) {
+        self.current_fn_mut_unchecked().blocks = blocks;
+    }
+
+    pub fn mir_local_ptr(&self, index: usize) -> PointerValue<'ctx> {
+        self.current_function_unchecked().locals[index].0
+    }
+
+    pub fn mir_local_type(&self, index: usize) -> Types {
+        self.current_function_unchecked().locals[index].1.clone()
+    }
+
+    pub fn mir_block(&self, index: usize) -> BasicBlock<'ctx> {
+        self.current_function_unchecked().blocks[index]
     }
 
     pub fn current_function(&self) -> Option<&FunctionContext<'ctx>> {
@@ -159,26 +174,6 @@ impl<'ctx> LLVMContext<'ctx> {
 
     pub fn clear_current_function(&mut self) {
         self.current_function = None;
-    }
-
-    pub fn push_loop(&mut self, continue_block: BasicBlock<'ctx>, break_block: BasicBlock<'ctx>) {
-        let current_func = self
-            .current_function
-            .as_mut()
-            .expect("LOOP OUTSIDE FUNCTION");
-
-        current_func.loop_stack.push(LoopContext {
-            continue_block,
-            break_block,
-        });
-    }
-
-    pub fn pop_loop(&mut self) -> Option<LoopContext<'ctx>> {
-        self.current_function.as_mut()?.loop_stack.pop()
-    }
-
-    pub fn current_loop(&self) -> Option<&LoopContext<'ctx>> {
-        self.current_function.as_ref()?.loop_stack.last()
     }
 
     pub fn create_alloca(
@@ -407,16 +402,3 @@ impl<'ctx> LLVMContext<'ctx> {
     }
 }
 
-impl FunctionContext<'_> {
-    pub fn push_defer(&mut self, defer: TypedDefer) {
-        self.defer.push(defer);
-    }
-
-    pub fn pop_defer(&mut self) -> Option<TypedDefer> {
-        self.defer.pop()
-    }
-
-    pub fn defer_iter(&self) -> impl Iterator<Item = &TypedDefer> {
-        self.defer.iter().rev()
-    }
-}

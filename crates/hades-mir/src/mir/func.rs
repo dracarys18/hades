@@ -7,6 +7,7 @@ use crate::mir::guard::Guard;
 use crate::mir::terminator::{Terminator, TerminatorKind};
 use crate::{BasicBlock, BlockAnd, BlockAndExt, ToMir, unpack};
 
+#[derive(Debug)]
 pub struct MirFunction {
     pub name: Name,
     pub receiver: Option<TypedReceiver>,
@@ -49,7 +50,16 @@ impl ToMir for TypedFuncDef {
         for (param_kind, param_ty) in self.signature.params() {
             match &param_kind {
                 ParamKind::Self_(_) => {
-                    builder.build_local(Ident::new("self".to_string(), span.clone()), param_ty);
+                    let self_ty = self
+                        .signature
+                        .receiver
+                        .as_ref()
+                        .map(|r| r.typ.clone())
+                        .unwrap_or(param_ty);
+                    builder.build_local(
+                        Ident::new(hades_tokens::SELF.to_string(), span.clone()),
+                        self_ty,
+                    );
                     arg_count += 1;
                 }
                 ParamKind::Ident(ident) => {
@@ -66,12 +76,17 @@ impl ToMir for TypedFuncDef {
         unpack!(block = body.to_mir(builder, block));
 
         if !builder.is_block_terminated(block) {
-            let deferred = builder.deferred_stmts();
-            for stmt in deferred {
-                builder.push_stmt(block, stmt);
+            let deferred = builder.deferred_blocks();
+            for deferred_block in deferred {
+                unpack!(block = deferred_block.to_mir(builder, block));
+                if builder.is_block_terminated(block) {
+                    break;
+                }
             }
-            builder.switch_to(block);
-            builder.terminate(Terminator::new(TerminatorKind::Return, span.clone()));
+            if !builder.is_block_terminated(block) {
+                builder.switch_to(block);
+                builder.terminate(Terminator::new(TerminatorKind::Return, span.clone()));
+            }
         }
 
         let guard = builder.exit_guard();

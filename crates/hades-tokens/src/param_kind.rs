@@ -20,7 +20,7 @@ impl ParamKind {
     pub fn name(&self) -> Ident {
         match self {
             ParamKind::Ident(ident) => ident.clone(),
-            ParamKind::Self_(selff) => Ident::new(String::from("self"), selff.span().clone()),
+            ParamKind::Self_(selff) => Ident::new(String::from(crate::SELF), selff.span().clone()),
         }
     }
 }

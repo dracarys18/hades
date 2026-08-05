@@ -14,6 +14,8 @@ pub use selff::*;
 
 use hades_error::Span;
 
+pub const SELF: &str = "self";
+
 #[derive(Clone, PartialEq)]
 pub struct Token {
     pub kind: TokenKind,
@@ -161,7 +163,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Module => write!(f, "module"),
             TokenKind::Import => write!(f, "import"),
             TokenKind::Std => write!(f, "std"),
-            TokenKind::Self_ => write!(f, "self"),
+            TokenKind::Self_ => write!(f, "{SELF}"),
             TokenKind::DoubleColon => write!(f, "::"),
             TokenKind::Null => write!(f, "null"),
             TokenKind::Char(c) => write!(f, "'{c}'"),

@@ -41,9 +41,12 @@ impl ToMir for TypedReturn {
     fn to_mir(&self, builder: &mut MirBuilder<'_>, mut block: BasicBlock) -> BlockAnd<()> {
         let span = self.span.clone();
 
-        let deferred = builder.deferred_stmts();
-        for stmt in deferred {
-            builder.push_stmt(block, stmt);
+        let deferred = builder.deferred_blocks();
+        for deferred_block in deferred {
+            unpack!(block = deferred_block.to_mir(builder, block));
+            if builder.is_block_terminated(block) {
+                return block.unit();
+            }
         }
 
         if let Some(ret_expr) = &self.expr {
@@ -254,21 +257,7 @@ impl ToMir for TypedDefer {
     type Output = ();
 
     fn to_mir(&self, builder: &mut MirBuilder<'_>, block: BasicBlock) -> BlockAnd<()> {
-        let span = self.span.clone();
-        let scratch = builder.start_block();
-        let saved = builder.current_block();
-
-        builder.switch_to(scratch);
-        let BlockAnd(scratch_exit, _) = self.stmt.to_mir(builder, scratch);
-
-        if !builder.is_block_terminated(scratch_exit) {
-            builder.switch_to(scratch_exit);
-            builder.terminate(Terminator::new(TerminatorKind::Unreachable, span.clone()));
-        }
-
-        let stmts = builder.drain_scratch_block(scratch);
-        builder.push_defer(stmts, span);
-        builder.switch_to(saved);
+        builder.push_defer(self.stmt.clone(), self.span.clone());
         block.unit()
     }
 }

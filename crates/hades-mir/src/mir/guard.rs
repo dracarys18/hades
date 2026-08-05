@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use hades_ast::TypedBlock;
 use hades_error::Span;
 use hades_tokens::Ident;
 
@@ -17,10 +18,11 @@ pub struct LoopContext {
 
 #[derive(Debug, Clone)]
 pub struct DeferEntry {
-    pub stmts: Vec<Statement>,
+    pub block: TypedBlock,
     pub span: Span,
 }
 
+#[derive(Debug)]
 pub struct Guard {
     pub locals: Vec<Local>,
     pub local_map: HashMap<Ident, usize>,
@@ -127,23 +129,19 @@ impl Guard {
         self.loop_stack.last()
     }
 
-    pub fn push_defer(&mut self, stmts: Vec<Statement>, span: Span) {
-        self.defer_stack.push(DeferEntry { stmts, span });
+    pub fn push_defer(&mut self, block: TypedBlock, span: Span) {
+        self.defer_stack.push(DeferEntry { block, span });
     }
 
     pub fn pop_defer(&mut self) {
         self.defer_stack.pop().expect("pop_defer: stack is empty");
     }
 
-    pub fn deferred_stmts(&self) -> Vec<Statement> {
+    pub fn deferred_blocks(&self) -> Vec<TypedBlock> {
         self.defer_stack
             .iter()
             .rev()
-            .flat_map(|d| d.stmts.iter().cloned())
+            .map(|d| d.block.clone())
             .collect()
-    }
-
-    pub fn drain_scratch_block(&mut self, id: BasicBlock) -> Vec<Statement> {
-        std::mem::take(&mut self.basic_blocks[id.0].stmts)
     }
 }

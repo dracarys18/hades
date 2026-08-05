@@ -1,4 +1,4 @@
-use hades_ast::{CompilerContext, Types};
+use hades_ast::{CompilerContext, TypedBlock, Types};
 use hades_error::Span;
 use hades_tokens::Ident;
 
@@ -105,20 +105,16 @@ impl<'ctx> MirBuilder<'ctx> {
         self.guard().current_loop()
     }
 
-    pub fn push_defer(&mut self, stmts: Vec<Statement>, span: Span) {
-        self.guard_mut().push_defer(stmts, span);
+    pub fn push_defer(&mut self, block: TypedBlock, span: Span) {
+        self.guard_mut().push_defer(block, span);
     }
 
     pub fn pop_defer(&mut self) {
         self.guard_mut().pop_defer();
     }
 
-    pub fn deferred_stmts(&self) -> Vec<Statement> {
-        self.guard().deferred_stmts()
-    }
-
-    pub fn drain_scratch_block(&mut self, id: BasicBlock) -> Vec<Statement> {
-        self.guard_mut().drain_scratch_block(id)
+    pub fn deferred_blocks(&self) -> Vec<TypedBlock> {
+        self.guard().deferred_blocks()
     }
 
     pub fn as_operand(

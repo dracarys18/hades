@@ -230,6 +230,7 @@ dependencies = [
  "hades-ast",
  "hades-common",
  "hades-error",
+ "hades-mir",
  "hades-semantic",
  "hades-tokens",
  "indexmap",

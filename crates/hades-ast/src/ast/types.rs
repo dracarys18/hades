@@ -47,7 +47,7 @@ impl std::fmt::Display for Types {
                 ArrayType::CharArray(size) => write!(f, "char[{size}]"),
             },
             Types::Char => write!(f, "char"),
-            Types::Self_ => write!(f, "self"),
+            Types::Self_ => write!(f, "{}", hades_tokens::SELF),
             Types::Pointer(inner) => write!(f, "&{inner}"),
         }
     }

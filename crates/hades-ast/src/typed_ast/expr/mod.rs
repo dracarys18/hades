@@ -94,6 +94,19 @@ impl TypedExpr {
         }
     }
 
+    pub fn span(&self) -> Span {
+        match self {
+            TypedExpr::Ident { ident, .. } => ident.span().clone(),
+            TypedExpr::Assign(expr) => expr.value.span().clone(),
+            TypedExpr::Call { func, .. } => func.span().clone(),
+            TypedExpr::StructInit { name, .. } => name.span().clone(),
+            TypedExpr::Binary(b) => b.left.span().clone(),
+            TypedExpr::FieldAccess(f) => f.expr.span().clone(),
+            TypedExpr::Unary { expr, .. } => expr.span().clone(),
+            _ => Span::default(),
+        }
+    }
+
     pub fn get_type(&self) -> Types {
         match self {
             TypedExpr::Value(val) => val.get_type(),

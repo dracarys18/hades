@@ -5,6 +5,7 @@ use indexmap::IndexMap;
 use crate::evaluator::graph::EvaluationGraph;
 use crate::lint::array_bounds::ArrayBoundsLint;
 use crate::lint::null_deref::NullDerefLint;
+use crate::lint::unused_var::UnusedVarLint;
 use crate::lint::{LintDiagnostic, LintRunner};
 use hades_ast::{CompilerContext, ModulePath as AstModulePath, WalkAst};
 use hades_error::{SemanticError, Span};
@@ -100,6 +101,7 @@ impl Analyzer<Prepared> {
         let mut runner = LintRunner::new();
         runner.register(ArrayBoundsLint);
         runner.register(NullDerefLint);
+        runner.register(UnusedVarLint);
 
         let mut all_diags = Vec::new();
         for typed_module in &self.modules {

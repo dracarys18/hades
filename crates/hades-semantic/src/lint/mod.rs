@@ -1,9 +1,10 @@
 pub mod array_bounds;
 pub mod null_deref;
+pub mod unused_var;
 
 use std::sync::{Arc, Mutex};
 
-use hades_error::{Error, ErrorSeverity};
+use hades_error::{Error, ErrorSeverity, Span};
 use hades_mir::mir::func::MirFunction;
 use hades_mir::mir::module::MirModule;
 use rayon::prelude::*;
@@ -19,6 +20,14 @@ pub struct LintDiagnostic {
 impl LintDiagnostic {
     pub fn error(lint_name: &'static str, error: Error) -> Self {
         Self { lint_name, error }
+    }
+
+    pub fn warn(lint_name: &'static str, message: String, span: Span) -> Self {
+        let err = Error::new_with_span(message, span).with_severity(ErrorSeverity::Warning);
+        Self {
+            lint_name,
+            error: err,
+        }
     }
 
     pub fn is_error(&self) -> bool {

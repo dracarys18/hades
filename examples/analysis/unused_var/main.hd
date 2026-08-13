@@ -1,0 +1,16 @@
+fn foo(v: int): int {
+    let a = [10, 20, 30];
+    let b = a;
+    return 0;
+}
+
+struct Foo {
+    a: int
+}
+
+fn main(): int {
+    let i = 0;
+    let f = Foo{a: 0};
+    f.a = 2;
+    return foo(i);
+}

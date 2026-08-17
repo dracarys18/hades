@@ -1,0 +1,16 @@
+[workspace]
+
+[package]
+name = "hades-runtime"
+edition = "2021"
+version = "0.1.8"
+
+[lib]
+crate-type = ["staticlib"]
+
+[profile.release]
+panic = "abort"
+opt-level = 3
+
+[profile.dev]
+panic = "abort"

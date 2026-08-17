@@ -202,7 +202,7 @@ checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
 
 [[package]]
 name = "hades"
-version = "0.1.1"
+version = "0.1.8"
 dependencies = [
  "clap",
  "hades-common",
@@ -212,7 +212,7 @@ dependencies = [
 
 [[package]]
 name = "hades-ast"
-version = "0.1.1"
+version = "0.1.8"
 dependencies = [
  "derive_more",
  "hades-common",
@@ -225,7 +225,7 @@ dependencies = [
 
 [[package]]
 name = "hades-codegen"
-version = "0.1.1"
+version = "0.1.8"
 dependencies = [
  "hades-ast",
  "hades-common",
@@ -241,11 +241,11 @@ dependencies = [
 
 [[package]]
 name = "hades-common"
-version = "0.1.1"
+version = "0.1.8"
 
 [[package]]
 name = "hades-compiler"
-version = "0.1.1"
+version = "0.1.8"
 dependencies = [
  "ariadne",
  "hades-ast",
@@ -262,14 +262,14 @@ dependencies = [
 
 [[package]]
 name = "hades-error"
-version = "0.1.1"
+version = "0.1.8"
 dependencies = [
  "ariadne",
 ]
 
 [[package]]
 name = "hades-lexer"
-version = "0.1.1"
+version = "0.1.8"
 dependencies = [
  "hades-common",
  "hades-error",
@@ -280,7 +280,7 @@ dependencies = [
 
 [[package]]
 name = "hades-mir"
-version = "0.1.1"
+version = "0.1.8"
 dependencies = [
  "hades-ast",
  "hades-error",
@@ -294,7 +294,7 @@ dependencies = [
 
 [[package]]
 name = "hades-module"
-version = "0.1.1"
+version = "0.1.8"
 dependencies = [
  "ariadne",
  "hades-ast",
@@ -310,7 +310,7 @@ dependencies = [
 
 [[package]]
 name = "hades-parser"
-version = "0.1.1"
+version = "0.1.8"
 dependencies = [
  "hades-ast",
  "hades-common",
@@ -321,7 +321,7 @@ dependencies = [
 
 [[package]]
 name = "hades-semantic"
-version = "0.1.1"
+version = "0.1.8"
 dependencies = [
  "hades-ast",
  "hades-common",
@@ -335,7 +335,7 @@ dependencies = [
 
 [[package]]
 name = "hades-tokens"
-version = "0.1.1"
+version = "0.1.8"
 dependencies = [
  "hades-error",
 ]

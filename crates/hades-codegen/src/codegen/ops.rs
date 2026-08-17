@@ -40,12 +40,12 @@ impl<'ctx> LLVMContext<'ctx> {
             .clone();
 
         let function = self.get_function(name, &sig)?;
-        let call_site =
-            self.builder()
-                .build_call(function, arg_values, "call")
-                .map_err(|_| CodegenError::LLVMBuild {
-                    message: format!("Failed to generate function call to {name}"),
-                })?;
+        let call_site = self
+            .builder()
+            .build_call(function, arg_values, "call")
+            .map_err(|_| CodegenError::LLVMBuild {
+                message: format!("Failed to generate function call to {name}"),
+            })?;
 
         Ok(match call_site.try_as_basic_value().basic() {
             Some(v) => CodegenValue::new(v, sig.return_type().clone()),
@@ -74,9 +74,11 @@ impl<'ctx> LLVMContext<'ctx> {
             (Types::Bool, Types::Bool) => {
                 self.build_bool_binary_op(left.into_int_value(), op, right.into_int_value())
             }
-            (Types::Pointer(_), Types::Pointer(_)) => {
-                self.build_pointer_compare(left.into_pointer_value(), op, right.into_pointer_value())
-            }
+            (Types::Pointer(_), Types::Pointer(_)) => self.build_pointer_compare(
+                left.into_pointer_value(),
+                op,
+                right.into_pointer_value(),
+            ),
             _ => Err(CodegenError::TypeMismatch {
                 expected: format!("{left_ty:?}"),
                 actual: format!("{right_ty:?}"),
@@ -289,7 +291,9 @@ impl<'ctx> LLVMContext<'ctx> {
         source_ty: &Types,
         target_ty: &Types,
     ) -> CodegenResult<BasicValueEnum<'ctx>> {
-        let target = self.type_converter().to_llvm_type(target_ty, self.module())?;
+        let target = self
+            .type_converter()
+            .to_llvm_type(target_ty, self.module())?;
         let casted: BasicValueEnum = match (source_ty, target_ty) {
             (Types::Int, Types::Float) => self
                 .builder()
@@ -351,9 +355,14 @@ impl<'ctx> LLVMContext<'ctx> {
         struct_ty: &Types,
         field_index: usize,
     ) -> CodegenResult<PointerValue<'ctx>> {
-        let llvm_type = self.type_converter().to_llvm_type(struct_ty, self.module())?;
+        let llvm_type = self
+            .type_converter()
+            .to_llvm_type(struct_ty, self.module())?;
         let zero = self.context().i32_type().const_zero();
-        let index = self.context().i32_type().const_int(field_index as u64, false);
+        let index = self
+            .context()
+            .i32_type()
+            .const_int(field_index as u64, false);
         unsafe {
             self.builder()
                 .build_in_bounds_gep(llvm_type, base, &[zero, index], "field_ptr")
@@ -369,7 +378,9 @@ impl<'ctx> LLVMContext<'ctx> {
         array_ty: &Types,
         index: IntValue<'ctx>,
     ) -> CodegenResult<PointerValue<'ctx>> {
-        let llvm_type = self.type_converter().to_llvm_type(array_ty, self.module())?;
+        let llvm_type = self
+            .type_converter()
+            .to_llvm_type(array_ty, self.module())?;
         let zero = self.context().i32_type().const_zero();
         unsafe {
             self.builder()

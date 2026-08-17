@@ -15,7 +15,9 @@ impl<'ctx> Visit<LLVMContext<'ctx>> for Operand {
         match self {
             Operand::Copy(place) => {
                 let (ptr, ty) = place.visit(context)?;
-                let llvm_type = context.type_converter().to_llvm_type(&ty, context.module())?;
+                let llvm_type = context
+                    .type_converter()
+                    .to_llvm_type(&ty, context.module())?;
                 let value = context.load(ptr, llvm_type, "copy")?;
                 Ok((value, ty))
             }
@@ -41,10 +43,22 @@ fn eval_const<'ctx>(
     constant: &MirConst,
 ) -> CodegenResult<(BasicValueEnum<'ctx>, Types)> {
     let value: BasicValueEnum<'ctx> = match constant {
-        MirConst::Int(n) => context.context().i64_type().const_int(*n as u64, false).into(),
+        MirConst::Int(n) => context
+            .context()
+            .i64_type()
+            .const_int(*n as u64, false)
+            .into(),
         MirConst::Float(f) => context.context().f64_type().const_float(*f).into(),
-        MirConst::Bool(b) => context.context().bool_type().const_int(*b as u64, false).into(),
-        MirConst::Char(c) => context.context().i8_type().const_int(*c as u64, false).into(),
+        MirConst::Bool(b) => context
+            .context()
+            .bool_type()
+            .const_int(*b as u64, false)
+            .into(),
+        MirConst::Char(c) => context
+            .context()
+            .i8_type()
+            .const_int(*c as u64, false)
+            .into(),
         MirConst::Null(_) => context
             .context()
             .ptr_type(AddressSpace::default())

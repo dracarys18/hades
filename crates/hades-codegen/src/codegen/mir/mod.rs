@@ -19,6 +19,8 @@ use inkwell::{
     targets::{CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine},
 };
 
+pub(crate) const REAL_MAIN: &str = "real_main";
+
 impl<'ctx> Visit<LLVMContext<'ctx>> for MirModule {
     type Output = ();
 
@@ -120,7 +122,10 @@ fn declare_module<'ctx>(
     Ok(())
 }
 
-fn declare_struct<'ctx>(context: &mut LLVMContext<'ctx>, def: &TypedStructDef) -> CodegenResult<()> {
+fn declare_struct<'ctx>(
+    context: &mut LLVMContext<'ctx>,
+    def: &TypedStructDef,
+) -> CodegenResult<()> {
     let struct_type = context
         .context()
         .get_struct_type(def.name.inner())
@@ -147,7 +152,10 @@ fn declare_struct<'ctx>(context: &mut LLVMContext<'ctx>, def: &TypedStructDef) -
     Ok(())
 }
 
-fn declare_function<'ctx>(context: &mut LLVMContext<'ctx>, def: &TypedFuncDef) -> CodegenResult<()> {
+fn declare_function<'ctx>(
+    context: &mut LLVMContext<'ctx>,
+    def: &TypedFuncDef,
+) -> CodegenResult<()> {
     let signature = &def.signature;
     let param_types = context
         .type_converter()
@@ -155,7 +163,11 @@ fn declare_function<'ctx>(context: &mut LLVMContext<'ctx>, def: &TypedFuncDef) -
 
     match &signature.kind {
         FuncKind::Extern { variadic } => {
-            if context.module().get_function(def.name.link_name()).is_some() {
+            if context
+                .module()
+                .get_function(def.name.link_name())
+                .is_some()
+            {
                 return Ok(());
             }
             let fn_type = context.build_fn_type(&signature.return_type, &param_types, *variadic)?;
@@ -178,13 +190,16 @@ fn declare_function<'ctx>(context: &mut LLVMContext<'ctx>, def: &TypedFuncDef) -
                 })?;
         }
         FuncKind::Normal => {
-            if context.module().get_function(def.name.inner()).is_some() {
+            let symbol = if def.name.link_name() == "main" {
+                REAL_MAIN
+            } else {
+                def.name.inner()
+            };
+            if context.module().get_function(symbol).is_some() {
                 return Ok(());
             }
             let fn_type = context.build_fn_type(&signature.return_type, &param_types, false)?;
-            context
-                .module()
-                .add_function(def.name.inner(), fn_type, None);
+            context.module().add_function(symbol, fn_type, None);
         }
     }
 

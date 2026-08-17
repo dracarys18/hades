@@ -16,6 +16,8 @@ use std::{
     path::Path,
 };
 
+const RUNTIME_LIB: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/libhades_runtime.a"));
+
 struct FileSourceCache {
     sources: HashMap<PathBuf, Source<String>>,
 }
@@ -236,7 +238,14 @@ impl<'a> Compiler {
         for obj in &obj_paths {
             cmd.arg(obj);
         }
-        cmd.arg("-o").arg(output_path).arg("-lc").arg("-lm");
+        let rt_path = std::env::temp_dir().join("libhades_runtime.a");
+        std::fs::write(&rt_path, RUNTIME_LIB).expect("unable to write to temp dir");
+
+        cmd.arg("-o")
+            .arg(output_path)
+            .arg("-lc")
+            .arg("-lm")
+            .arg(rt_path);
 
         let status = match cmd.status() {
             Ok(s) => s,

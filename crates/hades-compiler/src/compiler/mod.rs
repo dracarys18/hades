@@ -241,17 +241,11 @@ impl<'a> Compiler {
         let rt_path = std::env::temp_dir().join("libhades_runtime.a");
         std::fs::write(&rt_path, RUNTIME_LIB).expect("unable to write to temp dir");
 
-        let entry_key = typed_modules
-            .iter()
-            .flat_map(|m| m.signatures.functions.keys())
-            .find(|n| n.link_name() == "main")
-            .map(|n| n.inner().to_string());
-
-        cmd.arg("-o").arg(output_path).arg("-lc").arg("-lm");
-        if let Some(key) = entry_key {
-            cmd.arg(format!("-Wl,-alias,_{key},_real_main"));
-        }
-        cmd.arg(rt_path);
+        cmd.arg("-o")
+            .arg(output_path)
+            .arg("-lc")
+            .arg("-lm")
+            .arg(rt_path);
 
         let status = match cmd.status() {
             Ok(s) => s,

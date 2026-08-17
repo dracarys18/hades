@@ -10,11 +10,18 @@ impl<'ctx> Visit<LLVMContext<'ctx>> for MirFunction {
     type Output = ();
 
     fn visit(&self, context: &mut LLVMContext<'ctx>) -> CodegenResult<Self::Output> {
-        let function = context.module().get_function(self.name.inner()).ok_or(
-            CodegenError::FunctionNotFound {
-                name: self.name.inner().to_string(),
-            },
-        )?;
+        let symbol = if self.name.link_name() == "main" {
+            super::REAL_MAIN
+        } else {
+            self.name.inner()
+        };
+        let function =
+            context
+                .module()
+                .get_function(symbol)
+                .ok_or(CodegenError::FunctionNotFound {
+                    name: self.name.inner().to_string(),
+                })?;
 
         context.set_current_function(function);
 
@@ -46,8 +53,9 @@ impl<'ctx> Visit<LLVMContext<'ctx>> for MirFunction {
             let local = &self.guard.locals[local_idx];
             param_val.set_name(local.name.inner());
 
-            let is_self =
-                local_idx == 1 && self.receiver.is_some() && local.name.inner() == hades_tokens::SELF;
+            let is_self = local_idx == 1
+                && self.receiver.is_some()
+                && local.name.inner() == hades_tokens::SELF;
             if is_self && self.receiver.as_ref().unwrap().kind == ReceiverKind::Value {
                 locals[local_idx].0 = param_val.into_pointer_value();
                 continue;

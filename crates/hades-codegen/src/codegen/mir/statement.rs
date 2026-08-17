@@ -82,7 +82,9 @@ fn build_const_array_global<'ctx>(
         _ => return Ok(None),
     };
 
-    let global = context.module().add_global(array.get_type(), None, "const_arr");
+    let global = context
+        .module()
+        .add_global(array.get_type(), None, "const_arr");
     global.set_initializer(&array);
     global.set_constant(true);
     global.set_linkage(Linkage::Private);

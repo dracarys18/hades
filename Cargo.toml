@@ -13,6 +13,7 @@ members = [
     "crates/hades-mir",
     "crates/hades",
 ]
+exclude = ["crates/hades-runtime"]
 resolver = "2"
 
 [workspace.package]
